@@ -11,6 +11,7 @@ from typing import Any
 from medical_engine import DISEASES, sym_name
 
 SMOOTH = 1e-6
+_RARE: set = set()  # lazy — در اولین rank پر می‌شود
 
 
 def _age_sex_factor(d: dict, profile: dict) -> float:
@@ -39,12 +40,23 @@ def score_disease(d: dict, detected: dict, profile: dict) -> float:
     present = {s: info for s, info in detected.get("present", {}).items() if not info.get("denied")}
     denied = {s: info for s, info in detected.get("present", {}).items() if info.get("denied")}
     logp = math.log(max(d["prior"] * _age_sex_factor(d, profile), SMOOTH))
+    rare = _RARE
     for sid, p in d["symptoms"].items():
         if sid in present:
-            boost = 1.25 if present[sid]["severity"] == "severe"else 1.0
+            boost = 1.25 if present[sid]["severity"] == "severe" else 1.0
             logp += math.log(min(p * boost, 0.98))
+            # علامتِ کمیابِ پراحتمال (شبیه pathognomonic) بر علامت عمومی مثل تب غلبه می‌کند
+            if p >= 0.9 and sid in rare:
+                logp += math.log(2.0)
         elif sid in denied:
             logp += math.log(max(1.0 - p, SMOOTH))
+        elif p >= 0.8:
+            # علامت کلیدی که اصلاً ذکر نشده، احتمال را به‌نرمی کم می‌کند
+            logp += math.log(1.0 - p * 0.5)
+    # جریمه‌ی پوشش: علامتِ حاضرِ بیمار که این بیماری اصلاً توضیحش نمی‌دهد
+    for sid in present:
+        if sid not in d["symptoms"]:
+            logp += math.log(0.7)
     # جریمه‌ی بیماری‌هایی که علائم کلیدی‌شان ذکر نشده
     dur = detected.get("duration_days")
     if dur is not None:
@@ -55,7 +67,20 @@ def score_disease(d: dict, detected: dict, profile: dict) -> float:
     return logp
 
 
+def _rare_symptoms() -> set[str]:
+    """علائمی که فقط در ۱-۲ بیماری با احتمال بالا می‌آیند (مثل درد گوش در عفونت گوش)."""
+    counts: dict[str, int] = {}
+    for d in DISEASES:
+        for sid, p in d["symptoms"].items():
+            if p >= 0.7:
+                counts[sid] = counts.get(sid, 0) + 1
+    return {s for s, c in counts.items() if c <= 2}
+
+
 def rank_diseases(detected: dict, profile: dict, top_n: int = 5) -> list[dict[str, Any]]:
+    global _RARE
+    if not _RARE:
+        _RARE = _rare_symptoms()
     """رتبه‌بندی با نرمال‌سازی softmax تقریبی؛ درصد = احتمال نسبی در بین کاندیدها."""
     if not any(not i.get("denied") for i in detected.get("present", {}).values()):
         return []

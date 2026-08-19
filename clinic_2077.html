@@ -145,7 +145,7 @@ T.en = {
   foot:"NexusMed 2077 is an informational assistant; it does not replace a doctor and gives no definitive diagnosis. Emergency: Iran 115 | Europe/Finland 112",
   p_titles:{settings:"API settings",profile:"Patient profile",vitals:"Vitals",labs:"Lab analysis",rx:"Prescription & lab terms",
     drugs:"Drugs & interactions",mental:"Mental health",sleep:"Sleep analysis",checkup:"Checkup & vaccines",aid:"First aid",
-    referral:"Printable referral report",brain:"Internal brain & learning",gpu:"Local AI (Ollama)",image:"Medical image + text"},
+    referral:"Printable referral report",brain:"Internal brain & learning",gpu:"Local AI (Ollama)",image:"Medical image + text",assess:"Disease likelihood assessment"},
   keys:"API keys", keys_note:"Keys are stored only in a local .env file on your machine. They never enter the code, the ZIP or the installer.",
   getkey:"Get a free key", testconn:"Test connection", savekeys:"Save keys (no restart)", savemodel:"Save model",
   model:"OpenRouter model", model_list:"pick from the free/suggested list", model_manual:"or type a model id manually",
@@ -177,6 +177,12 @@ T.en = {
   img_note:"1) Pick a photo 2) Add a short note 3) Send", img_note_ph:"e.g. this red patch has itched badly for 3 days",
   img_send:"Send for analysis", img_hint:"With a vision model configured you get AI analysis; otherwise a safe offline answer (no fake guesses).",
   pickimg:"Choose image", empty:"Nothing to send.", img_first:"Pick an image first.",
+  assess_h:"Disease likelihood assessment", assess_hint:"Describe symptoms in one or a few lines (onset, severity, duration)",
+  assess_btn:"Assess", assess_symptoms:"Detected symptoms", assess_denied:"Ruled out", assess_dur:"Duration",
+  assess_cands:"Possibilities (probabilistic ranking - NOT a diagnosis)", assess_matched:"matched",
+  assess_ml:"ML classifier signal (synthetic test dataset)", assess_rag:"Related knowledge in local memory",
+  assess_none:"Not enough information - answer the assistant's question or add detail.",
+  assess_urg:{"emergency":"URGENT - emergency care","urgent":"see a clinician soon","routine":"routine follow-up"},
   opts:["Never","Several days","Half the days","Nearly every day"],
   q9flag:"thoughts of self-harm",
   saved:"Saved.", testing:"Testing", conn_ok:"Connection works", status:"Status"
@@ -199,7 +205,7 @@ T.fa = {
   foot:"NexusMed 2077 یک دستیار اطلاعاتی است؛ جایگزین پزشک نیست و تشخیص قطعی نمی‌دهد — اورژانس: ایران ۱۱۵ | اروپا/فنلاند ۱۱۲",
   p_titles:{settings:"تنظیمات API",profile:"پروفایل بیمار",vitals:"علائم حیاتی",labs:"تحلیل آزمایش",rx:"اسکن نسخه و اصطلاحات",
     drugs:"دارو و تداخلات دارویی",mental:"سلامت روان",sleep:"تحلیل خواب",checkup:"تقویم چکاپ و واکسن",aid:"کمک‌های اولیه",
-    referral:"گزارش ارجاع قابل چاپ",brain:"مغز داخلی و یادگیری",gpu:"هوش مصنوعی محلی (Ollama)",image:"تحلیل تصویر پزشکی"},
+    referral:"گزارش ارجاع قابل چاپ",brain:"مغز داخلی و یادگیری",gpu:"هوش مصنوعی محلی (Ollama)",image:"تحلیل تصویر پزشکی",assess:"ارزیابی احتمال بیماری‌ها"},
   keys:"کلیدهای API", keys_note:"کلیدها فقط در فایل .env روی سیستم خودتان ذخیره می‌شوند و هرگز داخل کد، ZIP یا بسته‌ی نصبی قرار نمی‌گیرند.",
   getkey:"گرفتن کلید رایگان", testconn:"تست اتصال", savekeys:"ذخیره‌ی کلیدها (بدون ری‌استارت)", savemodel:"ذخیره‌ی مدل",
   model:"مدل OpenRouter", model_list:"انتخاب از لیست مدل‌های رایگان/پیشنهادی", model_manual:"یا نوشتن دستی model id",
@@ -231,6 +237,12 @@ T.fa = {
   img_note:"۱) عکس را انتخاب کن ۲) توضیح کوتاه بنویس ۳) ارسال", img_note_ph:"مثلاً: این لک قرمز ۳ روزه خارش شدید دارد",
   img_send:"ارسال برای تحلیل", img_hint:"با مدل تصویری فعال، تحلیل AI انجام می‌شود؛ وگرنه پاسخ امن آفلاین می‌گیری (بدون حدس جعلی).",
   pickimg:"انتخاب عکس", empty:"چیزی ارسال نشد.", img_first:"اول عکس را انتخاب کن.",
+  assess_h:"ارزیابی احتمال بیماری‌ها", assess_hint:"علائم را در یک یا چند خط بنویس (شروع، شدت، مدت)",
+  assess_btn:"ارزیابی", assess_symptoms:"علائم شناسایی‌شده", assess_denied:"ردشده", assess_dur:"مدت",
+  assess_cands:"احتمالات (رتبه‌بندی احتمالی — تشخیص قطعی نیست)", assess_matched:"منطبق",
+  assess_ml:"سیگنال طبقه‌بند ML (دیتاست مصنوعی تستی)", assess_rag:"دانش مرتبط در حافظه‌ی محلی",
+  assess_none:"اطلاعات کافی نیست — به سوال دستیار جواب بده یا توضیح بیشتر بده.",
+  assess_urg:{"emergency":"فوری — اورژانس","urgent":"به‌زودی به پزشک","routine":"پیگیری سرپایی"},
   opts:["هرگز","چند روز","نیمی از روزها","تقریباً هر روز"],
   q9flag:"افکار آسیب به خود",
   saved:"ذخیره شد.", testing:"در حال تست", conn_ok:"اتصال برقرار است", status:"وضعیت"
@@ -309,10 +321,12 @@ async function sendMsg(){
   var holder=addMsg("bot","");
   holder.innerHTML='<span class="spin"></span>'+(imgB64?t("imgtyping"):t("typing"));
   busy=true;$("send").disabled=true;
-  var res=await api("/api/chat",{text:imgB64?"":txt,image_b64:imgB64,image_mime:imgMime,image_note:note});
+  var hint=imgB64?(window._imgHint||""):"";if(!imgB64)window._imgHint="";
+  var res=await api("/api/chat",{text:imgB64?"":txt,image_b64:imgB64,image_mime:imgMime,image_note:note,image_hint:hint});
   busy=false;$("send").disabled=false;
   holder.remove();clearImg();
-  var src=res.red_flag?t("src_emg"):(res.source==="internal"?t("src_int"):(res.source||""));
+  var src=res.red_flag?t("src_emg"):(res.source==="internal"?t("src_int"):(res.source==="internal-image"?(LANG==="fa"?"مغز داخلی — تحلیل تصویر":"offline brain - image"):res.source||""));
+  if(res.image_type&&res.image_type.label)src+=" | "+res.image_type.label;
   if(res.learned)src+=t("learned");
   addMsg(res.red_flag?"bot emg":"bot",res.text||res.message_fa||"...",src);
   refreshStatus();
@@ -334,7 +348,7 @@ function openPanel(k){
   currentPanel=k;if(k==="chat"){closePanel();return}
   $("panel").classList.add("open");$("ptitle").textContent=t("p_titles")[k]||k;
   var P={settings:uiSettings,profile:uiProfile,vitals:uiVitals,labs:uiLabs,rx:uiRx,drugs:uiDrugs,
-    mental:uiMental,sleep:uiSleep,checkup:uiCheckup,aid:uiAid,referral:uiReferral,brain:uiBrain,gpu:uiGpu,image:uiImage};
+    mental:uiMental,sleep:uiSleep,checkup:uiCheckup,aid:uiAid,referral:uiReferral,brain:uiBrain,gpu:uiGpu,image:uiImage,assess:uiAssess};
   (P[k]||function(){})();
 }
 function closePanel(){$("panel").classList.remove("open")}
@@ -610,6 +624,12 @@ async function testLL(){
 function uiImage(){
   $("pbody").innerHTML='<div class="card"><h3>'+t("p_titles").image+'</h3>'+
   '<p style="font-size:12px">'+t("img_note")+'<br><small style="color:var(--dim)">'+t("img_note_ph")+'</small></p>'+
+  '<label class="fl">'+(LANG==="fa"?"نوع تصویر (اختیاری — خودکار هم تشخیص داده می‌شود)":"Image type (optional - auto-detected too)")+'</label>'+
+  '<select class="f" id="imghint">'+
+  '<option value="">'+(LANG==="fa"?"تشخیص خودکار":"Auto-detect")+'</option>'+
+  [["skin","Skin / rash","پوست / جوش"],["wound","Wound / burn","زخم / سوختگی"],["xray","X-ray / CT / MRI","رادیوگرافی / سی‌تی / ام‌آرآی"],["ecg","ECG","نوار قلب"],["lab","Lab report / prescription","برگه‌ی آزمایش / نسخه"],["eye","Eye","چشم"],["other","Other","سایر"]]
+    .map(function(x){return '<option value="'+x[0]+'">'+(LANG==="fa"?x[2]:x[1])+'</option>'}).join("")+
+  '</select>'+
   '<input type="file" class="f" id="imgf2" accept="image/*" onchange="pickImg(this)">'+
   '<label class="fl">'+(LANG==="fa"?"توضیح همراه عکس":"Note with the photo")+'</label>'+
   '<textarea class="f" id="imgnote" placeholder="'+t("img_note_ph")+'"></textarea>'+
@@ -620,9 +640,47 @@ function uiImage(){
 async function sendImg(){
   var f=$("imgf2").files[0];if(!f){alert(t("img_first"));return}
   await new Promise(function(res){var rd=new FileReader();rd.onload=function(){imgB64=String(rd.result).split(",")[1];imgMime=f.type;res()};rd.readAsDataURL(f)});
+  window._imgHint=($("imghint")&&$("imghint").value)||"";
   $("txt").value=$("imgnote").value.trim();await sendMsg();closePanel();
 }
 
+function uiAssess(){
+  $("pbody").innerHTML='<div class="card"><h3>'+t("assess_h")+'</h3>'+
+  '<p style="font-size:11.5px;color:var(--dim)">'+t("assess_hint")+'</p>'+
+  '<textarea class="f" id="asstxt" placeholder="'+(LANG==="fa"?"مثلاً: سه روز است گلودرد و آبریزش بینی دارم و تب خفیف":"e.g. sore throat and runny nose for 3 days with mild fever")+'"></textarea>'+
+  '<button class="btn pri" onclick="runAssess()">'+t("assess_btn")+'</button><div id="assres"></div></div>';
+  return 0;
+}
+async function runAssess(){
+  var r=await api("/api/assess",{text:$("asstxt").value});
+  var el=$("assres");
+  if(!r.ok){el.innerHTML='<p class="warn">'+esc(r.message_fa)+"</p>";return}
+  if(r.red_flag){el.innerHTML='<div class="card" style="border-color:#7a1836">'+fmt(r.text)+"</div>";return}
+  var U=t("assess_urg");
+  var h='<div class="card"><b>'+t("assess_symptoms")+':</b> '+((r.symptoms||[]).map(function(s){return '<span class="tag">'+esc(s)+"</span>"}).join("")||"—");
+  if((r.denied||[]).length)h+='<br><small style="color:var(--dim)">'+t("assess_denied")+": "+r.denied.map(esc).join("، ")+"</small>";
+  if(r.duration_days)h+='<br><small>'+t("assess_dur")+": "+fa(r.duration_days)+"</small>";
+  h+="</div>";
+  if((r.candidates||[]).length){
+    h+='<div class="card"><h3>'+t("assess_cands")+'</h3>'+r.candidates.map(function(c){
+      var color=c.urgency==="emergency"?"#ff2a6d":(c.urgency==="urgent"?"#ffb020":"#3bff9e");
+      return '<div class="q"><b>'+esc(c.name)+'</b> <b style="color:'+color+'">'+fa(c.percent)+(LANG==="fa"?"٪":"%")+'</b>'+
+      ' <small style="color:'+color+'">'+esc(U[c.urgency]||c.urgency)+"</small>"+
+      '<div class="bar"><i style="width:'+Math.min(100,c.percent)+'%;background:'+color+'"></i></div>'+
+      '<small style="color:var(--dim)">'+t("assess_matched")+": "+esc((c.matched_symptoms||[]).join("، "))+"</small><br>"+
+      (c.advice||[]).map(function(a){return "<small>• "+esc(a)+"</small><br>"}).join("")+
+      (c.doctor_when?"<small class='warn'>"+esc(c.doctor_when)+"</small>":"")+"</div>"}).join("")+"</div>";
+  } else {
+    h+='<div class="card"><p class="warn">'+t("assess_none")+"</p></div>";
+  }
+  if(r.ml&&r.ml.length){
+    h+='<div class="card"><small>'+t("assess_ml")+": "+r.ml.map(function(m){return esc(m.label)+" (~"+fa(m.percent)+(LANG==="fa"?"٪":"%")+")"}).join("، ")+"</small></div>";
+  }
+  if((r.rag||[]).length){
+    h+='<div class="card"><small>'+t("assess_rag")+": "+r.rag.map(esc).join("، ")+"</small></div>";
+  }
+  el.innerHTML=h;
+}
 /* ================= boot ================= */
 window._QS={phq9:[],gad7:[]};
 (function boot(){

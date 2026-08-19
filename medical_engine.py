@@ -24,7 +24,7 @@ SYMPTOM_NAMES_FA: dict[str, str] = {
     "shortness_of_breath": "تنگی نفس", "dizziness": "سرگیجه", "fatigue": "خستگی",
     "palpitation": "تپش قلب", "heartburn": "سوزش سر دل", "flank_pain": "درد پهلو",
     "insomnia": "بی‌خوابی", "mood_low": "افت خلق/ناراحتی", "wheezing": "خس‌خس سینه",
-    "sputum": "خلط", "thirst": "تشنگی زیاد", "weight_loss": "کاهش وزن",
+    "sputum": "خلط", "thirst": "تشنگی زیاد", "weight_loss": "کاهش وزن", "weight_gain": "افزایش وزن",
     "blurred_vision": "تار شدن دید", "unilateral_weakness": "ضعف یک طرفه‌ی بدن",
     "speech_difficulty": "اختلال تکلم", "face_droop": "کج شدن صورت",
     "seizure": "تشنج", "loss_of_consciousness": "بیهوشی", "severe_bleeding": "خونریزی شدید",
@@ -35,6 +35,7 @@ SYMPTOM_NAMES_FA: dict[str, str] = {
     "rapid_breathing": "تنفس تند", "stiff_neck": "سفتی گردن", "photophobia": "حساسیت به نور",
     "apnea_observed": "قطع تنفس در خواب", "snoring": "خروپف", "daytime_sleepiness": "خواب‌آلودگی روزانه",
     "panic": "وحشت‌زدگی", "loss_of_interest": "بی‌علاقگی", "appetite_loss": "بی‌اشتهایی",
+    "ear_pain": "درد گوش", "menstrual_cramps": "درد قاعدگی", "mouth_ulcer": "زخم/آفت دهان", "leg_swelling": "تورم پا", "calf_pain": "درد ساق پا"
 }
 
 SYMPTOM_NAMES_EN: dict[str, str] = {
@@ -46,7 +47,7 @@ SYMPTOM_NAMES_EN: dict[str, str] = {
     "shortness_of_breath": "shortness of breath", "dizziness": "dizziness", "fatigue": "fatigue",
     "palpitation": "palpitations", "heartburn": "heartburn", "flank_pain": "flank pain",
     "insomnia": "insomnia", "mood_low": "low mood", "wheezing": "wheezing",
-    "sputum": "phlegm", "thirst": "excessive thirst", "weight_loss": "weight loss",
+    "sputum": "phlegm", "thirst": "excessive thirst", "weight_loss": "weight loss", "weight_gain": "weight gain",
     "blurred_vision": "blurred vision", "unilateral_weakness": "one-sided weakness",
     "speech_difficulty": "slurred speech", "face_droop": "facial droop",
     "seizure": "seizure", "loss_of_consciousness": "unconsciousness", "severe_bleeding": "severe bleeding",
@@ -57,6 +58,7 @@ SYMPTOM_NAMES_EN: dict[str, str] = {
     "rapid_breathing": "rapid breathing", "stiff_neck": "stiff neck", "photophobia": "light sensitivity",
     "apnea_observed": "breathing pauses in sleep", "snoring": "snoring", "daytime_sleepiness": "daytime sleepiness",
     "panic": "panic", "loss_of_interest": "loss of interest", "appetite_loss": "loss of appetite",
+    "ear_pain": "ear pain", "menstrual_cramps": "menstrual cramps", "mouth_ulcer": "mouth ulcer", "leg_swelling": "leg swelling", "calf_pain": "calf pain"
 }
 
 
@@ -81,12 +83,12 @@ SYMPTOM_KEYWORDS: dict[str, list[str]] = {
     "dysuria": ["سوزش ادرار", "ادرار سوزش", "سوزش موقع ادرار", "burning urination", "painful urination", "burns when i pee", "dysuria",
                 "burning when i urinate", "burns urinating", "burning pee", "stings when i pee", "pain urinating", "stings urinating"],
     "urinary_frequency": ["تکرر ادرار", "ادرار زیاد", "مدام دستشویی می روم", "frequent urination", "peeing a lot", "urinating often"],
-    "skin_itch": ["خارش", "خارش دارم", "خارش شدید", "itching", "itchy", "itches a lot"],
-    "rash": ["لک", "لک قرمز", "کهیر", "جوش", "بثورات", "قرمزی پوست", "rash", "hives", "spots on skin", "red patch"],
+    "skin_itch": ["خارش", "خارش دارم", "خارش شدید", "itching", "itchy", "itches a lot", "itch"],
+    "rash": ["لک", "لک قرمز", "کهیر", "جوش", "بثورات", "قرمزی پوست", "تاول", "بثورات تاولی", "rash", "hives", "spots on skin", "red patch", "blisters", "vesicles", "blister"],
     "anxiety": ["اضطراب", "مضطرب", "نگران هستم", "استرس دارم", "بی قرارم", "anxiety", "anxious", "stressed", "worried", "nervous"],
     "chest_pain": ["درد قفسه سینه", "درد سینه", "قفسه سینه ام درد", "درد قفسه صدری", "فشار روی سینه", "chest pain", "chest pressure", "chest tightness", "chest hurts"],
     "shortness_of_breath": ["تنگی نفس", "نفس کم می اورد", "نفس نفس", "سخت نفس می کشم", "shortness of breath", "hard to breathe", "cant breathe", "can not breathe", "difficulty breathing", "breathless", "out of breath"],
-    "dizziness": ["سرگیجه", "سرم گیج می رود", "گیجی", "dizziness", "dizzy", "lightheaded"],
+    "dizziness": ["سرگیجه", "سرم گیج می رود", "گیجی", "سرم می چرخد", "چرخش سر", "dizziness", "dizzy", "lightheaded", "vertigo", "room spins", "spinning"],
     "fatigue": ["خستگی", "خسته ام", "ضعف و بی حالی", "بی حال", "fatigue", "tired", "exhausted", "no energy"],
     "palpitation": ["تپش قلب", "قلبم تند می زند", "تپش", "palpitations", "racing heart", "heart pounding", "fast heartbeat"],
     "heartburn": ["سوزش سر دل", "سوزش معده", "ترش کردم", "رفلاکس", "heartburn", "acid reflux", "sour taste", "burning in chest"],
@@ -97,6 +99,11 @@ SYMPTOM_KEYWORDS: dict[str, list[str]] = {
     "sputum": ["خلط", "خلط دارم", "phlegm", "sputum", "mucus cough"],
     "thirst": ["تشنگی", "تشنه ام", "مدام آب می خورم", "excessive thirst", "very thirsty", "always thirsty", "dry mouth"],
     "weight_loss": ["کاهش وزن", "لاغر شده ام", "وزنم کم شده", "weight loss", "losing weight", "lost weight"],
+    "ear_pain": ["درد گوش", "گوشم درد", "درد داخل گوش", "ear pain", "earache", "ear hurts", "ear is painful"],
+    "menstrual_cramps": ["درد قاعدگی", "درد پریود", "دلرد پریود", "کمردرد قاعدگی", "menstrual cramps", "period pain", "period cramps", "menstrual pain"],
+    "mouth_ulcer": ["زخم دهان", "آفت دهان", "زخم داخل دهان", "mouth ulcer", "canker sore", "ulcer in mouth", "mouth sores", "cold sore"],
+    "leg_swelling": ["تورم پا", "پایم ورم کرده", "تورم ساق پا", "تورم مچ پا", "پام ورم کرده", "leg swelling", "swollen leg", "swollen ankle", "swollen calf", "one leg is swollen", "calf is swollen", "leg is swollen", "پای چپم ورم", "پای راستم ورم"],
+    "calf_pain": ["درد ساق پا", "ساق پام درد", "پام درد می کند", "calf pain", "pain in calf", "pain in one leg", "leg pain one side", "painful calf", "calf hurts", "leg is painful", "my leg hurts", "leg hurts"],
     "blurred_vision": ["تار شدن دید", "چشمانم تار", "تار می بینم", "blurred vision", "blurry vision", "vision is blurry"],
     "unilateral_weakness": ["ضعف یک طرف", "دست و پسم بی lực", "فلج", "یک طرف بدنم بی حس", "دستم بی حس شده", "پایم بی حس", "one sided weakness", "weakness on one side", "paralysis", "arm went numb", "leg went numb", "numb arm", "numb leg", "face is drooping"],
     "speech_difficulty": ["حرف زدن مشکل", "زبان بند می اید", "اختلال تکلم", "slurred speech", "cant speak", "can not speak", "trouble speaking", "speech problem", "words not coming out"],
@@ -109,7 +116,7 @@ SYMPTOM_KEYWORDS: dict[str, list[str]] = {
     "constipation": ["یبوست", "مدفوع سفت", "constipation", "constipated", "cant pass stool"],
     "joint_pain": ["درد مفاصل", "مفاصلم درد", "درد زانو", "joint pain", "joints hurt", "knee pain", "arthritis pain"],
     "back_pain": ["کمردرد", "کمر درد", "کمرم درد", "back pain", "back hurts", "lower back pain"],
-    "eye_redness": ["قرمزی چشم", "چشم قرمز", "red eyes", "eye redness", "bloodshot eyes"],
+    "eye_redness": ["قرمزی چشم", "چشم قرمز", "چشمم قرمز", "red eyes", "red eye", "eye redness", "bloodshot eyes", "my eye is red"],
     "tear_eyes": ["اشک ریزش", "چشمم اشک می ریزد", "watery eyes", "tearing eyes", "eyes watering"],
     "sweating": ["عرق سرد", "عرق کردم", "sweating", "cold sweat", "clammy", "sweating a lot"],
     "left_arm_pain": ["درد بازوی چپ", "دست چپم درد", "درد شانه چپ", "left arm pain", "pain in left arm", "left shoulder pain", "arm pain radiating"],
@@ -194,7 +201,7 @@ FEVER_RE = re.compile(r"(?:تب|fever|temp)\s*(\d{2}(?:[.,]\d)?)")
 
 DISEASES: list[dict[str, Any]] = [
     {"id": "common_cold", "fa": "سرماخوردگی", "en": "Common cold", "prior": 0.16, "urgency": "routine",
-     "symptoms": {"cough": 0.8, "sore_throat": 0.6, "runny_nose": 0.85, "sneezing": 0.7, "fever": 0.3, "headache": 0.35, "body_ache": 0.35, "sputum": 0.3},
+     "symptoms": {"cough": 0.8, "sore_throat": 0.6, "runny_nose": 0.9, "sneezing": 0.75, "fever": 0.3, "headache": 0.35, "body_ache": 0.35, "sputum": 0.3},
      "advice": ["استراحت و خواب کافی", "مایعات گرم فراوان", "غرغره‌ی آب نمک ولرم برای گلودرد"],
      "advice_en": ["Rest and get enough sleep", "Plenty of warm fluids", "Saltwater gargle for the sore throat"],
      "doctor_when": "اگر تب بیش از ۳ روز ادامه یافت یا گلودرد شدید با تب بالا بدون سرفه",
@@ -206,7 +213,7 @@ DISEASES: list[dict[str, Any]] = [
      "doctor_when": "تنگی نفس، درد قفسه سینه یا تب بالای ۳ روز؛ یا گروه پرخطر (بارداری، سالمند، بیماری زمینه‌ای)",
      "doctor_when_en": "Shortness of breath, chest pain, or fever beyond 3 days; or high-risk group (pregnant, elderly, chronic illness)"},
     {"id": "allergic_rhinitis", "fa": "آلرژی فصلی", "en": "Allergic rhinitis", "prior": 0.08, "urgency": "routine",
-     "symptoms": {"sneezing": 0.9, "runny_nose": 0.85, "tear_eyes": 0.5, "eye_redness": 0.4, "skin_itch": 0.3, "cough": 0.25},
+     "symptoms": {"sneezing": 0.85, "runny_nose": 0.8, "tear_eyes": 0.5, "eye_redness": 0.4, "skin_itch": 0.3, "cough": 0.25},
      "advice": ["اجتناب از مواجهه با محرک (گرد و غبار، گرده)", "شست‌وشوی بینی با سالین", "آنتی‌هیستامین بدون نسخه در صورت صلاحدید داروخانه"],
      "advice_en": ["Avoid triggers (dust, pollen)", "Saline nasal rinse", "Over-the-counter antihistamine if the pharmacist agrees"],
      "doctor_when": "علائم بیشتر از ۲ هفته ادامه یافت یا تنگی نفس اضافه شد",
@@ -361,6 +368,78 @@ DISEASES: list[dict[str, Any]] = [
      "advice_en": ["Smaller, more frequent meals", "Less fat, caffeine and soda", "Walk after eating"],
      "doctor_when": "کاهش وزن بی‌دلیل، استفراغ خونی، اختلال بلع، سن بالای ۵۰ با علامت جدید",
      "doctor_when_en": "Unexplained weight loss, vomiting blood, trouble swallowing, or new symptoms over 50"},
+    {"id": "appendicitis", "fa": "آپاندیسیت (احتمالی — اورژانسی)", "en": "Appendicitis (possible - urgent)", "prior": 0.02, "urgency": "emergency",
+     "symptoms": {"abdominal_pain": 0.9, "nausea": 0.6, "vomiting": 0.4, "fever": 0.5, "appetite_loss": 0.7},
+     "advice": ["هیچ‌چیز نخور و نیاشام", "مسکن/ملین خودسرانه نکن (علائم را پنهان می‌کند)", "همین امروز اورژانس/مطب"],
+     "advice_en": ["Do not eat or drink", "No painkillers or laxatives on your own (they mask signs)", "Emergency department or clinic today"],
+     "doctor_when": "درد شکم که به گوشه‌ی راست‌پایین می‌رود + تهوع/بی‌اشتهایی → فوری",
+     "doctor_when_en": "Belly pain moving to the lower right side with nausea/loss of appetite - urgent"},
+    {"id": "meningitis", "fa": "مننژیت (احتمالی — اورژانسی)", "en": "Meningitis (possible - urgent)", "prior": 0.008, "urgency": "emergency",
+     "symptoms": {"fever": 0.8, "headache": 0.8, "stiff_neck": 0.8, "photophobia": 0.5, "vomiting": 0.4, "confusion": 0.4, "rash": 0.2},
+     "advice": ["تب + سردرد + سفتی گردن = همین حالا اورژانس", "به هیچ عنوان در خانه منتظر نمان"],
+     "advice_en": ["Fever + headache + stiff neck = emergency right now", "Do not wait at home"],
+     "doctor_when": "ترکیب تب و سردرد و گردن سفت → اورژانس فوری (۱۱۵/۱۱۲)",
+     "doctor_when_en": "Fever with headache and stiff neck - call emergency now (115/112)"},
+    {"id": "angina_likely", "fa": "آنژین صدری (احتمالی)", "en": "Angina (possible)", "prior": 0.02, "urgency": "emergency",
+     "symptoms": {"chest_pain": 1.0, "shortness_of_breath": 0.5, "sweating": 0.4, "left_arm_pain": 0.3},
+     "advice": ["هر درد قفسه سینه تا خلاف آن ثابت شود اورژانس است", "فعالیت را متوقف کن و کمک بخواه"],
+     "advice_en": ["Any chest pain is an emergency until proven otherwise", "Stop exertion and get help"],
+     "doctor_when": "درد سینه با فعالیت که با استراحت خوب می‌شود → ارزیابی قلبی فوری",
+     "doctor_when_en": "Chest tightness on exertion relieved by rest - urgent cardiac assessment"},
+    {"id": "dvt_likely", "fa": "لخته‌ی وریدی پا/DVT (احتمالی)", "en": "Leg DVT (possible)", "prior": 0.01, "urgency": "urgent",
+     "symptoms": {"leg_swelling": 0.9, "calf_pain": 0.8, "skin_itch": 0.1},
+     "advice": ["پا را مالش نده", "همان روز پزشک/اورژانس (سونوگرافی داپلر)", "اگر تنگی نفس هم اضافه شد → اورژانس فوری (آمبولی)"],
+     "advice_en": ["Do not massage the leg", "Same-day clinician/emergency (duplex ultrasound)", "New breathlessness means emergency (clot to the lungs)"],
+     "doctor_when": "تورم و درد یک پا، به‌ویژه بعد از سفر طولانی/بی‌حرکتی/جراحی → همان روز",
+     "doctor_when_en": "One swollen painful leg, especially after long travel/immobility/surgery - same day"},
+    {"id": "otitis", "fa": "عفونت گوش (احتمالی)", "en": "Ear infection (possible)", "prior": 0.03, "urgency": "routine",
+     "symptoms": {"ear_pain": 1.0, "fever": 0.5, "sore_throat": 0.3},
+     "advice": ["مسکن ساده در صورت نیاز", "معاینه‌ی گوش توسط پزشک", "در کودکان زیر ۲ سال ارزیازه پزشک لازم است"],
+     "advice_en": ["Simple pain relief if needed", "An ear exam by a clinician", "Under age 2, always see a doctor"],
+     "doctor_when": "درد شدید، ترشح از گوش، تب بالا یا تورم پشت گوش → فوری",
+     "doctor_when_en": "Severe pain, discharge from the ear, high fever, or swelling behind the ear - urgent"},
+    {"id": "dysmenorrhea", "fa": "دیسمنوره (درد قاعدگی)", "en": "Menstrual cramps", "prior": 0.05, "urgency": "routine",
+     "symptoms": {"menstrual_cramps": 1.0, "abdominal_pain": 0.6, "nausea": 0.3, "back_pain": 0.4},
+     "advice": ["کمپرس گرم روی شکم", "فعالیت بدنی سبک", "مسکن ساده طبق دستور داروخانه/پزشک"],
+     "advice_en": ["Warm compress on the lower belly", "Light activity", "Simple pain relief as advised by pharmacist/doctor"],
+     "doctor_when": "درد غیرقابل کنترل، خونریزی خیلی زیاد یا تب",
+     "doctor_when_en": "Uncontrollable pain, very heavy bleeding, or fever"},
+    {"id": "chickenpox", "fa": "آبله‌مرغان (احتمالی)", "en": "Chickenpox (possible)", "prior": 0.02, "urgency": "routine",
+     "symptoms": {"fever": 0.7, "rash": 0.9, "skin_itch": 0.7, "appetite_loss": 0.3},
+     "advice": ["جداسازی تا خشک‌شدن تاول‌ها", "خارش: آنتی‌هیستامین/لوسیون با نظر داروخانه", "ناخن‌ها کوتاه"],
+     "advice_en": ["Isolate until the blisters crust over", "Itch: antihistamine/lotion per pharmacist", "Keep nails short"],
+     "doctor_when": "تب بالا، علائم عفونت پوست، سردرد شدید، بزرگسال/باردار → پزشک",
+     "doctor_when_en": "High fever, skin infection signs, severe headache, adult/pregnant - see a doctor"},
+    {"id": "scabies", "fa": "گال (احتمالی)", "en": "Scabies (possible)", "prior": 0.02, "urgency": "routine",
+     "symptoms": {"skin_itch": 1.0, "rash": 0.5},
+     "advice": ["خارش شدید شبانه و درگیری چند نفر از خانواده ← احتمال گال", "درمان موضعی تجویزی برای همه‌ی اعضا هم‌زمان", "شست‌وشوی البسه با آب داغ"],
+     "advice_en": ["Severe night itch plus affected family members points to scabies", "Prescribed topical treatment for everyone at once", "Hot-wash clothes and bedding"],
+     "doctor_when": "زخم/عفونت ثانویه یا بی‌پاسخ به درمان",
+     "doctor_when_en": "Secondary infection or no response to treatment"},
+    {"id": "oral_aphthous", "fa": "آفت دهان (احتمالی)", "en": "Mouth ulcer / aphthous (possible)", "prior": 0.03, "urgency": "routine",
+     "symptoms": {"mouth_ulcer": 1.0, "fever": 0.1},
+     "advice": ["دهان‌شویه‌ی ملایم و غذای غیرادکنه", "خمیر بی‌حسی بدون نسخه در صورت صلاحدید داروخانه", "بزرگ‌تر از ۱ سانتی‌متر یا بیش از ۲ هفته → پزشک"],
+     "advice_en": ["Mild mouthwash, avoid spicy food", "Over-the-counter numbing gel if the pharmacist agrees", "Bigger than 1 cm or beyond 2 weeks - see a doctor"],
+     "doctor_when": "زخم بزرگ/مقاوم، تب، یا درگیری مفاصل/چشم",
+     "doctor_when_en": "Large or persistent ulcer, fever, or joint/eye involvement"},
+    {"id": "allergic_conjunctivitis", "fa": "آلرژی چشمی (احتمالی)", "en": "Allergic conjunctivitis (possible)", "prior": 0.03, "urgency": "routine",
+     "symptoms": {"eye_redness": 0.9, "tear_eyes": 0.8, "skin_itch": 0.4, "sneezing": 0.4},
+     "advice": ["شست‌وشوی چشم با آب تمیز/قطره اشک مصنوعی", "پرهیز از مالش و مواجهه با محرک", "آنتی‌هیستامین در صورت صلاحدید داروخانه"],
+     "advice_en": ["Rinse eyes with clean water/artificial tears", "No rubbing; avoid the trigger", "Antihistamine if the pharmacist agrees"],
+     "doctor_when": "درد شدید چشم، تغییر دید، نورآزاری شدید یا ترشح چرکی",
+     "doctor_when_en": "Severe eye pain, vision change, strong light sensitivity, or pus"},
+    {"id": "bppv_vertigo", "fa": "سرگیجه‌ی خوش‌خیم/BPPV (احتمالی)", "en": "Benign vertigo / BPPV (possible)", "prior": 0.03, "urgency": "routine",
+     "symptoms": {"dizziness": 1.0, "nausea": 0.5, "vomiting": 0.3},
+     "advice": ["حرکات آرام سر؛ در حمله بنشین", "تغییر وضعیت ناگهانی سر را کم کن", "مانور تصحیحی فقط با فیزیوتراپیست/پزشک"],
+     "advice_en": ["Slow head movements; sit during an attack", "Avoid sudden head position changes", "Repositioning maneuvers only with a trained clinician"],
+     "doctor_when": "سرگیجه با ضعف/اختلال تکلم/دوبینی یا شنوایی → فوری",
+     "doctor_when_en": "Vertigo with weakness/slurred speech/double vision or hearing loss - urgent"},
+    {"id": "gallbladder_likely", "fa": "صفرا/کیسه‌ی صفرا (احتمالی)", "en": "Gallbladder problem (possible)", "prior": 0.02, "urgency": "urgent",
+     "symptoms": {"abdominal_pain": 0.8, "nausea": 0.5, "vomiting": 0.3, "fever": 0.2, "bloating": 0.4},
+     "advice": ["غذای کم‌چرب تا معاینه", "درد شدید بعد از غذای چرب + تهوع ← احتمال کولیک صفراوی؛ ارزیابی پزشک", "سونوگرافی در صورت تجویز"],
+     "advice_en": ["Low-fat food until examined", "Severe pain after fatty meals plus nausea points to biliary colic; see a doctor", "Ultrasound if ordered"],
+     "doctor_when": "درد شدید مستمر + تب/زردی → اورژانس",
+     "doctor_when_en": "Constant severe pain with fever/jaundice - emergency"},
 ]
 
 
@@ -452,6 +531,12 @@ def check_red_flags(text: str, detected: dict | None = None) -> dict[str, Any]:
     if "chest_pain" in s and any(k in t for k in ("عرق", "بازوی چپ", "دست چپ", "فک", "تهوع", "sweat", "left arm", "jaw", "nausea", "clammy")):
         reasons.append("علائم مطرح برای حمله‌ی قلبی" if is_fa() else "signs suggesting a heart attack")
         hits.append("heart_attack")
+    # خوشه‌ی مننژیت: سفتی گردن + تب یا سردرد
+    if detected:
+        pres = {s for s, i in detected.get("present", {}).items() if not i.get("denied")}
+        if "stiff_neck" in pres and ({"fever", "headache", "photophobia", "confusion"} & pres):
+            reasons.append("سفتی گردن با تب/سردرد — مطرح برای مننژیت" if is_fa() else "neck stiffness with fever/headache - possible meningitis")
+            hits.append("meningitis_cluster")
     # severity of key symptoms
     if detected:
         for sid, info in detected["present"].items():
