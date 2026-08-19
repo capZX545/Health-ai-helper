@@ -166,7 +166,7 @@ RED_FLAGS: list[dict[str, Any]] = [
     {"id": "severe_sob", "any": ["تنگی نفس شدید", "نفس نمی توانم", "نفس نفس", "سخت نفس",
                                  "cant breathe", "can not breathe", "cannot breathe", "struggling to breathe", "hard to breathe", "severe shortness of breath"],
      "en": "severe shortness of breath", "fa": "تنگی نفس"},
-    {"id": "severe_bleeding", "any": ["خونریزی شدید", "خونریزی زیاد", "خون نمی ایستد",
+    {"id": "severe_bleeding", "any": ["خونریزی شدید", "خونریزی زیاد", "خون نمی ایستد", "heavy bleeding",
                                       "severe bleeding", "bleeding heavily", "bleeding wont stop", "will not stop bleeding"],
      "en": "severe bleeding", "fa": "خونریزی شدید"},
     {"id": "unconscious", "any": ["بیهوش", "هوشیار نیست", "هوشیاری ندارد", "کما",
@@ -196,7 +196,7 @@ RED_FLAGS: list[dict[str, Any]] = [
 _NUM = r"(\d{1,3}(?:[.,]\d)?)"
 DURATION_RE = re.compile(_NUM + r"\s*(روز|هفته|شب|ماه|سال|ساعت|days?|weeks?|months?|years?|hours?)", re.IGNORECASE)
 TEMP_RE = re.compile(r"(?:تب|حرارت|fever|temperature|temp)\s*" + _NUM)
-FEVER_RE = re.compile(r"(?:تب|fever|temp)\s*(\d{2}(?:[.,]\d)?)")
+FEVER_RE = re.compile(r"(?:تب|fever|temp)\s*(\d{2,3}(?:[.,]\d)?)")
 
 # ============================================================================
 # 3) Internal knowledge base — p = rough P(symptom | condition) for Bayes.
@@ -515,8 +515,10 @@ def detect_symptoms(text: str) -> dict[str, Any]:
                 entry["severity"] = "mild"
             break
     t = " ".join(clauses)
+    # ارقام و ممیز حفظ شوند: normalize نقطه‌ی اعشار را حذف می‌کند («39.5» → «39 5»)
+    t_digits = (text or "").translate(str.maketrans("۰۱۲۳۴۵۶۷۸۹٫", "0123456789.")).lower()
     duration_days = None
-    for m in DURATION_RE.finditer(t):
+    for m in DURATION_RE.finditer(t_digits):
         num = float(m.group(1).replace(",", "."))
         unit = m.group(2).lower()
         mult = {"روز": 1, "شب": 1, "هفته": 7, "ماه": 30, "سال": 365, "ساعت": 1 / 24,
@@ -525,7 +527,7 @@ def detect_symptoms(text: str) -> dict[str, Any]:
         duration_days = round(num * mult, 1)
         break
     temp_c = None
-    for m in FEVER_RE.finditer(t):
+    for m in FEVER_RE.finditer(t_digits):
         v = float(m.group(1).replace(",", "."))
         if 34 <= v <= 45:
             temp_c = v
@@ -538,6 +540,8 @@ def check_red_flags(text: str, detected: dict | None = None) -> dict[str, Any]:
     """Screen for the red flag list before anything else."""
     from i18n import is_fa
     t = normalize(text)
+    if detected is None:
+        detected = detect_symptoms(text)
     reasons: list[str] = []
     hits: list[str] = []
     for rf in RED_FLAGS:

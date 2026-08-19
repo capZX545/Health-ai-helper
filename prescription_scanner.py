@@ -154,12 +154,14 @@ def scan(text: str) -> dict[str, Any]:
     # داروها
     drug_hits: list[dict] = []
     from drug_interaction import allergy_alert, check_interaction, search_drug
-    for word in re.split(r"[،,\n؛;]+", t):
-        w = word.strip()
-        if not w:
-            continue
+    chunks = [c.strip() for c in re.split(r"[،,\n؛;]+", t) if c.strip()]
+    # واژه‌های الفبایی هم جداگانی بررسی می‌شوند تا «Amoxicillin 500mg BID» پیدا شود
+    tokens = re.findall(r"[A-Za-zآ-ی][A-Za-zآ-ی\-]+", t)
+    seen_ids: set = set()
+    for w in chunks + tokens:
         d = search_drug(w)
-        if d and d[0]["score"] >= 100:
+        if d and d[0]["score"] >= 100 and d[0]["id"] not in seen_ids:
+            seen_ids.add(d[0]["id"])
             drug_hits.append(d[0])
     # هشدار حساسیت پروفایل
     alerts: list[str] = []

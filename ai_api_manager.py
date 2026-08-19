@@ -30,7 +30,20 @@ DEFAULT_SETTINGS: dict[str, Any] = {
 }
 
 
+_settings_cache: dict[str, Any] = {"mtime": None, "gen": -1, "data": None}
+_SETTINGS_GEN = 0
+
+
 def get_settings() -> dict[str, Any]:
+    global _settings_cache
+    global _SETTINGS_GEN
+    try:
+        mt = os.path.getmtime(SETTINGS_PATH)
+    except OSError:
+        mt = None
+    if (_settings_cache["mtime"] == mt and _settings_cache["gen"] == _SETTINGS_GEN
+            and _settings_cache["data"] is not None):
+        return dict(_settings_cache["data"])
     s = dict(DEFAULT_SETTINGS)
     stored = read_json(SETTINGS_PATH, default=None)
     if isinstance(stored, dict):
@@ -38,12 +51,15 @@ def get_settings() -> dict[str, Any]:
     # reasoning از .env هم خوانده می‌شود (پیش‌فرض خاموش)
     if env_get("OPENROUTER_REASONING_ENABLED", "0") in ("1", "true", "True"):
         s["reasoning_enabled"] = True
-    return s
+    _settings_cache = {"mtime": mt, "gen": _SETTINGS_GEN, "data": s}
+    return dict(s)
 
 
 def save_settings(updates: dict[str, Any]) -> dict[str, Any]:
     s = get_settings()
     clean = {k: v for k, v in updates.items() if k in DEFAULT_SETTINGS}
+    global _SETTINGS_GEN
+    _SETTINGS_GEN += 1
     s.update(clean)
     write_json(SETTINGS_PATH, s)
     if "reasoning_enabled" in clean:

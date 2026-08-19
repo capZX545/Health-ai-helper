@@ -16,11 +16,16 @@ import requests
 
 from common_2077 import DATA_DIR, env_get, read_json, write_json
 
-ENDPOINTS = {
-    "openrouter": "https://openrouter.ai/api/v1/chat/completions",
-    "openai": "https://api.openai.com/v1/chat/completions",
-    "deepseek": "https://api.deepseek.com/chat/completions",
-}
+from common_2077 import env_get
+
+
+def _endpoints() -> dict[str, str]:
+    """آدرس‌های پیش‌فرض؛ با متغیر محیطی/‎.env قابل بازنویسی‌اند (برای تست محلی)."""
+    return {
+        "openrouter": env_get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").rstrip("/") + "/chat/completions",
+        "openai": env_get("OPENAI_BASE_URL", "https://api.openai.com/v1").rstrip("/") + "/chat/completions",
+        "deepseek": env_get("DEEPSEEK_BASE_URL", "https://api.deepseek.com").rstrip("/") + "/chat/completions",
+    }
 
 REASONING_STATE_PATH = os.path.join(DATA_DIR, ".reasoning_state.json")
 _reasoning_lock = threading.RLock()
@@ -96,7 +101,7 @@ def chat(provider: str, messages: list[dict], model: str | None = None,
     if not key:
         from i18n import tt
         return {"ok": False, "error": "missing_key", "error_fa": tt(f"No API key configured for {provider}.", f"کلید API برای {provider} تنظیم نشده است.")}
-    url = ENDPOINTS.get(provider)
+    url = _endpoints().get(provider)
     if not url:
         from i18n import tt
         return {"ok": False, "error": "unknown_provider", "error_fa": tt("Unknown provider.", "سرویس ناشناخته است.")}
