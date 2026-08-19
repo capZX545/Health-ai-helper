@@ -283,7 +283,7 @@ class App:
         return out
 
     def _result_box(self, w):
-        t = scrolledtext.ScrolledText(w, bg="#070d18", fg=C["tx", ], font=pick_font(11), height=14,
+        t = scrolledtext.ScrolledText(w, bg="#070d18", fg=C["tx"], font=pick_font(11), height=14,
                                       relief="flat", wrap="word")
         t.pack(fill="both", expand=True, padx=16, pady=10)
         return t
@@ -512,7 +512,7 @@ class App:
         w = self._win("سلامت روان — PHQ-9 / GAD-7")
         var_type = tk.StringVar(value="phq9")
         box = self._result_box(w)
-        qs = {"phq9": [q[0] for q in PHQ9], "gad7": [q[0] for q in GAD7]}
+        qs = {"phq9": [q["fa"] if __import__("i18n").is_fa() else q["en"] for q in PHQ9], "gad7": [q["fa"] if __import__("i18n").is_fa() else q["en"] for q in GAD7]}
         frame = tk.Frame(w, bg=C["panel2"])
 
         def render():
@@ -632,11 +632,12 @@ class App:
                       fg=C["tx"], relief="flat", font=pick_font(10)).pack(side="right", padx=3, pady=4)
 
         def show(key):
-            t = TOPICS[key]
-            lines = [t["title"], "="* 34, *t["steps"], ""]
-            lines += [""+ x for x in t.get("warnings", [])]
-            lines.append(t.get("doctor_when", ""))
-            lines.append(f"\nعمق فشار: {timing['depth_cm']} | نسبت {timing['ratio']}")
+            from first_aid import get_topic
+            tp = get_topic(key) or {}
+            lines = [tp.get("title", key), "="* 34, *(tp.get("steps") or []), ""]
+            lines += list(tp.get("warnings") or [])
+            lines.append(tp.get("disclaimer", ""))
+            lines.append(f"\n{tp.get('emergency_line', '')} | عمق {timing['depth_cm']} | نسبت {timing['ratio']}")
             box.delete("1.0", "end")
             box.insert("1.0", "\n".join(lines))
         show("cpr")
@@ -729,7 +730,7 @@ class App:
         for provider, title in (("openrouter", "کلید OpenRouter (پیشنهادی — رایگان)"),
                                 ("openai", "کلید OpenAI"), ("deepseek", "کلید DeepSeek")):
             tk.Label(w, text=title, bg=C["panel2"], fg=C["dim"], font=pick_font(10), anchor="e").pack(fill="x", padx=16, pady=(8, 0))
-            e = tk.Entry(w, bg="#0a1424", fg=C["tx", ], relief="flat", font=pick_font(11),
+            e = tk.Entry(w, bg="#0a1424", fg=C["tx"], relief="flat", font=pick_font(11),
                          justify="right", show="•", insertbackground=C["cy"])
             e.pack(fill="x", padx=16, ipady=4, side="top")
             keys[provider] = e
@@ -740,7 +741,7 @@ class App:
         cb.set(s.get("openrouter_model", "openai/gpt-oss-120b:free"))
         cb.pack(fill="x", padx=16, ipady=4)
         tk.Label(w, text="یا نوشتن دستی model id", bg=C["panel2"], fg=C["dim"], font=pick_font(9)).pack(anchor="e", padx=16)
-        manual = tk.Entry(w, bg="#0a1424", fg=C["tx", ], relief="flat", font=pick_font(11), justify="right", insertbackground=C["cy"])
+        manual = tk.Entry(w, bg="#0a1424", fg=C["tx"], relief="flat", font=pick_font(11), justify="right", insertbackground=C["cy"])
         manual.insert(0, s.get("openrouter_model", ""))
         manual.pack(fill="x", padx=16, ipady=4)
         var_reason = tk.BooleanVar(value=bool(s.get("reasoning_enabled")))

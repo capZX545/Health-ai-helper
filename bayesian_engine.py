@@ -12,6 +12,19 @@ from medical_engine import DISEASES, sym_name
 
 SMOOTH = 1e-6
 _RARE: set = set()  # lazy — در اولین rank پر می‌شود
+_RARE_COUNTS: dict = {}
+
+
+def _rare_counts() -> dict:
+    global _RARE_COUNTS
+    if not _RARE_COUNTS:
+        counts: dict[str, int] = {}
+        for dis in DISEASES:
+            for sid, p in dis["symptoms"].items():
+                if p >= 0.7:
+                    counts[sid] = counts.get(sid, 0) + 1
+        _RARE_COUNTS = counts
+    return _RARE_COUNTS
 
 
 def _age_sex_factor(d: dict, profile: dict) -> float:
@@ -37,6 +50,7 @@ def _age_sex_factor(d: dict, profile: dict) -> float:
 
 
 def score_disease(d: dict, detected: dict, profile: dict) -> float:
+    rare_counts = _rare_counts()
     present = {s: info for s, info in detected.get("present", {}).items() if not info.get("denied")}
     denied = {s: info for s, info in detected.get("present", {}).items() if info.get("denied")}
     logp = math.log(max(d["prior"] * _age_sex_factor(d, profile), SMOOTH))
@@ -46,7 +60,9 @@ def score_disease(d: dict, detected: dict, profile: dict) -> float:
             boost = 1.25 if present[sid]["severity"] == "severe" else 1.0
             logp += math.log(min(p * boost, 0.98))
             # علامتِ کمیابِ پراحتمال (شبیه pathognomonic) بر علامت عمومی مثل تب غلبه می‌کند
-            if p >= 0.8 and sid in rare:
+            if p >= 0.9 and rare_counts.get(sid, 9) == 1:
+                logp += math.log(3.5)
+            elif p >= 0.8 and sid in rare:
                 logp += math.log(2.0)
         elif sid in denied:
             logp += math.log(max(1.0 - p, SMOOTH))
@@ -57,9 +73,13 @@ def score_disease(d: dict, detected: dict, profile: dict) -> float:
     for sid in present:
         if sid not in d["symptoms"]:
             logp += math.log(0.7)
-    # جریمه‌ی بیماری‌هایی که علائم کلیدی‌شان ذکر نشده
+    # مدت بیماری: سرماخوردگی/آنفلوآنزا ۳ هفته طول نمی‌کشد؛ سل/COPD ماه‌ها است
     dur = detected.get("duration_days")
     if dur is not None:
+        if dur >= 21 and d["id"] in ("common_cold", "influenza", "gastroenteritis"):
+            logp -= 2.0
+        if dur >= 21 and d["id"] in ("tuberculosis", "copd", "osteoarthritis", "cataract", "psoriasis", "acne"):
+            logp += 0.7
         if dur <= 3 and d["id"] in ("sinusitis", "pneumonia"):
             logp -= 0.3
         if dur >= 14 and d["id"] in ("common_cold", "influenza"):
