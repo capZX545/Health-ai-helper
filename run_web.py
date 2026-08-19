@@ -280,11 +280,27 @@ class Handler(BaseHTTPRequestHandler):
                     rag = [h.get("title") for h in search(text, k=3) if h.get("title")]
                 except Exception:
                     pass
+                # سطح تریاژ بر اساس فوریت برترین کاندیدها
+                urgencies = [c.get("urgency") for c in a["candidates"][:3]]
+                from i18n import is_fa
+                if "emergency" in urgencies:
+                    level = "emergency"
+                elif "urgent" in urgencies:
+                    level = "urgent"
+                else:
+                    level = "routine"
+                where = {
+                    "emergency": ("Go to the emergency department NOW or call 115/112." , "همین حالا به اورژانس برو یا با ۱۱۵/۱۱۲ تماس بگیر."),
+                    "urgent": ("See a clinician today or at the first opportunity.", "امروز یا در اولین فرصت به پزشک مراجعه کن."),
+                    "routine": ("A routine visit is enough; monitor your symptoms.", "مراجعه‌ی سرپایی کافی است؛ علائم را زیر نظر بگیر."),
+                }[level]
+                triage = {"level": level, "where": where[1] if is_fa() else where[0]}
                 return self._json({"ok": True, "red_flag": False,
                                    "symptoms": a["symptoms"], "denied": a["denied"],
                                    "duration_days": a["detected"].get("duration_days"),
                                    "temp_c": a["detected"].get("temp_c"),
-                                   "candidates": a["candidates"], "ml": ml, "rag": rag})
+                                   "candidates": a["candidates"], "ml": ml, "rag": rag,
+                                   "triage": triage})
             if path == "/api/learning/reset":
                 from auto_learning import reset
                 return self._json({"ok": reset()})

@@ -46,6 +46,16 @@ TYPES: dict[str, dict[str, Any]] = {
         "fa": "عکس چشم",
         "hint_label": {"en": "Eye", "fa": "چشم"},
     },
+    "dental_photo": {
+        "en": "dental / oral photo",
+        "fa": "عکس دندان / داخل دهان",
+        "hint_label": {"en": "Dental / oral", "fa": "دندان / دهان"},
+    },
+    "device_screen": {
+        "en": "medical device screen (BP/glucose/thermometer)",
+        "fa": "صفحه‌نمایش دستگاه پزشکی (فشارسنج/قندسنج/دماسنج)",
+        "hint_label": {"en": "Device screen", "fa": "نمایشگر دستگاه"},
+    },
     "other_photo": {
         "en": "general photo",
         "fa": "عکس عمومی",
@@ -62,6 +72,8 @@ HINT_ALIASES = {
     "lab": "document_report", "report": "document_report", "document": "document_report",
     "prescription": "document_report",
     "eye": "eye_photo",
+    "dental": "dental_photo", "teeth": "dental_photo", "oral": "dental_photo", "mouth": "dental_photo",
+    "device": "device_screen", "monitor": "device_screen", "bp": "device_screen", "glucometer": "device_screen",
     "other": "other_photo",
 }
 

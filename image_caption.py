@@ -81,6 +81,18 @@ Name any written medications but stress they are taken only as prescribed.""",
 Ask about pain, light sensitivity, vision change, and contact lens use.
 Red flags: severe vision loss, severe pain, suspected corneal ulcer, acute cataract - urgent referral. Lens or drop advice only from a clinician.""",
     },
+    "dental_photo": {
+        "fa": """تصویر دندان/داخل دهان است. توصیف عینی: تورم لثه، قرمزی، خونریزی، پوسیدگی قابل‌دید، جرم، زخب دهانی، لقی دندان.
+علائم هشدار را ذکر کن: تورم صورت، تب، درد شدید یک‌طرفه (انتشار عفونت) → فوری. توصیه‌ی دارو/آنتی‌بیوتیک فقط با پزشک/دندانپزشک.""",
+        "en": """This is a dental/oral photo. Describe objectively: gum swelling, redness, bleeding, visible decay, tartar, oral ulcer, loose teeth.
+List red flags: facial swelling, fever, severe one-sided pain (spreading infection) - urgent. Any medication/antibiotic only via a dentist or doctor.""",
+    },
+    "device_screen": {
+        "fa": """تصویر نمایشگر یک دستگاه پزشکی است (فشارسنج/قندسنج/دماسنج و…). اگر اعداد خواناست، آن‌ها را با واحدشان بازگو کن و با محدوده‌های مرجع عمومی مقایسه کن (با تأکید که ملاک بازه‌ی راهنمای دستگاه است).
+اگر عدد خوانا نیست صادقانه بگو. برای فشار ≥۱۸۰/۱۲۰ یا قند خیلی بالا/پایین → مسیر اورژانس را بگو. هیچ تشخیصی از یک عدد نمی‌گذاری.""",
+        "en": """This is a photo of a medical device screen (BP monitor, glucometer, thermometer...). If the numbers are legible, read them back with units and compare against general reference ranges (stressing that the device's own guide is what counts).
+If not legible, say so honestly. For BP at or above 180/120 or very high/low sugar - give the emergency path. Never diagnose from a single number.""",
+    },
     "other_photo": {
         "fa": """تصویر پزشکی عمومی است. فقط توصیف عینی قابل مشاهده بنویس و بگو چه چیزی قابل قضاوت نیست.
 احتمالات را محتاط مطرح کن و مسیر درست ارجاع را بگو.""",
@@ -268,6 +280,40 @@ The right path:
 - Simple redness without pain or vision change -> clinician within days
 - No self-prescribed drops or lenses.""",
     },
+    "dental_photo": {
+        "fa": """سوال‌های کلیدی:
+• درد دندان از کِی و با چه محرکی (گرم/سرد/جویدن)؟
+• تورم صورت، تب یا طعم بد دهان داری؟
+
+مسیر درست:
+• تورم صورت/تب/درد شدید → همان روز دندانپزشک/اورژانس (انتشار عفونت)
+• درد خفیف بدون تورم → نوبت دندانپزشکی + مسکن ساده در صورت نیاز
+• نخ دندان و مسواک منظم؛ گرمای موضعی روی تورم نگذار بدون نظر پزشک""",
+        "en": """Key questions:
+- Since when does the tooth hurt, and what triggers it (hot/cold/chewing)?
+- Any facial swelling, fever, or bad taste?
+
+The right path:
+- Facial swelling/fever/severe pain -> dentist or emergency the same day (spreading infection)
+- Mild pain without swelling -> dental appointment plus simple pain relief if needed
+- Regular brushing and flossing; no hot compress on swelling without advice""",
+    },
+    "device_screen": {
+        "fa": """اعداد نمایشگر را برایم تایپ کن تا با محدوده‌ی مرجع بررسی‌شان کنم:
+• فشارسنج: «فشار ۱۲۵ روی ۸۰، نبض ۷۲»
+• قندسنج: «قند ۱۴۵»
+• دماسنج: «تب ۳۸.۵»
+
+می‌توانم در ماژول «تحلیل آزمایش» و «علائم حیاتی» تفسیر عمومی بدهم.
+هشدار: فشار ≥۱۸۰/۱۲۰ یا قند بالای ۴۰۰/زیر ۵۰ یا تب ≥۴۰ → اورژانس (۱۱۵/۱۱۲).""",
+        "en": """Type the numbers from the display and I will check them against reference ranges:
+- BP monitor: "BP 125/80, pulse 72"
+- Glucometer: "sugar 145"
+- Thermometer: "temp 38.5"
+
+I can interpret them in the Lab analysis and Vitals modules.
+Warning: BP at or above 180/120, sugar above 400 or below 50, or fever 40+ -> emergency (115/112).""",
+    },
     "other_photo": {
         "fa": """سوال‌های کلیدی:
 • این عکس مربوط به کدام ناحیه است و چه علامتی داری؟
@@ -283,7 +329,7 @@ Describe it and I can weigh possibilities better; with an OpenRouter key configu
 }
 
 
-def offline_analysis(type_info: dict, note: str) -> dict[str, Any]:
+def offline_analysis(type_info: dict, note: str, image_bytes: bytes | None = None) -> dict[str, Any]:
     from common_2077 import MEDICAL_DISCLAIMER
     fa = is_fa()
     tkey = type_info.get("type", "other_photo")
@@ -292,6 +338,22 @@ def offline_analysis(type_info: dict, note: str) -> dict[str, Any]:
     q = [head + _type_header(type_info, fa)]
     if type_info.get("quality"):
         q.append(("کیفیت عکس: " if fa else "Photo quality: ") + ("، ".join(type_info["quality"]) if fa else ", ".join(type_info["quality"])))
+    # تحلیل آفلاین موج نوار قلب: شمارش ضربان‌ها و نظم — بدون تفسیر بالینی
+    if tkey == "ecg_strip" and image_bytes:
+        try:
+            from ecg_analyzer import analyze_ecg
+            ecg = analyze_ecg(image_bytes)
+            note_txt = ecg.get("note_fa" if fa else "note_en", "")
+            if note_txt:
+                q.append(("بررسی آفلاین ریتم: " if fa else "Offline trace check: ") + note_txt)
+        except Exception:
+            pass
+    # معیار عینی پوست: شاخص قرمزی (توصیف، نه تشخیص)
+    if tkey in ("skin_photo", "wound_photo") and isinstance(type_info.get("features"), dict):
+        red = type_info["features"].get("redness")
+        if red is not None:
+            q.append(("شاخص قرمزی تصویر (توصیف عددی، نه تشخیص): " if fa else "Image redness index (numeric description, not a diagnosis): ")
+                     + (f"{red:.2f}"))
     q.append(body)
     # ارزیابی احتمالاتی از متنِ یادداشت (نه از خود تصویر — از عکس حدس بالینی نمی‌زنیم)
     if tkey in ("skin_photo", "wound_photo", "eye_photo", "other_photo") and note:
@@ -349,5 +411,4 @@ def analyze_image_bytes(image_bytes: bytes, note: str, engine=None, hint: str | 
             pass
         res["image_type"] = type_info
         return res
-    out = offline_analysis(type_info, note)
-    return out
+    return offline_analysis(type_info, note, image_bytes)

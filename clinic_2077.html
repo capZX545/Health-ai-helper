@@ -183,6 +183,7 @@ T.en = {
   assess_ml:"ML classifier signal (synthetic test dataset)", assess_rag:"Related knowledge in local memory",
   assess_none:"Not enough information - answer the assistant's question or add detail.",
   assess_urg:{"emergency":"URGENT - emergency care","urgent":"see a clinician soon","routine":"routine follow-up"},
+  assess_triage:"Triage suggestion",
   opts:["Never","Several days","Half the days","Nearly every day"],
   q9flag:"thoughts of self-harm",
   saved:"Saved.", testing:"Testing", conn_ok:"Connection works", status:"Status"
@@ -243,6 +244,7 @@ T.fa = {
   assess_ml:"سیگنال طبقه‌بند ML (دیتاست مصنوعی تستی)", assess_rag:"دانش مرتبط در حافظه‌ی محلی",
   assess_none:"اطلاعات کافی نیست — به سوال دستیار جواب بده یا توضیح بیشتر بده.",
   assess_urg:{"emergency":"فوری — اورژانس","urgent":"به‌زودی به پزشک","routine":"پیگیری سرپایی"},
+  assess_triage:"پیشنهاد تریاژ",
   opts:["هرگز","چند روز","نیمی از روزها","تقریباً هر روز"],
   q9flag:"افکار آسیب به خود",
   saved:"ذخیره شد.", testing:"در حال تست", conn_ok:"اتصال برقرار است", status:"وضعیت"
@@ -627,7 +629,7 @@ function uiImage(){
   '<label class="fl">'+(LANG==="fa"?"نوع تصویر (اختیاری — خودکار هم تشخیص داده می‌شود)":"Image type (optional - auto-detected too)")+'</label>'+
   '<select class="f" id="imghint">'+
   '<option value="">'+(LANG==="fa"?"تشخیص خودکار":"Auto-detect")+'</option>'+
-  [["skin","Skin / rash","پوست / جوش"],["wound","Wound / burn","زخم / سوختگی"],["xray","X-ray / CT / MRI","رادیوگرافی / سی‌تی / ام‌آرآی"],["ecg","ECG","نوار قلب"],["lab","Lab report / prescription","برگه‌ی آزمایش / نسخه"],["eye","Eye","چشم"],["other","Other","سایر"]]
+  [["skin","Skin / rash","پوست / جوش"],["wound","Wound / burn","زخم / سوختگی"],["xray","X-ray / CT / MRI","رادیوگرافی / سی‌تی / ام‌آرآی"],["ecg","ECG","نوار قلب"],["lab","Lab report / prescription","برگه‌ی آزمایش / نسخه"],["eye","Eye","چشم"],["dental","Dental / oral","دندان / دهان"],["device","Device screen","نمایشگر دستگاه"],["other","Other","سایر"]]
     .map(function(x){return '<option value="'+x[0]+'">'+(LANG==="fa"?x[2]:x[1])+'</option>'}).join("")+
   '</select>'+
   '<input type="file" class="f" id="imgf2" accept="image/*" onchange="pickImg(this)">'+
@@ -657,7 +659,12 @@ async function runAssess(){
   if(!r.ok){el.innerHTML='<p class="warn">'+esc(r.message_fa)+"</p>";return}
   if(r.red_flag){el.innerHTML='<div class="card" style="border-color:#7a1836">'+fmt(r.text)+"</div>";return}
   var U=t("assess_urg");
-  var h='<div class="card"><b>'+t("assess_symptoms")+':</b> '+((r.symptoms||[]).map(function(s){return '<span class="tag">'+esc(s)+"</span>"}).join("")||"—");
+  var h="";
+  if(r.triage){
+    var tc=r.triage.level==="emergency"?"#ff2a6d":(r.triage.level==="urgent"?"#ffb020":"#3bff9e");
+    h='<div class="card" style="border-color:'+tc+'"><b style="color:'+tc+'">'+t("assess_triage")+': '+esc(U[r.triage.level]||r.triage.level)+'</b><br><small>'+esc(r.triage.where)+"</small></div>";
+  }
+  h+='<div class="card"><b>'+t("assess_symptoms")+':</b> '+((r.symptoms||[]).map(function(s){return '<span class="tag">'+esc(s)+"</span>"}).join("")||"—");
   if((r.denied||[]).length)h+='<br><small style="color:var(--dim)">'+t("assess_denied")+": "+r.denied.map(esc).join("، ")+"</small>";
   if(r.duration_days)h+='<br><small>'+t("assess_dur")+": "+fa(r.duration_days)+"</small>";
   h+="</div>";
