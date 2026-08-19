@@ -13,13 +13,23 @@ _lock = threading.RLock()
 _override: str | None = None  # for tests / forced rendering
 
 
+_lang_cache: dict = {"stamp": None, "gen": -1, "value": "en"}
+
+
 def get_lang() -> str:
-    """Active language code: "en" (default) or "fa"."""
+    """Active language code: "en" (default) or "fa"; cached per settings file."""
     if _override in ("en", "fa"):
         return _override
     try:
+        import os
+        from ai_api_manager import SETTINGS_PATH, _SETTINGS_GEN
+        stamp = (os.path.getmtime(SETTINGS_PATH), _SETTINGS_GEN)
+        if _lang_cache["stamp"] == stamp:
+            return _lang_cache["value"]
         from ai_api_manager import get_settings
-        return "fa" if get_settings().get("language") == "fa" else "en"
+        value = "fa" if get_settings().get("language") == "fa" else "en"
+        _lang_cache.update({"stamp": stamp, "value": value})
+        return value
     except Exception:
         return "en"
 

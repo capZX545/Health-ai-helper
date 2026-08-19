@@ -187,10 +187,15 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/settings/keys":
                 from ai_api_manager import masked_keys, set_api_key
                 changed = []
+                from i18n import tt
                 for provider, field in (("openrouter", "openrouter_key"), ("openai", "openai_key"), ("deepseek", "deepseek_key")):
                     v = data.get(field)
                     if v is not None and str(v).strip():
-                        if set_api_key(provider, str(v).strip()):
+                        sv = str(v).strip()
+                        if len(sv) < 10 or any(ch.isspace() for ch in sv):
+                            return self._json({"ok": False, "changed": changed,
+                                               "message_fa": tt("That does not look like a valid API key.", "این مقدار شبیه کلید API معتبر نیست.")}, 400)
+                        if set_api_key(provider, sv):
                             changed.append(provider)
                 return self._json({"ok": True, "changed": changed, "masked": masked_keys(),
                                    "message_fa": "کلیدها ذخیره شد (فایل .env) — بدون نیاز به ری‌استارت." if changed else "کلید جدیدی وارد نشد."})

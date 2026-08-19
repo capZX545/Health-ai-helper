@@ -46,27 +46,30 @@ def bp_category(systolic: int | float, diastolic: int | float) -> dict[str, Any]
         s, d = int(systolic), int(diastolic)
     except (TypeError, ValueError):
         return {"ok": False, "message_fa": "اعداد فشار خون معتبر نیستند." if fa else "Invalid blood pressure numbers."}
-    fa_txt, en_txt = ("بحران فشار خون — اورژانسی", "خطر آسیب ارگان؛ فوراً اورژانس ۱۱۵/۱۱۲"), \
-                     ("hypertensive crisis - emergency", "risk of organ damage; call emergency services 115/112 now")
-    if s >= 180 or d >= 120:
-        cat, act = fa_txt if fa else en_txt
-        color = "red"
-    elif s >= 140 or d >= 90:
-        cat, color, act = ("فشار خون بالا (مرحله ۲)", "در اسرع وقت با پزشک مشورت کن؛ اندازه‌گیری را تکرار کن.") if fa else \
-                          ("high blood pressure (stage 2)", "See a doctor promptly; repeat the measurement."), "red"
-    elif s >= 130 or d >= 80:
-        cat, color, act = ("فشار خون بالا (مرحله ۱)", "با پزشک مشورت کن؛ نمک و استرس را کم کن.") if fa else \
-                          ("high blood pressure (stage 1)", "Talk to a doctor; cut salt and stress."), "orange"
-    elif s >= 120:
-        cat, color, act = ("فشار بالاتر از حد نرمال", "سبک زندگی سالم و پایش دوره‌ای توصیه می‌شود.") if fa else \
-                          ("elevated blood pressure", "Healthy lifestyle and periodic monitoring advised."), "yellow"
-    elif s < 90 or d < 60:
-        cat, color, act = ("فشار پایین‌تر از حد معمول", "اگر با سرگیجه/ضعف همراه است با پزشک مشورت کن.") if fa else \
-                          ("lower than usual blood pressure", "If it comes with dizziness/weakness, consult a doctor."), "yellow"
-    else:
-        cat, color, act = ("محدوده‌ی طبیعی", "وضعیت خوب است؛ پایش سالانه کافی است.") if fa else \
-                          ("normal range", "All good; yearly checks are enough."), "green"
-    return {"ok": True, "systolic": s, "diastolic": d, "category_fa": cat, "level": color, "action_fa": act}
+    rows = [
+        (s >= 180 or d >= 120, "red",
+         ("بحران فشار خون — اورژانسی", "خطر آسیب ارگان؛ فوراً اورژانس ۱۱۵/۱۱۲"),
+         ("hypertensive crisis - emergency", "risk of organ damage; call emergency services 115/112 now")),
+        (s >= 140 or d >= 90, "red",
+         ("فشار خون بالا (مرحله ۲)", "در اسرع وقت با پزشک مشورت کن؛ اندازه‌گیری را تکرار کن."),
+         ("high blood pressure (stage 2)", "See a doctor promptly; repeat the measurement.")),
+        (s >= 130 or d >= 80, "orange",
+         ("فشار خون بالا (مرحله ۱)", "با پزشک مشورت کن؛ نمک و استرس را کم کن."),
+         ("high blood pressure (stage 1)", "Talk to a doctor; cut salt and stress.")),
+        (s >= 120, "yellow",
+         ("فشار بالاتر از حد نرمال", "سبک زندگی سالم و پایش دوره‌ای توصیه می‌شود."),
+         ("elevated blood pressure", "Healthy lifestyle and periodic monitoring advised.")),
+        (s < 90 or d < 60, "yellow",
+         ("فشار پایین‌تر از حد معمول", "اگر با سرگیجه/ضعف همراه است با پزشک مشورت کن."),
+         ("lower than usual blood pressure", "If it comes with dizziness/weakness, consult a doctor.")),
+    ]
+    for cond, color, fa_pair, en_pair in rows:
+        if cond:
+            cat, act = fa_pair if fa else en_pair
+            return {"ok": True, "systolic": s, "diastolic": d, "category_fa": cat, "level": color, "action_fa": act}
+    cat, act = ("محدوده‌ی طبیعی", "وضعیت خوب است؛ پایش سالانه کافی است.") if fa else \
+               ("normal range", "All good; yearly checks are enough.")
+    return {"ok": True, "systolic": s, "diastolic": d, "category_fa": cat, "level": "green", "action_fa": act}
 
 
 def record(vitals: dict[str, Any]) -> dict[str, Any]:
