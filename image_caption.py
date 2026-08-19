@@ -388,8 +388,8 @@ def offline_analysis(type_info: dict, note: str, image_bytes: bytes | None = Non
                     if f.get("meaning_fa" if fa else "meaning_en"):
                         lines.append("   " + ("معنی ممکن: " if fa else "What it can mean: ") + (f["meaning_fa"] if fa else f["meaning_en"]))
                 if any(f.get("level") == "urgent" for f in les["findings"]):
-                    lines.append(("⚠️" if False else ("توجه: یکی از یافته‌ها فوریت بالاتری دارد — مسیر ارجاع بالا را جدی بگیر." if fa
-                                  else "Note: one of the findings carries higher urgency - take the referral path above seriously.")))
+                    lines.append(("توجه: یکی از یافته‌ها فوریت بالاتری دارد — مسیر ارجاع بالا را جدی بگیر." if fa
+                                  else "Note: one of the findings carries higher urgency - take the referral path above seriously."))
                 q.append("\n".join(lines))
         except Exception:
             pass
