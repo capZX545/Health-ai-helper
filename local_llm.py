@@ -9,7 +9,10 @@ from __future__ import annotations
 import os
 from typing import Any
 
-import requests
+try:
+    import requests
+except ImportError:
+    requests = None
 
 from common_2077 import DATA_DIR, read_json, write_json
 
@@ -40,6 +43,8 @@ def save_config(updates: dict[str, Any]) -> dict[str, Any]:
 
 
 def is_up(base_url: str | None = None, timeout: int = 4) -> bool:
+    if requests is None:
+        return False
     cfg = get_config()
     url = (base_url or cfg["base_url"]).rstrip("/")
     try:
@@ -50,6 +55,8 @@ def is_up(base_url: str | None = None, timeout: int = 4) -> bool:
 
 
 def list_models(base_url: str | None = None) -> list[str]:
+    if requests is None:
+        return []
     cfg = get_config()
     url = (base_url or cfg["base_url"]).rstrip("/")
     try:
@@ -63,6 +70,11 @@ def list_models(base_url: str | None = None) -> list[str]:
 def chat(messages: list[dict], model: str | None = None, **kw) -> dict[str, Any]:
     """گفتگو با مدل محلی. خروجی هم‌شکل ai_client.chat"""
     cfg = get_config()
+    if requests is None:
+        from i18n import tt
+        return {"ok": False, "error": "no_requests",
+                "error_fa": tt("The 'requests' library is not installed - run: pip install requests",
+                               "کتابخانه‌ی requests نصب نیست — این را اجرا کن: pip install requests")}
     if not cfg.get("enabled"):
         return {"ok": False, "error": "disabled", "error_fa": "هوش مصنوعی محلی در تنظیمات فعال نیست."}
     url = cfg["base_url"].rstrip("/")

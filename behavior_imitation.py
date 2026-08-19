@@ -76,6 +76,19 @@ def _split_sections(text: str) -> list[dict[str, str]]:
     return [s for s in secs if s["body"] or s["header"]]
 
 
+_BAD_OPENER_MARKS = ("offline", "تحلیل تصویر", "offline image", "emergency", "هشدار اورژانسی", "image type", "نوع تصویر")
+
+
+def _valid_opener(s: str) -> bool:
+    s = (s or "").strip()
+    if not (15 <= len(s) <= 160):
+        return False
+    if "\n" in s:
+        return False
+    low = s.lower()
+    return not any(m in low for m in _BAD_OPENER_MARKS)
+
+
 def update_profile(ai_text: str) -> dict[str, Any]:
     """استخراج سبک از پاسخ AI خارجی و ادغام در پروفایل (میانگین متحرک)."""
     prof = load_profile()
@@ -110,10 +123,12 @@ def update_profile(ai_text: str) -> dict[str, Any]:
     prof["samples"] = n
     prof["avg_len_chars"] = int(statistics.mean([prof.get("avg_len_chars", 900), len(ai_text)]) if n > 1 else len(ai_text))
     prof["avg_questions"] = round(statistics.mean([prof.get("avg_questions", 2), sum(1 for l in ai_text.splitlines() if is_question(l))]), 1) if n > 1 else sum(1 for l in ai_text.splitlines() if is_question(l))
-    if openers:
-        prof["openers"] = list(dict.fromkeys(openers + prof.get("openers", [])))[:8]
-    if closers:
-        prof["closers"] = list(dict.fromkeys(closers + prof.get("closers", [])))[:8]
+    prof["openers"] = [o for o in prof.get("openers", []) if _valid_opener(o)]
+    if openers and _valid_opener(openers[0]):
+        prof["openers"] = list(dict.fromkeys(openers + prof["openers"]))[:8]
+    prof["closers"] = [c for c in prof.get("closers", []) if _valid_opener(c)]
+    if closers and _valid_opener(closers[0]):
+        prof["closers"] = list(dict.fromkeys(closers + prof["closers"]))[:8]
     if empathy:
         prof["empathy_words"] = list(dict.fromkeys(empathy + prof.get("empathy_words", [])))[:12]
     if any(s["key"] in ("findings", "probables", "advice", "followup") for s in learned_sections):
@@ -131,6 +146,17 @@ def load_profile() -> dict[str, Any]:
         return copy.deepcopy(DEFAULT_STYLE)
     merged = dict(DEFAULT_STYLE)
     merged.update(data)
+    # پاک‌سازی هنگام خواندن: فایل‌های مسمومِ قدیمی خودشان شفا یابند
+    merged["openers"] = [o for o in merged.get("openers", []) if _valid_opener(o)]
+    merged["closers"] = [c for c in merged.get("closers", []) if _valid_opener(c)]
+    merged["sections"] = [s for s in merged.get("sections", [])
+                          if isinstance(s, dict) and s.get("key") and s.get("header") and _valid_opener(s["header"])]
+    if not merged["openers"]:
+        merged["openers"] = list(DEFAULT_STYLE["openers"])
+    if not merged["closers"]:
+        merged["closers"] = list(DEFAULT_STYLE["closers"])
+    if not merged["sections"]:
+        merged["sections"] = [dict(s) for s in DEFAULT_STYLE["sections"]]
     return merged
 
 
