@@ -8,7 +8,7 @@ from __future__ import annotations
 import math
 from typing import Any
 
-from medical_engine import DISEASES, SYMPTOM_NAMES_FA
+from medical_engine import DISEASES, sym_name
 
 SMOOTH = 1e-6
 
@@ -72,14 +72,15 @@ def rank_diseases(detected: dict, profile: dict, top_n: int = 5) -> list[dict[st
     mx = top[0][0]
     exps = [math.exp(s - mx) for s, _, _ in top]
     total = sum(exps)
+    from i18n import is_fa
     out = []
     for (s, d, overlap), e in zip(top, exps):
         pct = e / total * 100.0
         out.append({
-            "id": d["id"], "fa": d["fa"], "en": d["en"],
+            "id": d["id"], "fa": d["fa"], "en": d["en"], "name": d["fa"] if is_fa() else d["en"],
             "urgency": d["urgency"], "percent": round(pct, 1),
-            "matched_symptoms_fa": [SYMPTOM_NAMES_FA.get(x, x) for x in overlap],
-            "advice": list(d.get("advice", [])),
-            "doctor_when": d.get("doctor_when", ""),
+            "matched_symptoms": [sym_name(x) for x in overlap],
+            "advice": list(d.get("advice" if is_fa() else "advice_en", d.get("advice", []))),
+            "doctor_when": d.get("doctor_when" if is_fa() else "doctor_when_en", d.get("doctor_when", "")),
         })
     return out

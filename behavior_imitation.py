@@ -11,6 +11,7 @@ import statistics
 from typing import Any
 
 from common_2077 import DATA_DIR, is_question, normalize, read_json, write_json
+from i18n import pick
 
 PROFILE_PATH = os.path.join(DATA_DIR, "ai_behavior_profile.json")
 
@@ -19,10 +20,10 @@ DEFAULT_STYLE: dict[str, Any] = {
     "avg_len_chars": 900,
     "sections": [
         {"key": "empathy", "header": ""},
-        {"key": "findings", "header": "چیزی که از علائمت متوجه شدم"},
-        {"key": "probables", "header": "چند احتمال مطرح است"},
-        {"key": "advice", "header": "کارهایی که فعلاً می‌توانی انجام بدهی"},
-        {"key": "followup", "header": "برای اینکه دقیق‌تر کمک کنم"},
+        {"key": "findings", "header": {"fa": "چیزی که از علائمت متوجه شدم", "en": "What I picked up from your symptoms"}},
+        {"key": "probables", "header": {"fa": "چند احتمال مطرح است", "en": "A few possibilities to consider"}},
+        {"key": "advice", "header": {"fa": "کارهایی که فعلاً می‌توانی انجام بدهی", "en": "Things you can do for now"}},
+        {"key": "followup", "header": {"fa": "برای اینکه دقیق‌تر کمک کنم", "en": "So I can help more precisely"}},
     ],
     "bullet": "•",
     "use_percent": True,
@@ -32,15 +33,15 @@ DEFAULT_STYLE: dict[str, Any] = {
     "avg_questions": 2,
 }
 
-# تشخیص نوع بخش از روی کلیدواژه‌های عنوان (بدون وابستگی به ایموجی)
+# تشخیص نوع بخش از روی کلیدواژه‌های عنوان فارسی و انگلیسی (بدون وابستگی به ایموجی)
 HEADER_HINTS: list[tuple[str, tuple[str, ...]]] = [
-    ("warning", ("هشدار", "خطر", "قرمز", "اورژانس")),
-    ("probables", ("احتمال", "تشخیص", "افتراقی")),
-    ("findings", ("علائم", "یافته", "چیزی که از", "مرور")),
-    ("followup", ("سوال", "پرسش", "برای اینکه دقیق")),
-    ("advice", ("توصیه", "مراقبت", "کارهایی که", "اقدام", "چه کاری", "درمان خانگی", "برنامه")),
-    ("doctor", ("پزشک", "مراجعه", "ارجاع")),
-    ("empathy", ("درک", "همدلی", "متوجه شدم", "خوش آمدی")),
+    ("warning", ("هشدار", "خطر", "قرمز", "اورژانس", "warning", "danger", "red flag", "emergency")),
+    ("probables", ("احتمال", "تشخیص", "افتراقی", "possib", "likehood", "likely", "differential", "could be")),
+    ("findings", ("علائم", "یافته", "چیزی که از", "مرور", "symptom", "noticed", "found", "what i")),
+    ("followup", ("سوال", "پرسش", "برای اینکه دقیق", "question", "ask", "to help", "wondering")),
+    ("advice", ("توصیه", "مراقبت", "کارهایی که", "اقدام", "چه کاری", "درمان خانگی", "برنامه", "advice", "you can do", "care", "tips", "try")),
+    ("doctor", ("پزشک", "مراجعه", "ارجاع", "doctor", "clinician", "see a", "refer")),
+    ("empathy", ("درک", "همدلی", "متوجه شدم", "خوش آمدی", "understand", "sorry", "hear you")),
 ]
 
 
@@ -138,11 +139,16 @@ def apply_style(sections: dict[str, list[str] | str], opener: str | None = None)
 
     sections کلیدهای مجاز: empathy, findings, probables, advice, followup, warning, doctor, note
     """
+    from i18n import tt
     prof = load_profile()
     order = [s for s in prof["sections"]] if prof.get("sections") else DEFAULT_STYLE["sections"]
     seen = set()
     blocks: list[str] = []
-    op = opener or (prof["openers"][0] if prof.get("openers") else DEFAULT_STYLE["openers"][0])
+    if prof.get("samples") and prof.get("openers"):
+        op = opener or prof["openers"][0]
+    else:
+        op = opener or tt("I hear you. Let's work through this step by step.",
+                          "درکت می‌کنم؛ بذار مرحله‌به‌مرحله بررسی کنیم.")
     parts_out: list[str] = []
     # جلوگیری از تکرار: اگر بخش empathy همان جمله‌ی شروع باشد، فقط یک‌بار بیاید
     emp = sections.get("empathy")
@@ -164,8 +170,9 @@ def apply_style(sections: dict[str, list[str] | str], opener: str | None = None)
         else:
             b = prof.get("bullet", "•")
             body = "\n".join(f"{b} {str(line)}" for line in content)
-        if header:
-            blocks.append(f"{header}:\n{body}".strip())
+        header_text = pick(header) if isinstance(header, (dict, tuple, list)) else header
+        if header_text:
+            blocks.append(f"{header_text}:\n{body}".strip())
         else:
             blocks.append(body.strip())
     for k in sections:  # کلیدهای خارج از قالب آموخته‌شده
@@ -173,7 +180,11 @@ def apply_style(sections: dict[str, list[str] | str], opener: str | None = None)
             content = sections[k]
             body = content if isinstance(content, str) else "\n".join(f"• {c}" for c in content)
             blocks.append(body.strip())
-    closer = prof["closers"][0] if prof.get("closers") else DEFAULT_STYLE["closers"][0]
+    if prof.get("samples") and prof.get("closers"):
+        closer = prof["closers"][0]
+    else:
+        closer = tt("If anything gets worse, do see a doctor.",
+                    "اگر علائم بدتر شد، حتماً به پزشک مراجعه کن.")
     parts_out.append(op)
     parts_out.extend(blocks)
     if closer:

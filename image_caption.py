@@ -26,14 +26,24 @@ def prepare_image(image_bytes: bytes, max_side: int = 1024, quality: int = 82) -
 
 
 def _vision_prompt(note: str) -> str:
-    return f"""این تصویر پزشکی توسط کاربر ارسال شده همراه توضیح: «{note or 'توضیحی داده نشده'}»
+    from i18n import is_fa
+    if is_fa():
+        return f"""این تصویر پزشکی توسط کاربر ارسال شده همراه توضیح: «{note or 'توضیحی داده نشده'}»
 به‌عنوان دستیار پزشکی فارسی:
 1. فقط توصیفِ عینیِ قابل مشاهده بنویس (شکل، رنگ، پراکندگی، اندازه تقریبی) — بدون ادعای قطعی.
-2. چند «احتمال مطرح» را با لحن احتمالی و محتاط بنویس (بدون قطعیت).
+2. چند «احتمال مطرح» را با لحن احتمالی و محتاط بنویس.
 3. مواردی که در تصویر قابل تشخیص نیست را صادقانه بگو.
 4. مراقبت عمومی امن + علائم هشدار برای مراجعه فوری.
-5. تأکید کن تشخیص نهایی با معاینه‌ی حضوری پزشک/پوست/متخصص است.
-قوانین: هیچ‌گاه تشخیص قطعی نده؛ اطلاعات جعلی نساز؛ فارسی همدلانه؛ بخش‌بندی با عنوان‌های کوتاه (علائم، احتمالات، مراقبت، سوال بعدی)."""
+5. تأکید کن تشخیص نهایی با معاینه‌ی حضوری پزشک است.
+قوانین: تشخیص قطعی ممنوع؛ اطلاعات جعلی ممنوع؛ فارسی همدلانه؛ بخش‌بندی با عنوان‌های کوتاه (علائم، احتمالات، مراقبت، سوال بعدی)."""
+    return f"""This medical image was sent by the user with this note: '{note or 'no note given'}'
+As the medical assistant:
+1. Describe only what is objectively visible (shape, color, distribution, approximate size) - no definitive claims.
+2. List a few "possibilities to consider" in cautious, probabilistic language.
+3. Say honestly what cannot be determined from the image alone.
+4. Safe general care plus red flags that mean urgent in-person care.
+5. Stress that the final diagnosis belongs to an in-person clinician.
+Rules: no definitive diagnosis; never fabricate information; warm clear English; short section titles (findings, possibilities, care, next question)."""
 
 
 def analyze_image_with_ai(image_b64: str, mime: str, note: str, engine=None) -> dict[str, Any]:
@@ -58,25 +68,52 @@ def analyze_image_with_ai(image_b64: str, mime: str, note: str, engine=None) -> 
     return {"ok": False, "error": "no_vision_ai", "error_fa": "مدل تصویری خارجی در دسترس نیست."}
 
 
-OFFLINE_IMAGE_RESPONSE = """تحلیل تصویر آفلاین (بدون AI خارجی)
+OFFLINE_IMAGE_RESPONSE_FA = """تحلیل تصویر آفلاین (بدون AI خارجی)
 
-از اینکه عکس را فرستادی ممنونم؛ ولی بدون مدل تصویری فعال، من **حدس تصویری قطعی نمی‌زنم** — ایمنی‌ات مهم‌تر از جواب سریع است.
+از اینکه عکس را فرستادی ممنونم؛ ولی بدون مدل تصویری فعال، من حدس تصویری قطعی نمی‌زنم — ایمنی‌ات مهم‌تر از جواب سریع است.
 
- سوال‌های کلیدی که جوابشان کمک می‌کند:
+سوال‌های کلیدی که جوابشان کمک می‌کند:
 • این ضایعه چند روز/هفته است؟
 • خارش، درد، ترشح یا خونریزی دارد؟
 • پس از چه چیزی شروع شد (دارو، غذا، نیش، تماس با ماده‌ی جدید)؟
 • تب یا علائم عمومی هم داری؟
 
- مسیر درست:
+مسیر درست:
 • ضایعه‌ی پوستی جدید با خارش/رشد → معاینه‌ی پزشک یا پوست‌شناس در چند روز آینده
 • همراه با تورم صورت/لب/زبان یا تنگی نفس → اورژانس فوری (۱۱۵ / ۱۱۲)
-• تب بالا با لک‌های پهن بنفش/قرمز که زیر فشار محو نمی‌شود → اورژانس فوری
+• تب بالا با لک‌های بنفش/قرمز که زیر فشار محو نمی‌شود → اورژانس فوری
 
- تا زمان معاینه: ناحیه را تمیز و خشک نگه دار، از خاراندن پرهیز کن، مرطوب‌کننده‌ی ساده بدون عطر.
+تا زمان معاینه: ناحیه را تمیز و خشک نگه دار، از خاراندن پرهیز کن، مرطوب‌کننده‌ی ساده بدون عطر.
 
- جواب سوال‌های بالا را بنویس تا مغز داخلی، احتمالات را دقیق‌تر کند؛ و اگر کلید OpenRouter را در تنظیمات وارد کنی، تحلیل تصویری واقعی هم فعال می‌شود.
- این برنامه جایگزین پزشک نیست."""
+جواب سوال‌های بالا را بنویس تا مغز داخلی، احتمالات را دقیق‌تر کند؛ و اگر کلید OpenRouter را در تنظیمات وارد کنی، تحلیل تصویری واقعی هم فعال می‌شود.
+
+این برنامه جایگزین پزشک نیست."""
+
+OFFLINE_IMAGE_RESPONSE_EN = """Offline image analysis (no external AI)
+
+Thank you for the photo. Without a vision model configured, I will not guess a diagnosis from an image - your safety matters more than a fast answer.
+
+Key questions that would help:
+- How many days/weeks has this been there?
+- Is it itchy, painful, discharging or bleeding?
+- What appeared right before it (medication, food, an insect bite, contact with something new)?
+- Any fever or general symptoms?
+
+The right path:
+- A new skin lesion that grows or itches -> see a clinician or dermatologist in the next few days
+- With swelling of face/lips/tongue or trouble breathing -> call emergency services now (115 / 112)
+- High fever with purple/red spots that do not fade under pressure -> emergency now
+
+Until it is examined: keep the area clean and dry, do not scratch, plain fragrance-free moisturizer is fine.
+
+Answer the questions above so the offline brain can weigh possibilities more precisely. If you add an OpenRouter key in settings, real image analysis turns on.
+
+This software does not replace a doctor."""
+
+
+def OFFLINE_IMAGE_RESPONSE() -> str:
+    from i18n import is_fa
+    return OFFLINE_IMAGE_RESPONSE_FA if is_fa() else OFFLINE_IMAGE_RESPONSE_EN
 
 
 def analyze_image_file(path: str, note: str, engine=None) -> dict[str, Any]:
@@ -109,4 +146,4 @@ def analyze_image_bytes(image_bytes: bytes, note: str, engine=None) -> dict[str,
         except Exception:
             pass
         return {"ok": True, "text": res["text"], "source": f"external:{res.get('provider')}", "red_flag": False}
-    return {"ok": True, "text": OFFLINE_IMAGE_RESPONSE, "source": "internal", "red_flag": False}
+    return {"ok": True, "text": OFFLINE_IMAGE_RESPONSE(), "source": "internal", "red_flag": False}

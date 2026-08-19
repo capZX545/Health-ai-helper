@@ -122,6 +122,10 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/mental/breathing":
                 from mental_health import breathing
                 return self._json({"ok": True, **breathing()})
+            if path == "/api/mental/questions":
+                from mental_health import questions as mh_questions
+                q = mh_questions()
+                return self._json({"ok": True, "phq9": q["phq9"], "gad7": q["gad7"], "answers": q["answers"]})
             if path == "/api/sleep/questions":
                 from sleep_analyzer import questions
                 return self._json({"ok": True, **questions()})
@@ -272,11 +276,11 @@ def main() -> int:
         port = find_free_port(2077, 2087, args.host) or 2078
     httpd = ThreadingHTTPServer((args.host, port), Handler)
     url = f"http://{'localhost' if args.host in ('127.0.0.1', '0.0.0.0') else args.host}:{port}"
-    print("="* 56)
-    print(f"{APP_NAME} v{APP_VERSION} — دستیار هوشمند پزشکی فارسی")
-    print(f"نسخه‌ی وب: {url}")
-    print("این نرم‌افزار جایگزین پزشک نیست. اورژانس: ایران ۱۱۵ / اروپا 112")
-    print("="* 56)
+    print("=" * 56)
+    print(f"{APP_NAME} v{APP_VERSION} - bilingual medical assistant (en/fa)")
+    print(f"Web UI: {url}")
+    print("Not a doctor replacement. Emergency: Iran 115 / Europe 112")
+    print("=" * 56)
     if not args.no_browser:
         threading.Timer(0.8, lambda: webbrowser.open(url)).start()
     try:

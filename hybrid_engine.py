@@ -178,13 +178,15 @@ class HybridEngine:
         sections = compose_offline_answer(analysis, self.dialogue.summary(), profile, ml, rag_hits, followup)
         # اگر مغز داخلی خاموش است فقط راهنمایی محدود بده
         if not get_settings().get("brain_enabled"):
-            text = ("مغز داخلی در تنظیمات خاموش است — فقط موارد الزامی:\n\n"
+            from i18n import tt
+            text = (tt("The internal brain is switched off in settings - essentials only:\n\n", "مغز داخلی در تنظیمات خاموش است — فقط موارد الزامی:\n\n")
                     + str(sections["warning"]) + "\n\n"+ str(sections["followup"])
-                    + "\n\n(یادگیری پس‌زمینه از پاسخ‌های AI خارجی همچنان فعال است.)")
+                    + "\n\n"+ tt("(Background learning from external AI replies stays active.)", "(یادگیری پس‌زمینه از پاسخ‌های AI خارجی همچنان فعال است.)"))
             return text, {"candidates": []}
         text = apply_style(sections)
-        if MEDICAL_DISCLAIMER not in text:
-            text += "\n\n"+ MEDICAL_DISCLAIMER
+        disc = MEDICAL_DISCLAIMER()
+        if disc not in text:
+            text += "\n\n"+ disc
         return text, {"candidates": analysis.get("candidates", [])}
 
     def _remember(self, role: str, content: str):

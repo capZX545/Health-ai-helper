@@ -94,10 +94,12 @@ def chat(provider: str, messages: list[dict], model: str | None = None,
     from ai_api_manager import get_api_key
     key = get_api_key(provider)
     if not key:
-        return {"ok": False, "error": "missing_key", "error_fa": f"کلید API برای {provider} تنظیم نشده است."}
+        from i18n import tt
+        return {"ok": False, "error": "missing_key", "error_fa": tt(f"No API key configured for {provider}.", f"کلید API برای {provider} تنظیم نشده است.")}
     url = ENDPOINTS.get(provider)
     if not url:
-        return {"ok": False, "error": "unknown_provider", "error_fa": "سرویس ناشناخته است."}
+        from i18n import tt
+        return {"ok": False, "error": "unknown_provider", "error_fa": tt("Unknown provider.", "سرویس ناشناخته است.")}
     mdl = _model_for(provider, model)
 
     # ساخت پیام آخر + تصویر (vision)
@@ -125,23 +127,29 @@ def chat(provider: str, messages: list[dict], model: str | None = None,
     try:
         resp = requests.post(url, headers=_headers(provider, key), json=payload, timeout=timeout)
     except requests.exceptions.Timeout:
-        return {"ok": False, "error": "timeout", "error_fa": "پاسخ سرویس بیش از حد انتظار طول کشید. دوباره تلاش کنید."}
+        from i18n import tt
+        return {"ok": False, "error": "timeout", "error_fa": tt("The service took too long to respond. Try again.", "پاسخ سرویس بیش از حد انتظار طول کشید. دوباره تلاش کنید.")}
     except requests.exceptions.ConnectionError:
-        return {"ok": False, "error": "no_internet", "error_fa": "اینترنت قطع است یا سرویس در دسترس نیست."}
+        from i18n import tt
+        return {"ok": False, "error": "no_internet", "error_fa": tt("No internet connection, or the service is unreachable.", "اینترنت قطع است یا سرویس در دسترس نیست.")}
     except Exception as e:
-        return {"ok": False, "error": str(e)[:150], "error_fa": "خطای نامشخص در اتصال."}
+        from i18n import tt
+        return {"ok": False, "error": str(e)[:150], "error_fa": tt("Unknown connection error.", "خطای نامشخص در اتصال.")}
 
     if resp.status_code != 200:
-        fa = {
-            401: "کلید API نامعتبر است.",
-            402: "اعتبار حساب کافی نیست.",
-            403: "دسترسی به این مدل مجاز نیست.",
-            404: "مدل پیدا نشد؛ شناسه‌ی مدل را بررسی کنید.",
-            429: "محدودیت درخواست (Rate limit)؛ کمی بعد دوباره تلاش کنید.",
-            500: "خطای سرور سرویس دهنده.",
-            502: "سرویس موقتاً در دسترس نیست.",
-            503: "سرویس موقتاً شلوغ است.",
-        }.get(resp.status_code, f"خطای HTTP {resp.status_code}")
+        from i18n import tt
+        codes = {
+            401: ("Invalid API key.", "کلید API نامعتبر است."),
+            402: ("Not enough credit on the account.", "اعتبار حساب کافی نیست."),
+            403: ("Access to this model is not allowed.", "دسترسی به این مدل مجاز نیست."),
+            404: ("Model not found; check the model id.", "مدل پیدا نشد؛ شناسه‌ی مدل را بررسی کنید."),
+            429: ("Rate limited; try again in a moment.", "محدودیت درخواست (Rate limit)؛ کمی بعد دوباره تلاش کنید."),
+            500: ("Server error on the provider side.", "خطای سرور سرویس دهنده."),
+            502: ("Service temporarily unavailable.", "سرویس موقتاً در دسترس نیست."),
+            503: ("Service temporarily overloaded.", "سرویس موقتاً شلوغ است."),
+        }
+        en, fa = codes.get(resp.status_code, (f"HTTP error {resp.status_code}", f"خطای HTTP {resp.status_code}"))
+        fa = tt(en, fa)
         return {"ok": False, "error": resp.text[:200], "error_code": resp.status_code, "error_fa": fa}
 
     try:
@@ -152,11 +160,13 @@ def chat(provider: str, messages: list[dict], model: str | None = None,
         if reasoning_enabled and rdet:
             save_reasoning(mdl, rdet)
         if not text:
-            return {"ok": False, "error": "empty_response", "error_fa": "پاسخ مدل خالی بود؛ مدل دیگری را امتحان کنید."}
+            from i18n import tt
+            return {"ok": False, "error": "empty_response", "error_fa": tt("The model returned an empty reply; try another model.", "پاسخ مدل خالی بود؛ مدل دیگری را امتحان کنید.")}
         return {"ok": True, "text": text, "provider": provider, "model": mdl,
                 "reasoning_details": rdet if reasoning_enabled else None}
     except Exception as e:
-        return {"ok": False, "error": f"parse:{e}", "error_fa": "پاسخ سرویس قابل خواندن نبود."}
+        from i18n import tt
+        return {"ok": False, "error": f"parse:{e}", "error_fa": tt("Could not read the service response.", "پاسخ سرویس قابل خواندن نبود.")}
 
 
 def chat_with_fallbacks(messages: list[dict], models: list[dict[str, str]] | None = None,

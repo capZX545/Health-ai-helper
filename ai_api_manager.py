@@ -25,7 +25,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     "openrouter_model": "openai/gpt-oss-120b:free",
     "reasoning_enabled": False,
     "brain_enabled": True,
-    "language": "fa",
+    "language": "en",
     "local_first": False,
 }
 
@@ -74,19 +74,22 @@ def has_any_external() -> bool:
 
 def test_connection(provider: str) -> dict[str, Any]:
     """تست اتصال با پیام فارسی واضح؛ بدون نیاز به ری‌استارت."""
+    from i18n import tt
     key = get_api_key(provider)
     if not key:
-        return {"ok": False, "message": f"کلید {provider} وارد نشده است. از پنل تنظیمات وارد کنید."}
+        return {"ok": False, "message": tt(f"No API key set for {provider}. Add it in the settings panel.",
+                                           f"کلید {provider} وارد نشده است. از پنل تنظیمات وارد کنید.")}
     try:
         from ai_client import chat as ai_chat
         s = get_settings()
         model = {"openrouter": s["openrouter_model"], "openai": "gpt-4o-mini", "deepseek": "deepseek-chat"}[provider]
-        res = ai_chat(provider, [{"role": "user", "content": "سلام"}], model=model, max_tokens=20, timeout=25)
+        res = ai_chat(provider, [{"role": "user", "content": tt("Hello", "سلام")}], model=model, max_tokens=20, timeout=25)
         if res.get("ok"):
-            return {"ok": True, "message": f"اتصال برقرار است — پاسخ مدل دریافت شد ({model})."}
-        return {"ok": False, "message": f"{res.get('error_fa', 'خطای نامشخص')}", "detail": res.get("error", "")}
+            return {"ok": True, "message": tt(f"Connection is working - the model replied ({model}).",
+                                              f"اتصال برقرار است — پاسخ مدل دریافت شد ({model}).")}
+        return {"ok": False, "message": res.get("error_fa", tt("Unknown error", "خطای نامشخص")), "detail": res.get("error", "")}
     except Exception as e:
-        return {"ok": False, "message": "خطا در تست اتصال: "+ str(e)[:120]}
+        return {"ok": False, "message": tt("Connection test failed: ", "خطا در تست اتصال: ")+ str(e)[:120]}
 
 
 def env_summary() -> dict[str, Any]:
