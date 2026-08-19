@@ -102,7 +102,25 @@ Raise possibilities cautiously and point to the right care path.""",
 }
 
 
-def _vision_prompt(note: str, type_info: dict | None) -> str:
+def lesion_summary_for_ai(image_bytes: bytes | None, tkey: str) -> str:
+    """اندازه‌گیری‌های عینی برای مدل تصویری — تحلیل خود عکس، نه فقط نوع آن."""
+    if not image_bytes or tkey not in ("skin_photo", "wound_photo", "eye_photo"):
+        return ""
+    try:
+        from lesion_analyzer import analyze_lesion
+        les = analyze_lesion(image_bytes)
+        if not les.get("found"):
+            return ""
+        lines = [f"- {f['en']}" for f in les["findings"]]
+        m = les.get("measures", {})
+        lines.append(f"- measured: affected area ~{m.get('affected_area_pct', '?')}% of frame, redness index {m.get('redness_index', '?')}")
+        return ("Offline preprocessing measured these objective findings in the image "
+                "(use them, correct them if they look wrong, and stay cautious):\n" + "\n".join(lines) + "\n")
+    except Exception:
+        return ""
+
+
+def _vision_prompt(note: str, type_info: dict | None, lesion_block: str = "") -> str:
     tkey = (type_info or {}).get("type", "other_photo")
     frag = PROMPT_FRAGMENTS.get(tkey, PROMPT_FRAGMENTS["other_photo"])
     tline = ""
@@ -112,10 +130,12 @@ def _vision_prompt(note: str, type_info: dict | None) -> str:
         tline = f"\nThe user says the image type is: {type_info.get('label')}.\n"
     if is_fa():
         return f"""این تصویر پزشکی توسط کاربر با توضیح «{note or 'توضیحی داده نشده'}» ارسال شده.{tline}
+{lesion_block}
 {frag['fa']}
 
 قوانین: هیچ‌گاه تشخیص قطعی نده؛ اطلاعات جعلی نساز؛ فارسی همدلانه؛ بخش‌بندی با عنوان‌های کوتاه (یافته‌ها، احتمالات، مراقبت، سوال بعدی)."""
     return f"""This medical image was sent by the user with the note: '{note or 'no note given'}'.{tline}
+{lesion_block}
 {frag['en']}
 
 Rules: never give a definitive diagnosis; never fabricate information; warm clear English; short section titles (findings, possibilities, care, next question)."""
@@ -129,13 +149,19 @@ def analyze_image_with_ai(image_b64: str, mime: str, note: str, engine=None,
     from free_ai import is_vision_model, vision_models
     s = get_settings()
     order = [p for p in s["provider_order"] if p != "local" and get_api_key(p)]
+    try:
+        import base64 as _b64
+        _raw_img = _b64.b64decode(image_b64.split(",")[-1])
+        _lesion_block = lesion_summary_for_ai(_raw_img, (type_info or {}).get("type", ""))
+    except Exception:
+        _lesion_block = ""
     for p in order:
         model = s.get("openrouter_model") if p == "openrouter" else ("gpt-4o-mini" if p == "openai" else None)
         if p == "openrouter" and not is_vision_model(model or ""):
             model = vision_models()[0]
         if p == "deepseek":
             continue  # DeepSeek has no vision endpoint
-        r = ext_chat(p, [{"role": "user", "content": _vision_prompt(note, type_info)}],
+        r = ext_chat(p, [{"role": "user", "content": _vision_prompt(note, type_info, _lesion_block)}],
                      model=model, image_b64=image_b64, image_mime=mime, max_tokens=1100)
         if r.get("ok"):
             r["provider"] = p
@@ -348,12 +374,29 @@ def offline_analysis(type_info: dict, note: str, image_bytes: bytes | None = Non
                 q.append(("بررسی آفلاین ریتم: " if fa else "Offline trace check: ") + note_txt)
         except Exception:
             pass
-    # معیار عینی پوست: شاخص قرمزی (توصیف، نه تشخیص)
-    if tkey in ("skin_photo", "wound_photo") and isinstance(type_info.get("features"), dict):
+    # تحلیل عینیِ محتوای عکس (اندازه‌گیری؛ نه تشخیص)
+    if image_bytes and tkey in ("skin_photo", "wound_photo", "eye_photo"):
+        try:
+            from lesion_analyzer import analyze_lesion
+            les = analyze_lesion(image_bytes)
+            if les.get("found") and les.get("findings"):
+                head = ("یافته‌های عینی از خود عکس (اندازه‌گیری شده — تشخیص نیست):" if fa
+                        else "Objective findings from the image itself (measured - not a diagnosis):")
+                lines = [head]
+                for f in les["findings"]:
+                    lines.append(("• " if fa else "- ") + (f["fa"] if fa else f["en"]))
+                    if f.get("meaning_fa" if fa else "meaning_en"):
+                        lines.append("   " + ("معنی ممکن: " if fa else "What it can mean: ") + (f["meaning_fa"] if fa else f["meaning_en"]))
+                if any(f.get("level") == "urgent" for f in les["findings"]):
+                    lines.append(("⚠️" if False else ("توجه: یکی از یافته‌ها فوریت بالاتری دارد — مسیر ارجاع بالا را جدی بگیر." if fa
+                                  else "Note: one of the findings carries higher urgency - take the referral path above seriously.")))
+                q.append("\n".join(lines))
+        except Exception:
+            pass
+    elif isinstance(type_info.get("features"), dict) and tkey in ("skin_photo", "wound_photo"):
         red = type_info["features"].get("redness")
         if red is not None:
-            q.append(("شاخص قرمزی تصویر (توصیف عددی، نه تشخیص): " if fa else "Image redness index (numeric description, not a diagnosis): ")
-                     + (f"{red:.2f}"))
+            q.append(("شاخص قرمزی تصویر: " if fa else "Image redness index: ") + f"{red:.2f}")
     q.append(body)
     # ارزیابی احتمالاتی از متنِ یادداشت (نه از خود تصویر — از عکس حدس بالینی نمی‌زنیم)
     if tkey in ("skin_photo", "wound_photo", "eye_photo", "other_photo") and note:
