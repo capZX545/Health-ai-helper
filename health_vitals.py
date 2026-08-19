@@ -37,7 +37,7 @@ def bp_category(systolic: int | float, diastolic: int | float) -> dict[str, Any]
     except (TypeError, ValueError):
         return {"ok": False, "message_fa": "اعداد فشار خون معتبر نیستند."}
     if s >= 180 or d >= 120:
-        cat, color, act = "بحران فشار خون — اورژانسی", "red", "🚨 فوراً با اورژانس تماس بگیر (۱۱۵/۱۱۲)؛ این محدوده خطر آسیب ارگان است."
+        cat, color, act = "بحران فشار خون — اورژانسی", "red", "فوراً با اورژانس تماس بگیر (۱۱۵/۱۱۲)؛ این محدوده خطر آسیب ارگان است."
     elif s >= 140 or d >= 90:
         cat, color, act = "فشار خون بالا (مرحله ۲)", "red", "در اسرع وقت با پزشک مشورت کن؛ اندازه‌گیری را تکرار کن."
     elif s >= 130 or d >= 80:

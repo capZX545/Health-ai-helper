@@ -14,7 +14,7 @@ from lab_tests import interpret, parse_lines
 STATUS_COLOR = {"low": "#4da3ff", "normal": "#3bff9e", "high": "#ffb020", "critical": "#ff2a6d"}
 STATUS_FA = {"low": "پایین", "normal": "نرمال", "high": "بالا", "critical": "بحرانی"}
 
-_HTML_HEAD = """<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="utf-8">
+_HTML_HEAD = """<!DOCTYPE html><html lang="fa"dir="rtl"><head><meta charset="utf-8">
 <title>NexusMed 2077 — گزارش آزمایش</title><style>
 body{font-family:Tahoma,'Segoe UI',sans-serif;background:#0b1220;color:#d7e3ff;margin:0;padding:24px}
 h1{color:#00f0ff;font-size:20px}.card{background:#111a2e;border:1px solid #1e2c4d;border-radius:12px;padding:14px;margin:10px 0}
@@ -24,9 +24,9 @@ h1{color:#00f0ff;font-size:20px}.card{background:#111a2e;border:1px solid #1e2c4
 .v{font-size:18px;font-weight:bold}.sm{color:#6b7fa3;font-size:12px}
 .crit{border-color:#ff2a6d}.warn{color:#ffd60a}
 </style></head><body>
-<h1>🔬 NexusMed 2077 — نمایشگر آزمایش</h1>"""
+<h1> NexusMed 2077 — نمایشگر آزمایش</h1>"""
 
-_HTML_FOOT = """<p class="sm">⚠️ تفسیر عمومی؛ ملاک نهایی نظر پزشک شماست. محدوده‌ها بین آزمایشگاه‌ها متفاوت است.</p>
+_HTML_FOOT = """<p class="sm"> تفسیر عمومی؛ ملاک نهایی نظر پزشک شماست. محدوده‌ها بین آزمایشگاه‌ها متفاوت است.</p>
 </body></html>"""
 
 
@@ -45,11 +45,11 @@ def render_html(results: list[dict[str, Any]]) -> str:
         pct = _pos_pct(float(r["value"]), lo, hi)
         color = STATUS_COLOR.get("critical" if r.get("critical_fa") else r["status"], "#3bff9e")
         zone = f"<div class='warn'>{r['zone_fa']}</div>" if r.get("zone_fa") else ""
-        crit = f"<div class='warn' style='color:#ff2a6d'>🚨 {r['critical_fa']}</div>" if r.get("critical_fa") else ""
+        crit = f"<div class='warn' style='color:#ff2a6d'> {r['critical_fa']}</div>" if r.get("critical_fa") else ""
         rows.append(f"""<div class="card {'crit' if r.get('critical_fa') else ''}">
-<b>{r['name_fa']}</b> — <span class="v" style="color:{color}">{fa_digits(r['value'])} {r.get('unit','')}</span>
+<b>{r['name_fa']}</b> — <span class="v"style="color:{color}">{fa_digits(r['value'])} {r.get('unit','')}</span>
 <span class="sm">({STATUS_FA.get('critical' if r.get('critical_fa') else r['status'])} | مرجع {fa_digits(r.get('range',''))})</span>
-<div class="bar"><div class="fill" style="width:{pct:.0f}%;background:{color}"></div></div>
+<div class="bar"><div class="fill"style="width:{pct:.0f}%;background:{color}"></div></div>
 {zone}{crit}</div>""")
     return _HTML_HEAD + "\n".join(rows) + _HTML_FOOT
 
@@ -57,12 +57,12 @@ def render_html(results: list[dict[str, Any]]) -> str:
 def render_text(results: list[dict[str, Any]]) -> str:
     lines = []
     for r in results:
-        mark = {"low": "🔻", "normal": "✅", "high": "🔺"}.get(r["status"], "•")
+        mark = {"low": "[پایین]", "normal": "[نرمال]", "high": "[بالا]"}.get(r["status"], "•")
         if r.get("critical_fa"):
-            mark = "🚨"
+            mark = "[بحرانی]"
         lines.append(f"{mark} {r['name_fa']}: {fa_digits(r['value'])} {r.get('unit','')} — {r['status_fa']}"
-                     + (f" | {r['zone_fa']}" if r.get("zone_fa") else "")
-                     + (f" | ⚠ {r['critical_fa']}" if r.get("critical_fa") else ""))
+                     + (f"| {r['zone_fa']}" if r.get("zone_fa") else "")
+                     + (f"|  {r['critical_fa']}" if r.get("critical_fa") else ""))
     return "\n".join(lines)
 
 

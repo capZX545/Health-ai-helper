@@ -62,13 +62,13 @@ class App:
         top.pack(fill="x")
         tk.Label(top, text="NEXUS", bg="#0c1526", fg=C["cy"], font=F_TITLE).pack(side="right", padx=(16, 4))
         tk.Label(top, text="MED 2077", bg="#0c1526", fg=C["mg"], font=F_TITLE).pack(side="right", padx=4)
-        self.status_lbl = tk.Label(top, text="⏳ وضعیت: در حال بررسی…", bg="#0c1526", fg=C["dim"], font=F_SMALL)
+        self.status_lbl = tk.Label(top, text="وضعیت: در حال بررسی…", bg="#0c1526", fg=C["dim"], font=F_SMALL)
         self.status_lbl.pack(side="left", padx=12)
-        tk.Button(top, text="🌐 نسخه‌ی وب", command=self.launch_web, bg="#0d1930", fg=C["tx"],
+        tk.Button(top, text="نسخه‌ی وب", command=self.launch_web, bg="#0d1930", fg=C["tx"],
                   relief="flat", font=F, activebackground="#12233d").pack(side="left", padx=4, pady=12)
-        tk.Button(top, text="🚨 اورژانس ۱۱۵/۱۱۲", command=lambda: self._panel_emergency(),
+        tk.Button(top, text="اورژانس ۱۱۵/۱۱۲", command=lambda: self._panel_emergency(),
                   bg="#2a0d1a", fg="#ff8fab", relief="flat", font=F).pack(side="left", padx=4, pady=12)
-        tk.Button(top, text="⚙️ تنظیمات API", command=self._panel_settings,
+        tk.Button(top, text="تنظیمات API", command=self._panel_settings,
                   bg="#0d1930", fg=C["tx"], relief="flat", font=F).pack(side="left", padx=4, pady=12)
 
         body = tk.Frame(self.root, bg=C["bg"])
@@ -78,20 +78,20 @@ class App:
         nav.pack(side="right", fill="y")
         nav.pack_propagate(False)
         items = [
-            ("💬 گفتگو (بازگشت)", lambda: None),
-            ("🧑‍⚕️ پروفایل بیمار", self._panel_profile),
-            ("💓 علائم حیاتی", self._panel_vitals),
-            ("🧪 تحلیل آزمایش", self._panel_labs),
-            ("📜 اسکن نسخه", self._panel_rx),
-            ("💊 دارو و تداخلات", self._panel_drugs),
-            ("🖼️ تحلیل تصویر پزشکی", self._panel_image),
-            ("🧠 سلامت روان", self._panel_mental),
-            ("😴 تحلیل خواب", self._panel_sleep),
-            ("📅 تقویم چکاپ", self._panel_checkup),
-            ("🚑 کمک‌های اولیه / CPR", self._panel_emergency),
-            ("🖨️ گزارش ارجاع", self._panel_referral),
-            ("🧬 مغز داخلی / یادگیری", self._panel_brain),
-            ("🖥️ هوش محلی (GPU/Ollama)", self._panel_gpu),
+            ("گفتگو (بازگشت)", lambda: None),
+            ("پروفایل بیمار", self._panel_profile),
+            ("علائم حیاتی", self._panel_vitals),
+            ("تحلیل آزمایش", self._panel_labs),
+            ("اسکن نسخه", self._panel_rx),
+            ("دارو و تداخلات", self._panel_drugs),
+            ("تحلیل تصویر پزشکی", self._panel_image),
+            ("سلامت روان", self._panel_mental),
+            ("تحلیل خواب", self._panel_sleep),
+            ("تقویم چکاپ", self._panel_checkup),
+            ("کمک‌های اولیه / CPR", self._panel_emergency),
+            ("گزارش ارجاع", self._panel_referral),
+            ("مغز داخلی / یادگیری", self._panel_brain),
+            ("هوش محلی (GPU/Ollama)", self._panel_gpu),
         ]
         tk.Label(nav, text="ـ ماژول‌ها ـ", bg=C["panel"], fg=C["dim"], font=F_SMALL).pack(pady=8)
         for txt, cmd in items:
@@ -118,9 +118,9 @@ class App:
         bar.pack(fill="x", padx=10, pady=(2, 4))
         self.attach_lbl = tk.Label(bar, text="", bg=C["bg"], fg=C["yl"], font=F_SMALL)
         self.attach_lbl.pack(side="right")
-        tk.Button(bar, text="📎 عکس پزشکی", command=self._attach, bg="#0d1930", fg=C["tx"],
+        tk.Button(bar, text="عکس پزشکی", command=self._attach, bg="#0d1930", fg=C["tx"],
                   relief="flat", font=F).pack(side="left", padx=3)
-        tk.Button(bar, text="🧹 گفتگوی جدید", command=self._reset_dialogue, bg="#0d1930", fg=C["tx"],
+        tk.Button(bar, text="گفتگوی جدید", command=self._reset_dialogue, bg="#0d1930", fg=C["tx"],
                   relief="flat", font=F).pack(side="left", padx=3)
 
         inbar = tk.Frame(main, bg=C["bg"])
@@ -130,7 +130,7 @@ class App:
         self.entry.pack(side="right", fill="both", expand=True, ipady=2)
         self.entry.bind("<Return>", self._on_enter)
         self.entry.bind("<Shift-Return>", lambda e: None)
-        self.send_btn = tk.Button(inbar, text="ارسال ⬆", command=self._send, bg="#0077b6",
+        self.send_btn = tk.Button(inbar, text="ارسال", command=self._send, bg="#0077b6",
                                   fg="#021018", font=pick_font(12, True), relief="flat")
         self.send_btn.pack(side="left", fill="y", padx=(6, 0))
 
@@ -145,10 +145,10 @@ class App:
         return self.engine
 
     def _hello(self):
-        self._bot("سلام! من نکسوس هستم — دستیار پزشکی فارسی NexusMed 2077 🤖\n"
+        self._bot("سلام! من نکسوس هستم — دستیار پزشکی فارسی NexusMed 2077\n"
                   "علائمت را با جزئیات (شروع، شدت، مدت) بنویس تا مرحله‌به‌مرحله بررسی کنیم.\n"
-                  "🚨 در علائم اورژانسی فوراً راهنمایی اورژانس می‌گیری.\n"
-                  "برای اتصال به AI خارجی، از دکمه‌ی «⚙️ تنظیمات API» کلید OpenRouter را وارد کن.")
+                  "در علائم اورژانسی فوراً راهنمایی اورژانس می‌گیری.\n"
+                  "برای اتصال به AI خارجی، از دکمه‌ی « تنظیمات API» کلید OpenRouter را وارد کن.")
 
     def _bot(self, text: str, tag: str = "bot", meta: str = ""):
         self.chat.config(state="normal")
@@ -161,7 +161,7 @@ class App:
         self.chat.config(state="disabled")
 
     def _user(self, text: str):
-        self._bot("🧑 " + text, "user")
+        self._bot(text, "user")
 
     def _on_enter(self, _e):
         self._send()
@@ -172,7 +172,7 @@ class App:
                                        filetypes=[("تصاویر", "*.jpg *.jpeg *.png *.webp *.bmp"), ("همه", "*.*")])
         if p:
             self.img_path = p
-            self.attach_lbl.config(text="📎 " + os.path.basename(p))
+            self.attach_lbl.config(text=""+ os.path.basename(p))
 
     def _reset_dialogue(self):
         self._engine().dialogue.reset()
@@ -198,14 +198,14 @@ class App:
                 else:
                     res = self._engine().chat(text)
                 tag = "emg" if res.get("red_flag") else "bot"
-                meta = {"internal": "🧠 مغز داخلی آفلاین"}.get(res.get("source", ""), res.get("source", ""))
+                meta = {"internal": "مغز داخلی آفلاین"}.get(res.get("source", ""), res.get("source", ""))
                 if res.get("learned"):
-                    meta += " • 🧬 یادگیری ثبت شد"
+                    meta += "•  یادگیری ثبت شد"
                 self._bot(res.get("text", ""), tag, meta)
             except Exception as e:
-                self._bot("خطا: " + str(e)[:200], "emg")
+                self._bot("خطا: "+ str(e)[:200], "emg")
             finally:
-                self.send_btn.config(state="normal", text="ارسال ⬆")
+                self.send_btn.config(state="normal", text="ارسال")
                 self._refresh_status()
 
         threading.Thread(target=work, daemon=True).start()
@@ -215,12 +215,12 @@ class App:
         def work():
             try:
                 s = self._engine().status()
-                ext = "✅ AI خارجی فعال" if s.get("external_available") else "❌ AI خارجی: کلید ندارد"
-                brain = "🧠 مغز داخلی روشن" if s.get("settings", {}).get("brain_enabled") else "🧠 مغز خاموش (یادگیری پس‌زمینه فعال)"
+                ext = "AI خارجی فعال" if s.get("external_available") else "AI خارجی: کلید ندارد"
+                brain = "مغز داخلی روشن" if s.get("settings", {}).get("brain_enabled") else "مغز خاموش (یادگیری پس‌زمینه فعال)"
                 learned = s.get("learning", {}).get("entries", 0)
-                msg = f"{ext} | {brain} | 🧬 حافظه: {learned} مورد"
+                msg = f"{ext} | {brain} |  حافظه: {learned} مورد"
             except Exception as e:
-                msg = "وضعیت: خطا — " + str(e)[:80]
+                msg = "وضعیت: خطا — "+ str(e)[:80]
             self.status_lbl.config(text=msg)
         threading.Thread(target=work, daemon=True).start()
 
@@ -230,7 +230,7 @@ class App:
         exe = sys.executable
         script = os.path.join(DATA_DIR, "run_web.py")
         threading.Thread(target=lambda: subprocess.Popen([exe, script], cwd=DATA_DIR), daemon=True).start()
-        self._bot("🌐 نسخه‌ی وب در حال اجراست: http://localhost:2077 (در مرورگر باز می‌شود)", "meta")
+        self._bot("نسخه‌ی وب در حال اجراست: http://localhost:2077 (در مرورگر باز می‌شود)", "meta")
 
     # ============================================================= پنل‌ها
     def _win(self, title: str):
@@ -272,8 +272,8 @@ class App:
 
         def save():
             save_profile({k: e.get() for k, e in ents.items()})
-            messagebox.showinfo("پروفایل", "✅ ذخیره شد (patient_profile.json)", parent=w)
-        tk.Button(w, text="💾 ذخیره", command=save, bg="#0077b6", fg="#021018",
+            messagebox.showinfo("پروفایل", "ذخیره شد (patient_profile.json)", parent=w)
+        tk.Button(w, text="ذخیره", command=save, bg="#0077b6", fg="#021018",
                   font=pick_font(11, True), relief="flat").pack(pady=10, ipadx=24, ipady=4)
 
     def _panel_vitals(self):
@@ -298,10 +298,10 @@ class App:
             lines.append("\n— تاریخچه‌ی اخیر —")
             for h in history(6):
                 lines.append(str(h))
-            lines.append("روند: " + str(trend()))
+            lines.append("روند: "+ str(trend()))
             box.delete("1.0", "end")
             box.insert("1.0", "\n\n".join(lines))
-        tk.Button(w, text="💓 ثبت و تحلیل", command=go, bg="#0077b6", fg="#021018",
+        tk.Button(w, text="ثبت و تحلیل", command=go, bg="#0077b6", fg="#021018",
                   font=pick_font(11, True), relief="flat").pack(pady=8, ipadx=24, ipady=4)
 
     def _panel_labs(self):
@@ -316,10 +316,10 @@ class App:
         def go():
             r = analyze_text(txt.get("1.0", "end"), save_html=True)
             box.delete("1.0", "end")
-            box.insert("1.0", r.get("text_report", "") + "\n\n" + "\n".join(r.get("summary_fa", [])))
+            box.insert("1.0", r.get("text_report", "") + "\n\n"+ "\n".join(r.get("summary_fa", [])))
             if r.get("html_path"):
-                box.insert("end", "\n\n📊 گزارش تصویری: " + r["html_path"])
-        tk.Button(w, text="🔬 تحلیل", command=go, bg="#0077b6", fg="#021018",
+                box.insert("end", "\n\n گزارش تصویری: "+ r["html_path"])
+        tk.Button(w, text="تحلیل", command=go, bg="#0077b6", fg="#021018",
                   font=pick_font(11, True), relief="flat").pack(pady=8, ipadx=24, ipady=4)
 
     def _panel_rx(self):
@@ -337,13 +337,13 @@ class App:
             for t in r.get("translations", []):
                 lines.append(f"{t['abbr']} → {t['fa']} ({t['type']})")
             for d in r.get("drugs", []):
-                lines.append(f"💊 دارو: {d['fa']} ({d['cat']})")
+                lines.append(f"دارو: {d['fa']} ({d['cat']})")
             for a in r.get("alerts", []):
-                lines.append("⚠️ " + a)
+                lines.append(""+ a)
             lines.append(r.get("disclaimer", ""))
             box.delete("1.0", "end")
             box.insert("1.0", "\n".join(lines) if lines else "چیزی شناسایی نشد.")
-        tk.Button(w, text="📜 ترجمه", command=go, bg="#0077b6", fg="#021018",
+        tk.Button(w, text="ترجمه", command=go, bg="#0077b6", fg="#021018",
                   font=pick_font(11, True), relief="flat").pack(pady=8, ipadx=24, ipady=4)
 
     def _panel_drugs(self):
@@ -358,7 +358,7 @@ class App:
                 if ents[key].get().strip():
                     res = search_drug(ents[key].get())
                     if res:
-                        lines.append("🔍 " + key + ": " + " | ".join(f"{d['fa']} ({d['cat']})" for d in res[:3]))
+                        lines.append(key + ": " + " | ".join(f"{d['fa']} ({d['cat']})" for d in res[:3]))
             if ents["a"].get().strip() and ents["b"].get().strip():
                 r = check_interaction(ents["a"].get(), ents["b"].get())
                 for it in r.get("interactions", [{}]):
@@ -368,7 +368,7 @@ class App:
                 lines.append(r.get("disclaimer", ""))
             box.delete("1.0", "end")
             box.insert("1.0", "\n\n".join(lines) if lines else "نام دارو را وارد کن (مثلاً: وارفارین، ژلوفن، سیر، زنجبیل)")
-        tk.Button(w, text="⚗️ بررسی", command=go, bg="#0077b6", fg="#021018",
+        tk.Button(w, text="بررسی", command=go, bg="#0077b6", fg="#021018",
                   font=pick_font(11, True), relief="flat").pack(pady=8, ipadx=24, ipady=4)
 
     def _panel_image(self):
@@ -381,8 +381,8 @@ class App:
             p = filedialog.askopenfilename(parent=w, filetypes=[("تصاویر", "*.jpg *.jpeg *.png *.webp *.bmp")])
             if p:
                 path["p"] = p
-                lbl.config(text="📎 " + os.path.basename(p))
-        tk.Button(w, text="📎 انتخاب عکس", command=pick, bg="#0d1930", fg=C["tx", ], relief="flat",
+                lbl.config(text=""+ os.path.basename(p))
+        tk.Button(w, text="انتخاب عکس", command=pick, bg="#0d1930", fg=C["tx", ], relief="flat",
                   font=pick_font(11)).pack(pady=4)
         lbl = tk.Label(w, text="—", bg=C["panel2"], fg=C["yl"], font=pick_font(10))
         lbl.pack()
@@ -397,9 +397,9 @@ class App:
             from image_caption import analyze_image_file
             r = analyze_image_file(path["p"], note.get("1.0", "end").strip())
             box.delete("1.0", "end")
-            box.insert("1.0", f"[{r.get('source','')}]\n\n" + r.get("text", ""))
+            box.insert("1.0", f"[{r.get('source','')}]\n\n"+ r.get("text", ""))
             self._refresh_status()
-        tk.Button(w, text="📤 تحلیل", command=go, bg="#0077b6", fg="#021018",
+        tk.Button(w, text="تحلیل", command=go, bg="#0077b6", fg="#021018",
                   font=pick_font(11, True), relief="flat").pack(pady=8, ipadx=24, ipady=4)
 
     def _panel_mental(self):
@@ -417,13 +417,13 @@ class App:
 
             def make_submit():
                 from mental_health import gad7, phq9
-                n = 9 if var_type.get() == "phq9" else 7
+                n = 9 if var_type.get() == "phq9"else 7
                 answers = [rows.get(i, tk.IntVar(value=0)).get() for i in range(n)]
-                r = phq9(answers) if var_type.get() == "phq9" else gad7(answers)
+                r = phq9(answers) if var_type.get() == "phq9"else gad7(answers)
                 out = [f"نمره: {r['total']} — {r['band_fa']}"]
                 out += r.get("recommendations_fa", [])
                 if r.get("crisis"):
-                    out.append("\n" + r["crisis_text"])
+                    out.append("\n"+ r["crisis_text"])
                 out.append(r.get("note", ""))
                 box.delete("1.0", "end")
                 box.insert("1.0", "\n".join(out))
@@ -437,7 +437,7 @@ class App:
                     tk.Radiobutton(rowf, text=lbl, variable=v, value=val, bg=C["panel2"], fg=C["dim"],
                                    selectcolor="#0a1424", activebackground=C["panel2"],
                                    activeforeground=C["cy"], font=pick_font(9)).pack(side="right", padx=8)
-            tk.Button(frame, text="✅ محاسبه", command=make_submit, bg="#0077b6", fg="#021018",
+            tk.Button(frame, text="محاسبه", command=make_submit, bg="#0077b6", fg="#021018",
                       font=pick_font(11, True), relief="flat").pack(pady=10)
         top_bar = tk.Frame(w, bg=C["panel2"])
         top_bar.pack(fill="x", pady=6)
@@ -447,7 +447,7 @@ class App:
         tk.Radiobutton(top_bar, text="GAD-7 (اضطراب)", variable=var_type, value="gad7", command=render,
                        bg=C["panel2"], fg=C["tx"], selectcolor="#0a1424", activebackground=C["panel2"],
                        activeforeground=C["cy"], font=pick_font(10)).pack(side="right", padx=14)
-        tk.Label(top_bar, text="🫁 تمرین تنفس ۴-۷-۸: دم ۴ ثانیه، نگه‌داشتن ۷، بازدم ۸ — چهار چرخه",
+        tk.Label(top_bar, text="تمرین تنفس ۴-۷-۸: دم ۴ ثانیه، نگه‌داشتن ۷، بازدم ۸ — چهار چرخه",
                  bg=C["panel2"], fg=C["dim"], font=pick_font(9)).pack(side="left", padx=10)
         frame.pack(fill="x")
         render()
@@ -469,12 +469,12 @@ class App:
 
         def go():
             r = stopbang([1 if v.get() else 0 for v in vars_])
-            out = [f"{r['total']} از ۸ — {r['risk_fa']}", "موارد مثبت: " + ("، ".join(r["answers_fa"]) or "—")]
+            out = [f"{r['total']} از ۸ — {r['risk_fa']}", "موارد مثبت: "+ ("، ".join(r["answers_fa"]) or "—")]
             out += r.get("recommendations_fa", [])
             out.append(r.get("note", ""))
             box.delete("1.0", "end")
             box.insert("1.0", "\n".join(out))
-        tk.Button(w, text="😴 محاسبه", command=go, bg="#0077b6", fg="#021018",
+        tk.Button(w, text="محاسبه", command=go, bg="#0077b6", fg="#021018",
                   font=pick_font(11, True), relief="flat").pack(pady=8, ipadx=24, ipady=4)
 
     def _panel_checkup(self):
@@ -488,10 +488,10 @@ class App:
             lines += [f"• {c['title']}: {c['interval_fa']}" for c in r.get("checkups", [])]
             lines.append("\n— واکسن‌ها —")
             lines += [f"• {v['title']}: {v['interval_fa']}" for v in r.get("vaccines", [])]
-            lines.append("\n" + r.get("note_fa", ""))
+            lines.append("\n"+ r.get("note_fa", ""))
             box.delete("1.0", "end")
             box.insert("1.0", "\n".join(lines))
-        tk.Button(w, text="📅 پیشنهاد بگیر", command=go, bg="#0077b6", fg="#021018",
+        tk.Button(w, text="پیشنهاد بگیر", command=go, bg="#0077b6", fg="#021018",
                   font=pick_font(11, True), relief="flat").pack(pady=8, ipadx=24, ipady=4)
         go()
 
@@ -499,11 +499,11 @@ class App:
         from first_aid import TOPICS, cpr_timing
         w = self._win("کمک‌های اولیه / CPR")
         box = self._result_box(w)
-        tk.Label(w, text="🚨 اورژانس: ایران ۱۱۵ | اروپا/فنلاند ۱۱۲", bg="#2a0d1a", fg="#ff8fab",
+        tk.Label(w, text="اورژانس: ایران ۱۱۵ | اروپا/فنلاند ۱۱۲", bg="#2a0d1a", fg="#ff8fab",
                  font=pick_font(12, True), pady=6).pack(fill="x")
         cpr = {"on": False, "job": None}
         timing = cpr_timing()
-        cpr_btn = tk.Button(w, text=f"🫀 START/STOP مترونوم CPR — {timing['bpm']} BPM", relief="flat",
+        cpr_btn = tk.Button(w, text=f"START/STOP مترونوم CPR — {timing['bpm']} BPM", relief="flat",
                             bg="#1c0a14", fg=C["mg"], font=pick_font(13, True))
 
         def beat():
@@ -514,7 +514,7 @@ class App:
                 if cpr["job"]:
                     w.after_cancel(cpr["job"])
                 cpr["on"] = False
-                cpr_btn.config(text=f"🫀 START/STOP مترونوم CPR — {timing['bpm']} BPM")
+                cpr_btn.config(text=f"START/STOP مترونوم CPR — {timing['bpm']} BPM")
             else:
                 cpr["on"] = True
                 beat()
@@ -528,8 +528,8 @@ class App:
 
         def show(key):
             t = TOPICS[key]
-            lines = [t["title"], "=" * 34, *t["steps"], ""]
-            lines += ["⚠️ " + x for x in t.get("warnings", [])]
+            lines = [t["title"], "="* 34, *t["steps"], ""]
+            lines += [""+ x for x in t.get("warnings", [])]
             lines.append(t.get("doctor_when", ""))
             lines.append(f"\nعمق فشار: {timing['depth_cm']} | نسبت {timing['ratio']}")
             box.delete("1.0", "end")
@@ -548,15 +548,15 @@ class App:
             r = generate(load_profile(), None, dlg.get("symptoms_fa"), [], dlg, "")
             box.delete("1.0", "end")
             if r.get("ok"):
-                box.insert("1.0", "✅ گزارش ساخته شد: " + r["path"] + "\n(در مرورگر باز کنید و Ctrl+P بزنید)")
+                box.insert("1.0", "گزارش ساخته شد: "+ r["path"] + "\n(در مرورگر باز کنید و Ctrl+P بزنید)")
                 try:
                     import webbrowser
-                    webbrowser.open("file://" + r["path"])
+                    webbrowser.open("file://"+ r["path"])
                 except Exception:
                     pass
             else:
                 box.insert("1.0", r.get("message_fa", "خطا"))
-        tk.Button(w, text="📄 تولید گزارش", command=go, bg="#0077b6", fg="#021018",
+        tk.Button(w, text="تولید گزارش", command=go, bg="#0077b6", fg="#021018",
                   font=pick_font(11, True), relief="flat").pack(pady=8, ipadx=24, ipady=4)
 
     def _panel_brain(self):
@@ -568,16 +568,16 @@ class App:
             from semantic_rag import status as rag_status
             st = stats()
             lines = [f"موارد یادگرفته‌شده از AI خارجی: {st['entries']} (سقف {st['max']})",
-                     f"موضوعات پرتکرار: " + ("، ".join(st.get("top_topics", [])) or "—"),
+                     f"موضوعات پرتکرار: "+ ("، ".join(st.get("top_topics", [])) or "—"),
                      f"RAG: {rag_status()}", "", "— ۵ مورد آخر —"]
             for e in recent(5):
                 lines.append(f"[{e.get('ts', '')[:16]}] {e.get('topic', '')} ({e.get('provider', '')} / {e.get('model', '')})")
-                lines.append("   " + (e.get("ai_summary", "") or "")[:120])
+                lines.append(""+ (e.get("ai_summary", "") or "")[:120])
             lines.append("\nیادگیری پس‌زمینه همیشه از هر پاسخ AI خارجی انجام می‌شود؛")
             lines.append("تقلید فقط لحن/ساختار است، نه تولید محتوای پزشکی جعلی.")
             box.delete("1.0", "end")
             box.insert("1.0", "\n".join(lines))
-        tk.Button(w, text="🧬 به‌روزرسانی", command=go, bg="#0077b6", fg="#021018",
+        tk.Button(w, text="به‌روزرسانی", command=go, bg="#0077b6", fg="#021018",
                   font=pick_font(11, True), relief="flat").pack(pady=8, ipadx=24, ipady=4)
         go()
 
@@ -597,20 +597,20 @@ class App:
             save_config({"enabled": ent_on.get(), "base_url": ents["base_url"].get().strip(),
                          "model": ents["model"].get().strip()})
             box.delete("1.0", "end")
-            box.insert("1.0", "✅ ذخیره شد (local_llm_config.json)")
+            box.insert("1.0", "ذخیره شد (local_llm_config.json)")
         def test():
             box.delete("1.0", "end")
             box.insert("1.0", "… در حال بررسی Ollama")
             def work():
                 r = test_setup()
                 box.delete("1.0", "end")
-                box.insert("1.0", r.get("message_fa", "") + "\nمدل‌ها: " + ("، ".join(r.get("models", [])) or "—"))
+                box.insert("1.0", r.get("message_fa", "") + "\nمدل‌ها: "+ ("، ".join(r.get("models", [])) or "—"))
             threading.Thread(target=work, daemon=True).start()
         bar = tk.Frame(w, bg=C["panel2"])
         bar.pack(pady=8)
-        tk.Button(bar, text="💾 ذخیره", command=save, bg="#0077b6", fg="#021018",
+        tk.Button(bar, text="ذخیره", command=save, bg="#0077b6", fg="#021018",
                   font=pick_font(11, True), relief="flat").pack(side="right", padx=8)
-        tk.Button(bar, text="🔌 بررسی و تست", command=test, bg="#0d1930", fg=C["tx"],
+        tk.Button(bar, text="بررسی و تست", command=test, bg="#0d1930", fg=C["tx"],
                   relief="flat", font=pick_font(11)).pack(side="right", padx=8)
 
     # ------------------------------------------------------ تنظیمات API
@@ -656,12 +656,12 @@ class App:
             from ai_api_manager import save_settings
             save_settings({"openrouter_model": manual.get().strip() or cb.get(),
                            "reasoning_enabled": var_reason.get(), "brain_enabled": var_brain.get()})
-            box.insert("end", "\n✅ ذخیره شد (فایل .env) — بدون نیاز به ری‌استارت اعمال می‌شود.")
+            box.insert("end", "\n ذخیره شد (فایل .env) — بدون نیاز به ری‌استارت اعمال می‌شود.")
             self._refresh_status()
 
         def test(provider):
             box.delete("1.0", "end")
-            box.insert("1.0", "… در حال تست اتصال " + provider)
+            box.insert("1.0", "… در حال تست اتصال "+ provider)
 
             def work():
                 r = test_connection(provider)
@@ -670,15 +670,15 @@ class App:
             threading.Thread(target=work, daemon=True).start()
         bar = tk.Frame(w, bg=C["panel2"])
         bar.pack(pady=8)
-        tk.Button(bar, text="💾 ذخیره", command=save, bg="#0077b6", fg="#021018",
+        tk.Button(bar, text="ذخیره", command=save, bg="#0077b6", fg="#021018",
                   font=pick_font(11, True), relief="flat").pack(side="right", padx=6)
-        tk.Button(bar, text="🔌 تست OpenRouter", command=lambda: test("openrouter"), bg="#0d1930",
+        tk.Button(bar, text="تست OpenRouter", command=lambda: test("openrouter"), bg="#0d1930",
                   fg=C["tx"], relief="flat", font=pick_font(10)).pack(side="right", padx=4)
-        tk.Button(bar, text="🔌 تست OpenAI", command=lambda: test("openai"), bg="#0d1930",
+        tk.Button(bar, text="تست OpenAI", command=lambda: test("openai"), bg="#0d1930",
                   fg=C["tx"], relief="flat", font=pick_font(10)).pack(side="right", padx=4)
-        tk.Button(bar, text="🔌 تست DeepSeek", command=lambda: test("deepseek"), bg="#0d1930",
+        tk.Button(bar, text="تست DeepSeek", command=lambda: test("deepseek"), bg="#0d1930",
                   fg=C["tx"], relief="flat", font=pick_font(10)).pack(side="right", padx=4)
-        tk.Button(bar, text="🔑 گرفتن کلید OpenRouter", command=lambda: webbrowser.open("https://openrouter.ai/keys"),
+        tk.Button(bar, text="گرفتن کلید OpenRouter", command=lambda: webbrowser.open("https://openrouter.ai/keys"),
                   bg="#0d1930", fg=C["cy"], relief="flat", font=pick_font(10)).pack(side="left", padx=4)
 
 

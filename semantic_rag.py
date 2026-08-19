@@ -29,9 +29,9 @@ def _doc(text: str, source: str, title: str = "") -> dict:
 def _collect_docs() -> list[dict]:
     docs: list[dict] = []
     for d in DISEASES:
-        body = d["fa"] + " | " + d["en"] + " | " + \
-               "، ".join(k for k in d["symptoms"]) + " | " + \
-               "؛ ".join(d.get("advice", [])) + " | " + d.get("doctor_when", "")
+        body = d["fa"] + "| "+ d["en"] + "| "+ \
+               "، ".join(k for k in d["symptoms"]) + "| "+ \
+               "؛ ".join(d.get("advice", [])) + "| "+ d.get("doctor_when", "")
         docs.append(_doc(body, "smart_brain", d["fa"]))
     for d in (read_json(EXTRA_PATH, default=[]) or []):
         if isinstance(d, dict):
@@ -43,7 +43,7 @@ def _collect_docs() -> list[dict]:
             cur = con.cursor()
             cur.execute("SELECT name_fa, name_en, symptoms, advice, doctor_when FROM diseases")
             for row in cur.fetchall():
-                docs.append(_doc(" | ".join(str(x) for x in row), "diseases_offline.db", row[0]))
+                docs.append(_doc("| ".join(str(x) for x in row), "diseases_offline.db", row[0]))
             con.close()
         except Exception:
             pass

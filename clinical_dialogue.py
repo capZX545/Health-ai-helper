@@ -18,7 +18,7 @@ QUESTION_BANK: dict[str, list[str]] = {
     "abdominal_pain": ["درد شکمت کجاست (بالا/پایین/راست/چپ) و آیا ناگهانی شروع شد؟", "آیا درد با غذا خوردن تغییر می‌کند؟"],
     "chest_pain": ["درد به بازو، فک یا پشت کتف تیر می‌کشد؟", "درد با فعالیت بیشتر می‌شود؟"],
     "shortness_of_breath": ["تنگی نفست در حالت استراحت هم هست یا فقط با فعالیت؟", "آیا خس‌خس سینه هم داری؟"],
-    "diarrhea": ["آیا در مدفوع خون یا مخوط دیده‌ای؟", " چند بار در روز اسهال داری؟"],
+    "diarrhea": ["آیا در مدفوع خون یا مخوط دیده‌ای؟", "چند بار در روز اسهال داری؟"],
     "vomiting": ["استفراغ خونی یا رنگ قهوه‌ای داشته‌ای؟", "چند بار استفراغ کردی؟"],
     "dysuria": ["آیا ادرارت بوی بد یا رنگ تیره دارد؟", "آیا درد پهلو یا تب هم داری؟"],
     "skin_itch": ["خارش در چه ناحیه‌ای است و آیا بثورات پوستی هم داری؟", "آیا اخیراً دارو یا غذای جدیدی مصرف کرده‌ای؟"],
@@ -125,9 +125,9 @@ def answer_ack(user_text: str, state: ClinicalDialogue) -> str:
     proc = state.process(user_text)
     parts = []
     if proc["new_mentions"]:
-        parts.append(state._ack() + " «" + "، ".join(SYMPTOM_NAMES_FA.get(s, s) for s in proc["new_mentions"]) + "» را ثبت کردم.")
+        parts.append(state._ack() + "«"+ "، ".join(SYMPTOM_NAMES_FA.get(s, s) for s in proc["new_mentions"]) + "» را ثبت کردم.")
     if proc["new_denials"]:
-        parts.append("خب، «" + "، ".join(SYMPTOM_NAMES_FA.get(s, s) for s in proc["new_denials"]) + "» را رد می‌کنیم.")
+        parts.append("خب، «"+ "، ".join(SYMPTOM_NAMES_FA.get(s, s) for s in proc["new_denials"]) + "» را رد می‌کنیم.")
     if not parts:
         parts.append(state._ack())
     return " ".join(parts)

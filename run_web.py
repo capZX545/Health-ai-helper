@@ -136,7 +136,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"ok": True, **stats(), "recent": recent(5)})
             return self._json({"ok": False, "message_fa": "مسیر یافت نشد"}, 404)
         except Exception as e:
-            return self._json({"ok": False, "message_fa": "خطای سرور: " + str(e)[:120]}, 500)
+            return self._json({"ok": False, "message_fa": "خطای سرور: "+ str(e)[:120]}, 500)
 
     def _status(self) -> dict:
         eng = get_engine()
@@ -207,12 +207,12 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/mental":
                 from mental_health import gad7, phq9
                 answers = data.get("answers") or []
-                res = phq9(answers) if data.get("type") == "phq9" else gad7(answers)
+                res = phq9(answers) if data.get("type") == "phq9"else gad7(answers)
                 return self._json(res)
             if path == "/api/sleep":
                 from sleep_analyzer import psqi_lite, stopbang
                 answers = data.get("answers") or []
-                res = stopbang(answers) if data.get("type") == "stopbang" else psqi_lite(answers)
+                res = stopbang(answers) if data.get("type") == "stopbang"else psqi_lite(answers)
                 return self._json(res)
             if path == "/api/checkup/reminders":
                 from checkup_calendar import add_reminder
@@ -257,7 +257,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"ok": True})
             return self._json({"ok": False, "message_fa": "مسیر یافت نشد"}, 404)
         except Exception as e:
-            return self._json({"ok": False, "message_fa": "خطای سرور: " + str(e)[:150]}, 500)
+            return self._json({"ok": False, "message_fa": "خطای سرور: "+ str(e)[:150]}, 500)
 
 
 def main() -> int:
@@ -272,11 +272,11 @@ def main() -> int:
         port = find_free_port(2077, 2087, args.host) or 2078
     httpd = ThreadingHTTPServer((args.host, port), Handler)
     url = f"http://{'localhost' if args.host in ('127.0.0.1', '0.0.0.0') else args.host}:{port}"
-    print("=" * 56)
-    print(f"  {APP_NAME} v{APP_VERSION} — دستیار هوشمند پزشکی فارسی")
-    print(f"  🌐 نسخه‌ی وب: {url}")
-    print("  ⚠️ این نرم‌افزار جایگزین پزشک نیست. اورژانس: ایران ۱۱۵ / اروپا 112")
-    print("=" * 56)
+    print("="* 56)
+    print(f"{APP_NAME} v{APP_VERSION} — دستیار هوشمند پزشکی فارسی")
+    print(f"نسخه‌ی وب: {url}")
+    print("این نرم‌افزار جایگزین پزشک نیست. اورژانس: ایران ۱۱۵ / اروپا 112")
+    print("="* 56)
     if not args.no_browser:
         threading.Timer(0.8, lambda: webbrowser.open(url)).start()
     try:

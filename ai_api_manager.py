@@ -83,10 +83,10 @@ def test_connection(provider: str) -> dict[str, Any]:
         model = {"openrouter": s["openrouter_model"], "openai": "gpt-4o-mini", "deepseek": "deepseek-chat"}[provider]
         res = ai_chat(provider, [{"role": "user", "content": "سلام"}], model=model, max_tokens=20, timeout=25)
         if res.get("ok"):
-            return {"ok": True, "message": f"✅ اتصال برقرار است — پاسخ مدل دریافت شد ({model})."}
-        return {"ok": False, "message": f"❌ {res.get('error_fa', 'خطای نامشخص')}", "detail": res.get("error", "")}
+            return {"ok": True, "message": f"اتصال برقرار است — پاسخ مدل دریافت شد ({model})."}
+        return {"ok": False, "message": f"{res.get('error_fa', 'خطای نامشخص')}", "detail": res.get("error", "")}
     except Exception as e:
-        return {"ok": False, "message": "❌ خطا در تست اتصال: " + str(e)[:120]}
+        return {"ok": False, "message": "خطا در تست اتصال: "+ str(e)[:120]}
 
 
 def env_summary() -> dict[str, Any]:

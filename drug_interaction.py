@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-drug_interaction.py — جست‌وجوی دارو/گیاه دارویی + بررسی تداخل + هشدار حساسیت.
-⚠️ اطلاعات عمومی آموزشی است؛ تصمیم نهایی فقط با پزشک/داروساز است.
+drug_interaction.py — جست‌وجوی دارو/گیاه دارویی + بررسی تداخل + هشدار حساسیت. اطلاعات عمومی آموزشی است؛ تصمیم نهایی فقط با پزشک/داروساز است.
 """
 from __future__ import annotations
 
@@ -54,7 +53,7 @@ DRUGS: list[dict[str, Any]] = [
     {"id": "turmeric", "fa": ["زردچوبه", "کورکومین"], "en": ["turmeric", "curcumin"], "cat": "گیاه دارویی"},
     {"id": "greentea", "fa": ["چای سبز"], "en": ["green tea"], "cat": "گیاه دارویی"},
     {"id": "stjohnswort", "fa": ["گل راعی", "چای کوهی", "سن‌جان"], "en": ["st johns wort", "st. john's wort"], "cat": "گیاه دارویی"},
-    {"id": "senna", "fa": ["سنا", " برگ سنا", "شربت سنا"], "en": ["senna"], "cat": "ملین گیاهی"},
+    {"id": "senna", "fa": ["سنا", "برگ سنا", "شربت سنا"], "en": ["senna"], "cat": "ملین گیاهی"},
     {"id": "licorice", "fa": ["ریشه‌ی شیرین‌بیان", "شیرین بیان"], "en": ["licorice", "liquorice"], "cat": "گیاه دارویی"},
     {"id": "chamomile", "fa": ["بابونه", "چای بابونه"], "en": ["chamomile"], "cat": "گیاه دارویی"},
 ]
@@ -93,9 +92,9 @@ INTERACTIONS: list[dict[str, Any]] = [
     {"a": "insulin", "b": "prednisolone", "sev": "moderate", "fa": "کورتون نیاز انسولین را بالا می‌برد؛ پایش قند ضروری است."},
 ]
 
-SEV_FA = {"major": "🔴 تداخل شدید", "moderate": "🟠 تداخل متوسط", "minor": "🟡 تداخل خفیف"}
+SEV_FA = {"major": "تداخل شدید", "moderate": "تداخل متوسط", "minor": "تداخل خفیف"}
 
-DISCLAIMER = "⚠️ این بررسی آموزشی است و کامل نیست؛ فهرست دارویی کامل خود را به پزشک/داروساز نشان بده."
+DISCLAIMER = "این بررسی آموزشی است و کامل نیست؛ فهرست دارویی کامل خود را به پزشک/داروساز نشان بده."
 
 
 def _norm_all(drug: dict) -> list[str]:
@@ -133,7 +132,7 @@ def check_interaction(a: str, b: str) -> dict[str, Any]:
     da, db = search_drug(a), search_drug(b)
     if not da or not db:
         return {"ok": False,
-                "message_fa": "یکی از داروها در پایگاه داخلی پیدا نشد؛ نام را دقیق‌تر بنویس (مثلاً «وارفارین» یا «warfarin»). " + DISCLAIMER}
+                "message_fa": "یکی از داروها در پایگاه داخلی پیدا نشد؛ نام را دقیق‌تر بنویس (مثلاً «وارفارین» یا «warfarin»). "+ DISCLAIMER}
     ida, idb = da[0]["id"], db[0]["id"]
     matches = []
     for it in INTERACTIONS:
@@ -141,7 +140,7 @@ def check_interaction(a: str, b: str) -> dict[str, Any]:
             matches.append({"severity": it["sev"], "severity_fa": SEV_FA[it["sev"]],
                             "a_fa": da[0]["fa"], "b_fa": db[0]["fa"], "detail_fa": it["fa"]})
     if not matches:
-        matches.append({"severity": "none", "severity_fa": "🟢 تداخل شناخته‌شده‌ای در پایگاه کوچک داخلی ثبت نشده",
+        matches.append({"severity": "none", "severity_fa": "تداخل شناخته‌شده‌ای در پایگاه کوچک داخلی ثبت نشده",
                         "a_fa": da[0]["fa"], "b_fa": db[0]["fa"],
                         "detail_fa": "نبودِ تداخل در این پایگاه به معنای بی‌خطر بودن قطعی نیست."})
     return {"ok": True, "a": da[0], "b": db[0], "interactions": matches, "disclaimer": DISCLAIMER}
@@ -162,6 +161,6 @@ def allergy_alert(drug_names: list[str]) -> dict[str, Any]:
         for name in d[0:1]:
             for alias in [name["fa"], name["en"]]:
                 if normalize(alias) and normalize(alias) in al:
-                    alerts.append(f"🔴 «{name['fa']}» با حساسیت ثبت‌شده‌ی شما ({alias}) مطابقت دارد!")
+                    alerts.append(f"«{name['fa']}» با حساسیت ثبت‌شده‌ی شما ({alias}) مطابقت دارد!")
                     break
     return {"ok": True, "alerts": alerts}

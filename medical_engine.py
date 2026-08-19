@@ -23,7 +23,7 @@ SYMPTOM_NAMES_FA: dict[str, str] = {
     "shortness_of_breath": "تنگی نفس", "dizziness": "سرگیجه", "fatigue": "خستگی",
     "palpitation": "تپش قلب", "heartburn": "سوزش سر دل", "flank_pain": "درد پهلو",
     "insomnia": "بی‌خوابی", "mood_low": "افت خلق/ناراحتی", "wheezing": "خس‌خس سینه",
-    "sputum": "خلط", "thirst": "تشنگی زیاد", "weight_loss": " کاهش وزن",
+    "sputum": "خلط", "thirst": "تشنگی زیاد", "weight_loss": "کاهش وزن",
     "blurred_vision": "تار شدن دید", "unilateral_weakness": "ضعف یک طرفه‌ی بدن",
     "speech_difficulty": "اختلال تکلم", "face_droop": "کج شدن صورت",
     "seizure": "تشنج", "loss_of_consciousness": "بیهوشی", "severe_bleeding": "خونریزی شدید",
@@ -120,7 +120,7 @@ RED_FLAGS: list[dict[str, Any]] = [
 
 _NUM = r"(\d{1,3}(?:[.,]\d)?)"
 DURATION_RE = re.compile(_NUM + r"\s*(روز|هفته|شب|ماه|سال|ساعت)", re.IGNORECASE)
-TEMP_RE = re.compile(r"(?:تب|حرارت)\s*" + _NUM)
+TEMP_RE = re.compile(r"(?:تب|حرارت)\s*"+ _NUM)
 FEVER_RE = re.compile(r"تب\s*(\d{2}(?:[.,]\d)?)")
 
 # ============================================================================
@@ -338,7 +338,7 @@ def check_red_flags(text: str, detected: dict | None = None) -> dict[str, Any]:
     return {"flag": bool(reasons), "reasons": reasons, "hits": sorted(set(hits))}
 
 
-EMERGENCY_RESPONSE_TEMPLATE = """🚨 **هشدار اورژانی — تشخیص معمول متوقف شد**
+EMERGENCY_RESPONSE_TEMPLATE = """**هشدار اورژانی — تشخیص معمول متوقف شد**
 
 در متن شما این نشانگان خطر شناسایی شد: {reasons}
 
@@ -348,8 +348,7 @@ EMERGENCY_RESPONSE_TEMPLATE = """🚨 **هشدار اورژانی — تشخیص
 3. در مشکوک به سکته: زمان شروع علائم را یادداشت کنید؛ به فرد غذای آب یا دارو ندهید
 4. در درد قفسه سینه: فعالیت متوقف، نشستن و آرامش؛ دارو فقط با راهنمایی اورژانس
 5. در بیهوشی بدون تنفس: CPR را شروع کنید (دکمه‌ی CPR برنامه: ضرباهنگ ۱۱۰ در دقیقه)
-
-⚠️ این برنامه در این مرحله تشخیص معمول انجام نمی‌دهد؛ اولویت با رسیدگی اورژانسی است.
+ این برنامه در این مرحله تشخیص معمول انجام نمی‌دهد؛ اولویت با رسیدگی اورژانسی است.
 {disclaimer}"""
 
 
@@ -357,7 +356,7 @@ def emergency_response(reasons: list[str], disclaimer: str = "") -> str:
     from common_2077 import MEDICAL_DISCLAIMER
     return EMERGENCY_RESPONSE_TEMPLATE.format(
         reasons="، ".join(reasons) if reasons else "علائم خطر",
-        disclaimer="\n\n" + (disclaimer or MEDICAL_DISCLAIMER),
+        disclaimer="\n\n"+ (disclaimer or MEDICAL_DISCLAIMER),
     )
 
 

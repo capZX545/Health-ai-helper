@@ -167,11 +167,11 @@ def chat_with_fallbacks(messages: list[dict], models: list[dict[str, str]] | Non
     order = [p for p in s["provider_order"] if p != "local" and get_api_key(p)]
     tries = []
     for p in order:
-        mdl = s["openrouter_model"] if p == "openrouter" else None
+        mdl = s["openrouter_model"] if p == "openrouter"else None
         res = chat(p, messages, model=mdl, **kw)
         res["provider"] = p
         if res["ok"]:
             return res
         tries.append(f"{p}: {res.get('error_fa')}")
-    return {"ok": False, "error": "all_failed", "error_fa": "هیچ سرویس خارجی پاسخ نداد:\n" + "\n".join(tries),
+    return {"ok": False, "error": "all_failed", "error_fa": "هیچ سرویس خارجی پاسخ نداد:\n"+ "\n".join(tries),
             "tries": tries}

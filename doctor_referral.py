@@ -33,7 +33,7 @@ def generate(profile: dict | None = None, vitals: list[dict] | None = None,
                       ("allergies", "حساسیت‌ها"), ("medications", "داروهای فعلی")))
     rows_v = ""
     for v in vit[:8]:
-        rows_v += "<tr>" + "".join(f"<td>{fa_digits(v.get(key, '—'))}</td>" for key in
+        rows_v += "<tr>"+ "".join(f"<td>{fa_digits(v.get(key, '—'))}</td>" for key in
                                    ("systolic_bp", "diastolic_bp", "heart_rate", "temp_c", "weight_kg", "glucose")) + "</tr>"
     sym = "، ".join(_esc(s) for s in (symptoms_fa or [])) or "—"
     cands = candidates or []
@@ -45,15 +45,15 @@ def generate(profile: dict | None = None, vitals: list[dict] | None = None,
     dlg = dialogue_summary or {}
     open_q = ""
     if dlg.get("symptoms_fa"):
-        open_q += "<li>توضیح بیشتر درباره: " + _esc("، ".join(dlg["symptoms_fa"][:8])) + "</li>"
+        open_q += "<li>توضیح بیشتر درباره: "+ _esc("، ".join(dlg["symptoms_fa"][:8])) + "</li>"
     open_q += "<li>بررسی معاینه‌ای و در صورت نیاز آزمایش/تصویربرداری</li>"
     tr_html = "".join(f"<li>{fa}: از {fa_digits(v['first'])} به {fa_digits(v['last'])} ({_esc(v['dir_fa'])})</li>"
                       for fa, v in (("فشار سیستولیک", tr.get("systolic_bp", {})), ("وزن", tr.get("weight_kg", {})),
                                     ("قند خون", tr.get("glucose", {}))) if v)
     labs_html = f"<pre class='labs'>{_esc(labs_text)}</pre>" if labs_text else "<p class='muted'>ثبت نشده</p>"
 
-    html = f"""<!DOCTYPE html><html lang="fa" dir="rtl"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+    html = f"""<!DOCTYPE html><html lang="fa"dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport"content="width=device-width, initial-scale=1">
 <title>گزارش ارجاع — NexusMed 2077</title>
 <style>
 @page{{size:A4;margin:16mm}}
@@ -64,7 +64,7 @@ th{{background:#eef4ff;width:28%}} .muted{{color:#7a8aa5}} .labs{{background:#f6
 .meta{{font-size:12px;color:#7a8aa5}} .sign{{margin-top:36px;display:flex;justify-content:space-between}}
 @media print{{.noprint{{display:none}}}}
 </style></head><body>
-<h1>🩺 گزارش ارجاع پزشکی</h1>
+<h1> گزارش ارجاع پزشکی</h1>
 <p class="meta">تولیدشده توسط NexusMed 2077 (نسخه {fa_digits(APP_VERSION)}) — {now_iso()}</p>
 <h2>۱) مشخصات بیمار</h2><table>{rows_p}</table>
 <h2>۲) علائم حیاتی اخیر</h2>
@@ -78,11 +78,11 @@ th{{background:#eef4ff;width:28%}} .muted{{color:#7a8aa5}} .labs{{background:#f6
 <h2>۶) درخواست از پزشک محترم</h2><ul>{open_q}</ul>
 <p class="sign"><span>امضای پزشک: ..................</span><span>تاریخ: ..................</span></p>
 <hr><p class="muted">{_esc(MEDICAL_DISCLAIMER)} این گزارش صرفاً جمع‌بندی اطلاعاتی بیمار است و جایگزین معاینه، پرسش‌های بالینی و نظر پزشک نیست.</p>
-<p class="noprint muted">📄 برای چاپ: Ctrl+P</p>
+<p class="noprint muted"> برای چاپ: Ctrl+P</p>
 </body></html>"""
     try:
         with open(OUT_PATH, "w", encoding="utf-8") as f:
             f.write(html)
         return {"ok": True, "path": OUT_PATH, "html": html}
     except Exception as e:
-        return {"ok": False, "message_fa": "خطا در ذخیره‌ی گزارش: " + str(e)[:100], "html": html}
+        return {"ok": False, "message_fa": "خطا در ذخیره‌ی گزارش: "+ str(e)[:100], "html": html}
