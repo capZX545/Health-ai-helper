@@ -162,8 +162,16 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if path == "/api/chat":
                 text = str(data.get("text") or "").strip()
+                from i18n import tt
                 if not text and not data.get("image_b64"):
-                    return self._json({"ok": False, "message_fa": "پیام خالی است."}, 400)
+                    return self._json({"ok": False, "message_fa": tt("The message is empty.", "پیام خالی است.")}, 400)
+                if data.get("image_b64"):
+                    import base64 as _b64chk
+                    try:
+                        _b64chk.b64decode(str(data["image_b64"]).split(",")[-1])
+                    except Exception:
+                        return self._json({"ok": False, "message_fa": tt("The attached image could not be decoded. Send it as PNG or JPG.",
+                                                                         "تصویر ضمیمه قابل رمزگشایی نبود. آن را به‌صورت PNG یا JPG بفرست.")}, 400)
                 res = get_engine().chat(text, image_b64=data.get("image_b64"),
                                         image_mime=data.get("image_mime", "image/jpeg"),
                                         image_note=str(data.get("image_note") or ""),
@@ -323,6 +331,21 @@ def main() -> int:
     if port == 2077:
         port = find_free_port(2077, 2087, args.host) or 2078
     httpd = ThreadingHTTPServer((args.host, port), Handler)
+
+    def _warmup():
+        # پیش‌بارگیری مدل ML و ایندکس RAG تا اولین چت کاربر سریع باشد
+        try:
+            from ml_classifier import is_ready
+            is_ready()
+        except Exception:
+            pass
+        try:
+            from semantic_rag import search
+            search("fever", k=1)
+        except Exception:
+            pass
+
+    threading.Thread(target=_warmup, daemon=True).start()
     url = f"http://{'localhost' if args.host in ('127.0.0.1', '0.0.0.0') else args.host}:{port}"
     print("=" * 56)
     print(f"{APP_NAME} v{APP_VERSION} - bilingual medical assistant (en/fa)")

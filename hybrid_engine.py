@@ -74,6 +74,7 @@ class HybridEngine:
             return self._chat_inner(user_text, image_b64, image_mime, image_note, image_hint)
 
     def _chat_inner(self, user_text: str, image_b64, image_mime, image_note, image_hint=None) -> dict[str, Any]:
+        user_text = (user_text or "")[:8000]
         from patient_profile import load_profile
         profile = load_profile()
         # با تصویر، بررسی علائم خطر روی متن + یادداشت تصویر انجام می‌شود
@@ -95,6 +96,7 @@ class HybridEngine:
             import base64 as _b64mod
             from image_caption import analyze_image_with_ai, offline_analysis
             from image_type_detector import classify_image
+            _raw = None
             try:
                 _raw = _b64mod.b64decode(image_b64.split(",")[-1])
                 _type_info = classify_image(_raw, image_hint)
@@ -181,12 +183,36 @@ class HybridEngine:
         from patient_profile import load_profile
         from behavior_imitation import apply_style
         from medical_nlg import compose_offline_answer
+        from medical_engine import sym_name
         profile = load_profile()
-        analysis = analysis or analyze(user_text, profile)
         # گفتگو را جلو ببر
         proc = self.dialogue.process(user_text)
+        analysis = analysis or analyze(user_text, profile)
+        # رتبه‌بندی روی «کل» علائم گفتگو انجام می‌شود، نه فقط پیام آخر:
+        # (عفونت ادراری در نوبت قبل، با «تب خفیف» در نوبت بعد گم نمی‌شود)
+        if not analysis.get("red_flag"):
+            from bayesian_engine import rank_diseases
+            dlg = self.dialogue
+            combined = {"present": {sid: {"count": 1,
+                                          "severity": proc["detected"]["present"].get(sid, {}).get("severity", "moderate"),
+                                          "denied": False}
+                                    for sid in dlg.mentioned},
+                        "duration_days": proc["detected"].get("duration_days") or dlg.summary()["duration_days"],
+                        "temp_c": proc["detected"].get("temp_c")}
+            if combined["present"]:
+                try:
+                    analysis["candidates"] = rank_diseases(combined, profile)
+                except Exception:
+                    pass
+            analysis["symptoms"] = [sym_name(s) for s in dlg.mentioned]
+            analysis["denied"] = [sym_name(s) for s in dlg.denied]
         cand_ids = [c["id"] for c in analysis.get("candidates", [])]
         followup = self.dialogue.next_question(cand_ids)
+        # اگر هنوز هیچ علامتی ثبت نشده، سوال غربالگری مشخص بپرس
+        if not followup and not self.dialogue.mentioned:
+            from i18n import tt
+            followup = tt("To get started: where is the discomfort (head, chest, belly, skin, urinary)? Any fever? How many days has it lasted?",
+                          "برای شروع: ناراحتی کجاست (سر، سینه، شکم، پوست، ادرار)؟ تب داری؟ چند روز است ادامه دارد؟")
         # سیگنال ML (اختیاری)
         ml = None
         if get_settings().get("brain_enabled"):

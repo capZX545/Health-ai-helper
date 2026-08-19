@@ -140,9 +140,17 @@ def _classify(s: dict[str, float]) -> tuple[str, float, str]:
 
 
 def classify_image(image_bytes: bytes, hint: str | None = None) -> dict[str, Any]:
-    """Classify a medical image. hint (from the user) overrides the heuristic."""
+    """Classify a medical image. hint (from the user) overrides the heuristic.
+    Broken image data degrades gracefully instead of raising."""
     from i18n import is_fa
-    s = _stats(image_bytes)
+    try:
+        s = _stats(image_bytes)
+    except Exception:
+        info = TYPES["other_photo"]
+        return {"type": "other_photo", "label": info["fa"] if is_fa() else info["en"],
+                "confidence": 0.0, "reason": "unreadable image data", "user_hint": bool(HINT_ALIASES.get((hint or "").strip().lower())),
+                "features": {}, "size": "?", "quality": ["unreadable" if not is_fa() else "ناخوانا"],
+                "hint_options": [{"value": k, "label": v["hint_label"]["fa" if is_fa() else "en"]} for k, v in TYPES.items()]}
     used_hint = False
     hint_key = HINT_ALIASES.get((hint or "").strip().lower())
     if hint_key:
