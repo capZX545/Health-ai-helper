@@ -69,14 +69,16 @@ class HybridEngine:
 
     # ------------------------------------------------------------------ chat
     def chat(self, user_text: str, image_b64: str | None = None, image_mime: str = "image/jpeg",
-             image_note: str = "") -> dict[str, Any]:
+             image_note: str = "", image_hint: str | None = None) -> dict[str, Any]:
         with _lock:
-            return self._chat_inner(user_text, image_b64, image_mime, image_note)
+            return self._chat_inner(user_text, image_b64, image_mime, image_note, image_hint)
 
-    def _chat_inner(self, user_text: str, image_b64, image_mime, image_note) -> dict[str, Any]:
+    def _chat_inner(self, user_text: str, image_b64, image_mime, image_note, image_hint=None) -> dict[str, Any]:
         from patient_profile import load_profile
         profile = load_profile()
-        analysis = analyze(user_text, profile)
+        # با تصویر، بررسی علائم خطر روی متن + یادداشت تصویر انجام می‌شود
+        red_flag_text = (user_text + " " + (image_note or "")).strip() if image_b64 else user_text
+        analysis = analyze(red_flag_text, profile)
 
         # ۱) علائم خطر → پاسخ اورژانسی فوری؛ تشخیص معمول متوقف
         if analysis["red_flag"]:
@@ -90,8 +92,22 @@ class HybridEngine:
         s = get_settings()
         external = None
         if image_b64:
-            from image_caption import analyze_image_with_ai
-            external = analyze_image_with_ai(image_b64, image_mime, image_note or user_text, self)
+            import base64 as _b64mod
+            from image_caption import analyze_image_with_ai, offline_analysis
+            from image_type_detector import classify_image
+            try:
+                _raw = _b64mod.b64decode(image_b64.split(",")[-1])
+                _type_info = classify_image(_raw, image_hint)
+            except Exception:
+                _type_info = {"type": "other_photo", "label": "general photo", "confidence": 0.0,
+                              "user_hint": False, "quality": [], "size": "?"}
+            external = analyze_image_with_ai(image_b64, image_mime, image_note or user_text, self, _type_info)
+            if not external.get("ok"):
+                external = offline_analysis(_type_info, image_note or user_text)
+                external["source"] = "internal-image"
+            else:
+                external["image_type"] = _type_info
+                external["source"] = f"external:{external.get('provider', '?')}"
         else:
             ext_res = self._try_external(user_text, s)
             external = ext_res
@@ -103,14 +119,18 @@ class HybridEngine:
             learned = False
             try:
                 from auto_learning import learn_from_exchange
+                _meta = {"image": bool(image_b64)}
+                if image_b64 and isinstance(external.get("image_type"), dict):
+                    _meta["image_type"] = external["image_type"].get("type", "?")
                 entry = learn_from_exchange(user_text or image_note, text,
                                             provider=external.get("provider", ""), model=external.get("model", ""),
-                                            red_flag=False, meta={"image": bool(image_b64)})
+                                            red_flag=False, meta=_meta)
                 learned = entry is not None
             except Exception:
                 pass
-            self.last_source = f"external:{external.get('provider', '?')}"
-            return {"ok": True, "text": text, "source": self.last_source, "red_flag": False, "learned": learned}
+            self.last_source = external.get("source") or f"external:{external.get('provider', '?')}"
+            return {"ok": True, "text": text, "source": self.last_source, "red_flag": False,
+                    "learned": learned, "image_type": external.get("image_type")}
 
         # ۴) مغز داخلی آفلاین
         text, info = self.internal_answer(user_text, analysis)
@@ -118,7 +138,8 @@ class HybridEngine:
         self._remember("assistant", text)
         self.last_source = "internal"
         return {"ok": True, "text": text, "source": "internal", "red_flag": False,
-                "learned": False, "external_error": external.get("error_fa") if external else None, "info": info}
+                "learned": False, "image_type": (external or {}).get("image_type"),
+                "external_error": external.get("error_fa") if external else None, "info": info}
 
     def _try_external(self, user_text: str, s: dict) -> dict[str, Any] | None:
         msgs = [{"role": "system", "content": self._system_prompt({}, self._rag(user_text))}]

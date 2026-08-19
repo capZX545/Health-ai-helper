@@ -104,6 +104,7 @@ class App:
             (("Prescription scan", "اسکن نسخه"), self._panel_rx),
             (("Drugs & interactions", "دارو و تداخلات"), self._panel_drugs),
             (("Medical image", "تحلیل تصویر پزشکی"), self._panel_image),
+            (("Disease likelihood", "ارزیابی احتمال بیماری"), self._panel_assess),
             (("Mental health", "سلامت روان"), self._panel_mental),
             (("Sleep analysis", "تحلیل خواب"), self._panel_sleep),
             (("Checkup calendar", "تقویم چکاپ"), self._panel_checkup),
@@ -223,7 +224,11 @@ class App:
                 else:
                     res = self._engine().chat(text)
                 tag = "emg" if res.get("red_flag") else "bot"
-                meta = {"internal": "مغز داخلی آفلاین"}.get(res.get("source", ""), res.get("source", ""))
+                meta = {"internal": self.L("offline brain", "مغز داخلی آفلاین"),
+                        "internal-image": self.L("offline brain - image", "مغز داخلی — تحلیل تصویر"),
+                        "internal-emergency": self.L("emergency", "اورژانسی")}.get(res.get("source", ""), res.get("source", ""))
+                if res.get("image_type") and res["image_type"].get("label"):
+                    meta += " | " + res["image_type"]["label"]
                 if res.get("learned"):
                     meta += "•  یادگیری ثبت شد"
                 self._bot(res.get("text", ""), tag, meta)
@@ -407,7 +412,20 @@ class App:
             if p:
                 path["p"] = p
                 lbl.config(text=""+ os.path.basename(p))
-        tk.Button(w, text="انتخاب عکس", command=pick, bg="#0d1930", fg=C["tx", ], relief="flat",
+        from i18n import is_fa
+        tk.Label(w, text=("Image type (optional - auto-detected too)" if not is_fa() else "نوع تصویر (اختیاری — خودکار هم تشخیص داده می‌شود)"),
+                 bg=C["panel2"], fg=C["dim"], font=pick_font(10)).pack(padx=16, pady=(8, 0))
+        hint_var = tk.StringVar(value=("Auto-detect" if not is_fa() else "تشخیص خودکار"))
+        hint_menu = ttk.Combobox(w, textvariable=hint_var, state="readonly", font=pick_font(10),
+                                 values=(["Auto-detect", "Skin / rash", "Wound / burn", "X-ray / CT / MRI", "ECG", "Lab report / prescription", "Eye", "Other"] if not is_fa()
+                                         else ["تشخیص خودکار", "پوست / جوش", "زخم / سوختگی", "رادیوگرافی / سی‌تی / ام‌آرآی", "نوار قلب", "برگه‌ی آزمایش / نسخه", "چشم", "سایر"]))
+        hint_menu.pack(fill="x", padx=16)
+        HINT_MAP = {"Auto-detect": "", "تشخیص خودکار": "", "Skin / rash": "skin", "پوست / جوش": "skin",
+                    "Wound / burn": "wound", "زخم / سوختگی": "wound", "X-ray / CT / MRI": "xray",
+                    "رادیوگرافی / سی‌تی / ام‌آرآی": "xray", "ECG": "ecg", "نوار قلب": "ecg",
+                    "Lab report / prescription": "lab", "برگه‌ی آزمایش / نسخه": "lab",
+                    "Eye": "eye", "چشم": "eye", "Other": "other", "سایر": "other"}
+        tk.Button(w, text=("Choose image" if not is_fa() else "انتخاب عکس"), command=pick, bg="#0d1930", fg=C["tx"], relief="flat",
                   font=pick_font(11)).pack(pady=4)
         lbl = tk.Label(w, text="—", bg=C["panel2"], fg=C["yl"], font=pick_font(10))
         lbl.pack()
@@ -420,11 +438,62 @@ class App:
                 messagebox.showwarning("تصویر", "اول عکس را انتخاب کن.", parent=w)
                 return
             from image_caption import analyze_image_file
-            r = analyze_image_file(path["p"], note.get("1.0", "end").strip())
+            hint = HINT_MAP.get(hint_var.get(), "")
+            r = analyze_image_file(path["p"], note.get("1.0", "end").strip(), hint=hint)
             box.delete("1.0", "end")
             box.insert("1.0", f"[{r.get('source','')}]\n\n"+ r.get("text", ""))
             self._refresh_status()
         tk.Button(w, text="تحلیل", command=go, bg="#0077b6", fg="#021018",
+                  font=pick_font(11, True), relief="flat").pack(pady=8, ipadx=24, ipady=4)
+
+    def _panel_assess(self):
+        from medical_engine import analyze, emergency_response
+        from ml_classifier import predict as ml_predict
+        w = self._win(self.L("Disease likelihood assessment", "ارزیابی احتمال بیماری‌ها"))
+        from i18n import is_fa
+        tk.Label(w, text=("Describe symptoms in one or a few lines (onset, severity, duration)" if not is_fa()
+                          else "علائم را در یک یا چند خط بنویس (شروع، شدت، مدت)"),
+                 bg=C["panel2"], fg=C["dim"], font=pick_font(10)).pack(padx=16, pady=8)
+        txt = scrolledtext.ScrolledText(w, bg="#0a1424", fg=C["tx"], font=pick_font(12), height=4, relief="flat")
+        txt.pack(fill="x", padx=16)
+        box = self._result_box(w)
+
+        def go():
+            text = txt.get("1.0", "end").strip()
+            if not text:
+                return
+            a = analyze(text)
+            lines = []
+            if a["red_flag"]:
+                box.delete("1.0", "end")
+                box.insert("1.0", emergency_response(a["red_flag_reasons"]))
+                return
+            from i18n import is_fa
+            fa_mode = is_fa()
+            lines.append((("علائم: " if fa_mode else "Symptoms: ") + ("، ".join(a["symptoms"]) if fa_mode else ", ".join(a["symptoms"]))) or "—")
+            if a["denied"]:
+                lines.append(("ردشده: " if fa_mode else "Ruled out: ") + ("، ".join(a["denied"]) if fa_mode else ", ".join(a["denied"])))
+            lines.append("")
+            if a["candidates"]:
+                lines.append("احتمالات (رتبه‌بندی احتمالی — تشخیص قطعی نیست):" if fa_mode else "Possibilities (probabilistic ranking - NOT a diagnosis):")
+                for c in a["candidates"]:
+                    lines.append(f"• {c['name']} ~{c['percent']}%  [{c['urgency']}]")
+                    lines.append("   " + ("؛ ".join(c.get("advice", [])[:2])))
+                    if c.get("doctor_when"):
+                        lines.append("   -> " + c["doctor_when"])
+            else:
+                lines.append("اطلاعات کافی نیست." if fa_mode else "Not enough information yet.")
+            try:
+                ml = ml_predict(a["detected"], {}, None)
+                if ml:
+                    lines.append("")
+                    lines.append(("سیگنال ML (دیتاست مصنوعی): " if fa_mode else "ML signal (synthetic dataset): ")
+                                 + ("، ".join(f"{m['label']} (~{m['percent']}%)" for m in ml[:2])))
+            except Exception:
+                pass
+            box.delete("1.0", "end")
+            box.insert("1.0", "\n".join(lines))
+        tk.Button(w, text=self.L("Assess", "ارزیابی"), command=go, bg="#0077b6", fg="#021018",
                   font=pick_font(11, True), relief="flat").pack(pady=8, ipadx=24, ipady=4)
 
     def _panel_mental(self):

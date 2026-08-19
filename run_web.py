@@ -166,7 +166,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"ok": False, "message_fa": "پیام خالی است."}, 400)
                 res = get_engine().chat(text, image_b64=data.get("image_b64"),
                                         image_mime=data.get("image_mime", "image/jpeg"),
-                                        image_note=str(data.get("image_note") or ""))
+                                        image_note=str(data.get("image_note") or ""),
+                                        image_hint=data.get("image_hint"))
                 return self._json(res)
             if path == "/api/settings":
                 from ai_api_manager import get_settings, save_settings
@@ -246,13 +247,44 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(test_setup())
             if path == "/api/image":
                 from image_caption import analyze_image_bytes
+                from i18n import tt
                 import base64
                 b64 = str(data.get("image_b64") or "")
                 note = str(data.get("note") or "")
                 if not b64:
-                    return self._json({"ok": False, "message_fa": "تصویری ارسال نشد."}, 400)
+                    return self._json({"ok": False, "message_fa": tt("No image was sent.", "تصویری ارسال نشد.")}, 400)
                 img_bytes = base64.b64decode(b64.split(",")[-1])
-                return self._json(analyze_image_bytes(img_bytes, note))
+                return self._json(analyze_image_bytes(img_bytes, note, hint=data.get("hint")))
+            if path == "/api/assess":
+                from medical_engine import analyze, detect_symptoms, emergency_response
+                from patient_profile import load_profile
+                from ml_classifier import predict as ml_predict
+                text = str(data.get("text") or "").strip()
+                if not text:
+                    from i18n import tt
+                    return self._json({"ok": False, "message_fa": tt("Enter your symptoms first.", "اول علائمت را بنویس.")}, 400)
+                profile = load_profile()
+                a = analyze(text, profile)
+                if a["red_flag"]:
+                    return self._json({"ok": True, "red_flag": True,
+                                       "reasons": a["red_flag_reasons"],
+                                       "text": emergency_response(a["red_flag_reasons"])})
+                ml = None
+                try:
+                    ml = ml_predict(a["detected"], profile, None)
+                except Exception:
+                    ml = None
+                rag = []
+                try:
+                    from semantic_rag import search
+                    rag = [h.get("title") for h in search(text, k=3) if h.get("title")]
+                except Exception:
+                    pass
+                return self._json({"ok": True, "red_flag": False,
+                                   "symptoms": a["symptoms"], "denied": a["denied"],
+                                   "duration_days": a["detected"].get("duration_days"),
+                                   "temp_c": a["detected"].get("temp_c"),
+                                   "candidates": a["candidates"], "ml": ml, "rag": rag})
             if path == "/api/learning/reset":
                 from auto_learning import reset
                 return self._json({"ok": reset()})

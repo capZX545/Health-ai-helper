@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-image_caption.py — تحلیل تصویر پزشکی همراه متن توضیحی کاربر.
-- اگر مدل تصویری خارجی در دسترس بود → تحلیل با AI + یادگیری خودکار
-- اگر نه → پاسخ امن آفلاین (بدون تولید تشخیص جعلی): سوالات کلیدی + مسیر ارجاع
+image_caption.py — medical image analysis with a text note.
+Flow: red flag check -> offline type detection (image_type_detector) ->
+optional external vision model with a type-specific prompt -> honest offline
+answer otherwise. The detected type also feeds the learning memory.
 """
 from __future__ import annotations
 
@@ -10,9 +11,11 @@ import base64
 import io
 from typing import Any
 
+from i18n import is_fa
+
 
 def prepare_image(image_bytes: bytes, max_side: int = 1024, quality: int = 82) -> tuple[str, str]:
-    """فشرده‌سازی تصویر با Pillow و خروجی (b64, mime)."""
+    """Resize/compress with Pillow, return (b64, mime)."""
     from PIL import Image
     im = Image.open(io.BytesIO(image_bytes))
     im = im.convert("RGB")
@@ -25,125 +28,326 @@ def prepare_image(image_bytes: bytes, max_side: int = 1024, quality: int = 82) -
     return base64.b64encode(buf.getvalue()).decode("ascii"), "image/jpeg"
 
 
-def _vision_prompt(note: str) -> str:
-    from i18n import is_fa
+# --------------------------------------------------------------------------
+# Type-specific instructions for the external vision model
+# --------------------------------------------------------------------------
+
+PROMPT_FRAGMENTS: dict[str, dict[str, str]] = {
+    "skin_photo": {
+        "fa": """تصویر یک ضایعه‌ی پوستی است. توصیف عینی بده: رنگ، مرز (منظم/نامنظم)، تعداد و پراکندگی، اندازه‌ی تقریبی، وجود پوسته‌ریز/ترشح/تاول.
+چند احتمال مطرح را با لحن محتاط بیاور (آلرژیک/عفونی/تحریکی و…) بدون قطعیت. بگو چه چیزی از عکس معلوم نیست.
+علائم هشدار برای مراجعه‌ی فوری: پخش سریع قرمزی، تب، تاول روی مخاط‌ها، کهیر با تورم صورت/گلو، لک‌های بنفش که زیر فشار محو نمی‌شوند.""",
+        "en": """This is a photo of a skin lesion. Describe objectively: color, border (regular/irregular), number and distribution, approximate size, any scaling/discharge/blistering.
+List a few cautious possibilities (allergic/infectious/irritant and so on) without certainty. Say what cannot be judged from the photo.
+Red flags that mean urgent care: rapidly spreading redness, fever, blisters on mucous membranes, hives with face/throat swelling, purple spots that do not fade under pressure.""",
+    },
+    "wound_photo": {
+        "fa": """تصویر یک زخم/سوختگی است. توصیف عینی: ظاهر بستر زخم، لبه‌ها، قرمزی اطراف، ترشح/چرک، تورم، رنگ.
+نشانه‌های عفونت را جدا ذکر کن (قرمزی پخش‌شونده، چرک، بو، تب). سوال درباره‌ی زمان ایجاد زخم، عامل آن و وضعیت واکسن تتانوس مطرح کن.
+مراقبت عمومی امن و زمان مراجعه را بگو؛ دیبریدمان/دارو فقط با پزشک.""",
+        "en": """This is a wound or burn photo. Describe objectively: wound bed, edges, surrounding redness, discharge/pus, swelling, color.
+Separately list infection signs (spreading redness, pus, odor, fever). Ask about when it happened, the cause, and tetanus vaccination status.
+Give safe general care and when to seek care; debridement and medication belong to a clinician.""",
+    },
+    "radiograph": {
+        "fa": """تصویر احتمالاً رادیولوژیک است (رادیوگرافی/سی‌تی/ام‌آرآی). اگر نوع اموج و ناحیه‌ی بدن از خود تصویر مشخص است بگو؛ اگر مطمئن نیستی صریح بگو.
+فقط یافته‌های درشتِ قابل مشاهده را با احتیاط توصیف کن و تأکید کن گزارش رسمی فقط توسط رادیولوژیست است.
+سوال درباره‌ی علت انجام عکس (ضربه/درد مزمن/پیگیری) و علائم همراه بپرس. هیچ‌گونه «طبیعی است» قطعی نگو.""",
+        "en": """This is probably a radiological image (X-ray/CT/MRI). If the modality and body region are evident from the image, say so; if not, say so honestly.
+Describe only gross visible findings cautiously, and stress that an official read belongs to a radiologist.
+Ask why the image was taken (trauma/chronic pain/follow-up) and about accompanying symptoms. Never declare it 'normal' with certainty.""",
+    },
+    "ecg_strip": {
+        "fa": """این تصویر نوار قلب است. فقط اگر کاملاً واضح است، ریتم ظاهری و نرخ تقریبی را با احتیاط توصیف کن.
+هیچ تفسیر ایسکمی/انفارکتوس نده و نگو «نوار طبیعی است». تأکید کن تفسیر نهایی فقط توسط پزشک/قلب‌شناس است.
+اگر کاربر درد قفسه سینه/تنگی نفس/غش دارد → فوراً اورژانس. بگو کدام علامت روی نوار باید سریع دیده شود (مثلاً ریتم خیلی تند/کند) و مراجعه فوری یعنی چه.""",
+        "en": """This is an ECG strip. Only if it is clearly legible, cautiously describe the apparent rhythm and approximate rate.
+Do not interpret ischemia/infarction and never say 'the ECG is normal'. The final read belongs to a physician/cardiologist.
+If the user has chest pain/breathlessness/fainting -> emergency immediately. Mention which patterns need urgent attention (extremely fast/slow rhythm) and what urgent care means.""",
+    },
+    "document_report": {
+        "fa": """این تصویر یک برگه‌ی آزمایش/نسخه است. مقادیر خوانا را فهرست کن (نام آزمایش، عدد، واحد، بازه‌ی مرجع اگر چاپ شده).
+برای هر مورد خارج از بازه توضیح عمومی کوتاه بده و تأکید کن تفسیر بالینی با پزشک است. اگر متنی خوانا نیست صادقانه بگو و از کاربر بخواه اعداد را تایپ کند تا در ماژول تحلیل آزمایش بررسی شوند.
+داروهای نوشته‌شده را فقط نام ببر و تأکید کن مصرف فقط با تجویز پزشک.""",
+        "en": """This is a scanned lab report or prescription. List legible values (test name, number, unit, reference range if printed).
+For each out-of-range item give a short general note and stress that clinical interpretation belongs to a doctor. If text is not legible, say so and ask the user to type the numbers so the lab module can analyze them.
+Name any written medications but stress they are taken only as prescribed.""",
+    },
+    "eye_photo": {
+        "fa": """تصویر چشم است. توصیف عینی: قرمزی (موضعی/پخش)، ترشح، پلک، مشخص بودن مردمک، تورم اطراف.
+سوال درباره‌ی درد، نورآزار بودن، تغییر دید، استفاده از لنز تماسی بپرس.
+علائم هشدار: کاهش شدید دید، درد شدید، زخم قرنیه مشکوک، کتاراکت حاد — ارجاع فوری. توصیه لنز/قطره فقط با پزشک.""",
+        "en": """This is an eye photo. Describe objectively: redness (localized/diffuse), discharge, eyelids, pupil visibility, surrounding swelling.
+Ask about pain, light sensitivity, vision change, and contact lens use.
+Red flags: severe vision loss, severe pain, suspected corneal ulcer, acute cataract - urgent referral. Lens or drop advice only from a clinician.""",
+    },
+    "other_photo": {
+        "fa": """تصویر پزشکی عمومی است. فقط توصیف عینی قابل مشاهده بنویس و بگو چه چیزی قابل قضاوت نیست.
+احتمالات را محتاط مطرح کن و مسیر درست ارجاع را بگو.""",
+        "en": """This is a general medical photo. Describe only what is objectively visible and say what cannot be judged.
+Raise possibilities cautiously and point to the right care path.""",
+    },
+}
+
+
+def _vision_prompt(note: str, type_info: dict | None) -> str:
+    tkey = (type_info or {}).get("type", "other_photo")
+    frag = PROMPT_FRAGMENTS.get(tkey, PROMPT_FRAGMENTS["other_photo"])
+    tline = ""
+    if type_info and not type_info.get("user_hint"):
+        tline = f"\nOffline preprocessing guesses the image type as: {type_info.get('label')} (heuristic, {int(type_info.get('confidence', 0) * 100)}%) - correct it if it is wrong.\n"
+    elif type_info:
+        tline = f"\nThe user says the image type is: {type_info.get('label')}.\n"
     if is_fa():
-        return f"""این تصویر پزشکی توسط کاربر ارسال شده همراه توضیح: «{note or 'توضیحی داده نشده'}»
-به‌عنوان دستیار پزشکی فارسی:
-1. فقط توصیفِ عینیِ قابل مشاهده بنویس (شکل، رنگ، پراکندگی، اندازه تقریبی) — بدون ادعای قطعی.
-2. چند «احتمال مطرح» را با لحن احتمالی و محتاط بنویس.
-3. مواردی که در تصویر قابل تشخیص نیست را صادقانه بگو.
-4. مراقبت عمومی امن + علائم هشدار برای مراجعه فوری.
-5. تأکید کن تشخیص نهایی با معاینه‌ی حضوری پزشک است.
-قوانین: تشخیص قطعی ممنوع؛ اطلاعات جعلی ممنوع؛ فارسی همدلانه؛ بخش‌بندی با عنوان‌های کوتاه (علائم، احتمالات، مراقبت، سوال بعدی)."""
-    return f"""This medical image was sent by the user with this note: '{note or 'no note given'}'
-As the medical assistant:
-1. Describe only what is objectively visible (shape, color, distribution, approximate size) - no definitive claims.
-2. List a few "possibilities to consider" in cautious, probabilistic language.
-3. Say honestly what cannot be determined from the image alone.
-4. Safe general care plus red flags that mean urgent in-person care.
-5. Stress that the final diagnosis belongs to an in-person clinician.
-Rules: no definitive diagnosis; never fabricate information; warm clear English; short section titles (findings, possibilities, care, next question)."""
+        return f"""این تصویر پزشکی توسط کاربر با توضیح «{note or 'توضیحی داده نشده'}» ارسال شده.{tline}
+{frag['fa']}
+
+قوانین: هیچ‌گاه تشخیص قطعی نده؛ اطلاعات جعلی نساز؛ فارسی همدلانه؛ بخش‌بندی با عنوان‌های کوتاه (یافته‌ها، احتمالات، مراقبت، سوال بعدی)."""
+    return f"""This medical image was sent by the user with the note: '{note or 'no note given'}'.{tline}
+{frag['en']}
+
+Rules: never give a definitive diagnosis; never fabricate information; warm clear English; short section titles (findings, possibilities, care, next question)."""
 
 
-def analyze_image_with_ai(image_b64: str, mime: str, note: str, engine=None) -> dict[str, Any]:
-    """ارسال تصویر + متن به مدل تصویری در دسترس."""
+def analyze_image_with_ai(image_b64: str, mime: str, note: str, engine=None,
+                          type_info: dict | None = None) -> dict[str, Any]:
+    """Send image + note (+ detected type context) to a vision model."""
     from ai_api_manager import get_api_key, get_settings
     from ai_client import chat as ext_chat
-    from free_ai import is_vision_model
+    from free_ai import is_vision_model, vision_models
     s = get_settings()
     order = [p for p in s["provider_order"] if p != "local" and get_api_key(p)]
     for p in order:
-        model = s.get("openrouter_model") if p == "openrouter"else ("gpt-4o-mini" if p == "openai"else None)
+        model = s.get("openrouter_model") if p == "openrouter" else ("gpt-4o-mini" if p == "openai" else None)
         if p == "openrouter" and not is_vision_model(model or ""):
-            from free_ai import vision_models
             model = vision_models()[0]
         if p == "deepseek":
-            continue  # DeepSeek تصویر نمی‌پذیرد
-        r = ext_chat(p, [{"role": "user", "content": _vision_prompt(note)}],
+            continue  # DeepSeek has no vision endpoint
+        r = ext_chat(p, [{"role": "user", "content": _vision_prompt(note, type_info)}],
                      model=model, image_b64=image_b64, image_mime=mime, max_tokens=1100)
         if r.get("ok"):
             r["provider"] = p
             return r
-    return {"ok": False, "error": "no_vision_ai", "error_fa": "مدل تصویری خارجی در دسترس نیست."}
+    return {"ok": False, "error": "no_vision_ai", "error_fa": "no vision model available" if not is_fa() else "مدل تصویری خارجی در دسترس نیست"}
 
 
-OFFLINE_IMAGE_RESPONSE_FA = """تحلیل تصویر آفلاین (بدون AI خارجی)
+# --------------------------------------------------------------------------
+# Honest offline answers, tailored per detected type
+# --------------------------------------------------------------------------
 
-از اینکه عکس را فرستادی ممنونم؛ ولی بدون مدل تصویری فعال، من حدس تصویری قطعی نمی‌زنم — ایمنی‌ات مهم‌تر از جواب سریع است.
+def _type_header(type_info: dict, fa: bool) -> str:
+    if fa:
+        how = "انتخاب شما" if type_info.get("user_hint") else f"حدس آفلاین (~{int(type_info.get('confidence', 0) * 100)}٪)"
+        return f"نوع تصویر ({how}): {type_info.get('label')} | اندازه: {type_info.get('size')}"
+    how = "your selection" if type_info.get("user_hint") else f"offline guess (~{int(type_info.get('confidence', 0) * 100)}%)"
+    return f"Image type ({how}): {type_info.get('label')} | size: {type_info.get('size')}"
 
-سوال‌های کلیدی که جوابشان کمک می‌کند:
-• این ضایعه چند روز/هفته است؟
-• خارش، درد، ترشح یا خونریزی دارد؟
+
+OFFLINE_BODIES: dict[str, dict[str, str]] = {
+    "skin_photo": {
+        "fa": """سوال‌های کلیدی:
+• چند روز/هفته است؟ خارش، درد یا ترشف دارد؟
 • پس از چه چیزی شروع شد (دارو، غذا، نیش، تماس با ماده‌ی جدید)؟
 • تب یا علائم عمومی هم داری؟
 
 مسیر درست:
-• ضایعه‌ی پوستی جدید با خارش/رشد → معاینه‌ی پزشک یا پوست‌شناس در چند روز آینده
-• همراه با تورم صورت/لب/زبان یا تنگی نفس → اورژانس فوری (۱۱۵ / ۱۱۲)
-• تب بالا با لک‌های بنفش/قرمز که زیر فشار محو نمی‌شود → اورژانس فوری
+• ضایعه‌ی جدید با رشد یا خارش شدید -> معاینه‌ی پزشک/پوست‌شناس در چند روز آینده
+• تورم لب/زبان/گلو یا تنگی نفس -> اورژانس فوری (۱۱۵ / ۱۱۲)
+• تب با لک‌های بنفش که زیر فشار محو نمی‌شود -> اورژانس فوری
 
-تا زمان معاینه: ناحیه را تمیز و خشک نگه دار، از خاراندن پرهیز کن، مرطوب‌کننده‌ی ساده بدون عطر.
-
-جواب سوال‌های بالا را بنویس تا مغز داخلی، احتمالات را دقیق‌تر کند؛ و اگر کلید OpenRouter را در تنظیمات وارد کنی، تحلیل تصویری واقعی هم فعال می‌شود.
-
-این برنامه جایگزین پزشک نیست."""
-
-OFFLINE_IMAGE_RESPONSE_EN = """Offline image analysis (no external AI)
-
-Thank you for the photo. Without a vision model configured, I will not guess a diagnosis from an image - your safety matters more than a fast answer.
-
-Key questions that would help:
-- How many days/weeks has this been there?
-- Is it itchy, painful, discharging or bleeding?
-- What appeared right before it (medication, food, an insect bite, contact with something new)?
+تا معاینه: ناحیه تمیز و خشک، بدون خاراندن، مرطوب‌کننده‌ی ساده‌ی بدون عطر.""",
+        "en": """Key questions:
+- How many days/weeks has it been there? Itchy, painful or oozing?
+- What appeared right before it (medication, food, a bite, contact with something new)?
 - Any fever or general symptoms?
 
 The right path:
-- A new skin lesion that grows or itches -> see a clinician or dermatologist in the next few days
-- With swelling of face/lips/tongue or trouble breathing -> call emergency services now (115 / 112)
-- High fever with purple/red spots that do not fade under pressure -> emergency now
+- A new lesion that grows or itches badly -> clinician/dermatologist in the next few days
+- Swelling of lips/tongue/throat or trouble breathing -> emergency now (115 / 112)
+- Fever with purple spots that do not fade under pressure -> emergency now
 
-Until it is examined: keep the area clean and dry, do not scratch, plain fragrance-free moisturizer is fine.
+Until examined: keep it clean and dry, no scratching, plain fragrance-free moisturizer.""",
+    },
+    "wound_photo": {
+        "fa": """سوال‌های کلیدی:
+• زخم کِی و با چه عاملی ایجاد شد؟ آخرین واکسن تتانوس کِی بوده؟
+• تب، قرمزی پخش‌شونده، چرک یا دردِ رو به افزایش دارد؟
+• دیابت یا مشکل ایمنی داری؟
 
-Answer the questions above so the offline brain can weigh possibilities more precisely. If you add an OpenRouter key in settings, real image analysis turns on.
+مسیر درست:
+• قرمزی پخش‌شونده/تب/چرک -> مراجعه‌ی فوری (عفونت)
+• زخم عمیق یا ناشی از گاز گرفتن/شیء کثیف -> همان روز پزشک
+• سوختگی وسیع یا در صورت/دست -> اورژانس
 
-This software does not replace a doctor."""
+تا مراجعه: شست‌وشو با آب و صابون ملایم، پوشش تمیز، بدون الکل/پمادهای سنتی.""",
+        "en": """Key questions:
+- When did it happen and what caused it? When was your last tetanus shot?
+- Any fever, spreading redness, pus or growing pain?
+- Any diabetes or immune problems?
+
+The right path:
+- Spreading redness/fever/pus -> urgent care (infection)
+- Deep wound, bite, or dirty object -> same-day clinician
+- Large burn, or burn on face/hands -> emergency
+
+Until care: wash gently with water and mild soap, clean cover, no alcohol or folk remedies.""",
+    },
+    "radiograph": {
+        "fa": """مهم: من آفلاین نمی‌توانم عکس رادیولوژیک را «بخوانم» و هیچ حدسی درباره‌ی محتوای آن نمی‌زنم؛ گزارش رسمی فقط توسط رادیولوژیست انجام می‌شود.
+
+سوال‌های کلیدی:
+• این عکس برای چه علامتی گرفته شد (ضربه، درد مزمن، پیگیری)؟
+• درد فعلی، تورم یا محدودیت حرکت داری؟
+
+مسیر درست:
+• نتیجه را همراه توضیح پزشکِ تجویزکننده بخواه؛ عکس بدون گزارش رادیولوژیست معناگذاری نمی‌شود.
+• اگر پس از ضربه درد شدید/بی‌شکستگی مشکوک داری -> همان روز اورژانس/مطب.
+
+اگر کلید OpenRouter را در تنظیمات وارد کنی، مدل تصویری می‌تواند توصیف محتاطانه‌ای هم بدهد.""",
+        "en": """Important: offline, I cannot 'read' a radiological image and I will not guess at its content; the official read belongs to a radiologist.
+
+Key questions:
+- Why was this taken (trauma, chronic pain, follow-up)?
+- Current pain, swelling, or limited movement?
+
+The right path:
+- Ask for the result together with the ordering doctor's explanation; an image without a radiologist read has no meaning.
+- Severe pain or suspected fracture after trauma -> same-day emergency/clinic.
+
+If you add an OpenRouter key in settings, a vision model can also give a cautious description.""",
+    },
+    "ecg_strip": {
+        "fa": """مهم: من آفلاین نوار قلب را تفسیر نمی‌کنم؛ تفسیر فقط توسط پزشک/قلب‌شناس است.
+
+سوال‌های کلیدی:
+• نوار برای چه علامتی زده شد (درد سینه، تپش، غش)؟
+• الان هم علامت داری؟
+
+مسیر درست:
+• درد قفسه سینه، غش یا تنگی نفس -> همین حالا اورژانس (۱۱۵ / ۱۱۲)
+• نوارِ بی‌علامت را همراه پزشک بخواه؛ «طبیعی بودن» از روبات پرسیده نشود
+• ریتم خیلی تند/کند با ضعف -> مراجعه‌ی فوری""",
+        "en": """Important: offline, I do not interpret ECGs; interpretation belongs to a physician/cardiologist.
+
+Key questions:
+- Why was it recorded (chest pain, palpitations, fainting)?
+- Do you have symptoms right now?
+
+The right path:
+- Chest pain, fainting or breathlessness -> emergency now (115 / 112)
+- A symptom-free tracing should be reviewed with your doctor; 'is it normal' is not a question for software
+- Very fast/slow rhythm with weakness -> urgent care""",
+    },
+    "document_report": {
+        "fa": """برگه‌ی آزمایش/نسخه را دیدم، ولی آفلاین OCR قابل‌اعتماد ندارم و عددی را حدس نمی‌زنم — این کار را درست انجام بده:
+
+• مقادیر را همین‌طور تایپ کن (مثلاً: FBS 105 و Hb 13) تا ماژول «تحلیل آزمایش» با بازه‌ی مرجع و تفسیر فارسی بررسی‌شان کند.
+• برای نسخه: متن دستورها را بنویس (BID، PO و…) تا «اسکن نسخه» ترجمه کند.
+• تفسیر نهایی همیشه با پزشک است.""",
+        "en": """I can see this is a report/prescription scan, but offline I have no reliable OCR and I will not guess numbers - do this instead:
+
+- Type the values here (e.g. FBS 105, Hb 13) and the Lab analysis module will check them against reference ranges.
+- For a prescription: type the directions (BID, PO, ...) and the Prescription scan module will translate them.
+- Final interpretation always belongs to your doctor.""",
+    },
+    "eye_photo": {
+        "fa": """سوال‌های کلیدی:
+• درد، نورآزاری، ترشح یا تغییر دید داری؟ لنز تماسی می‌زنی؟
+• قرمزی از کِی شروع شده و یک‌چشمی است یا دوجهت؟
+
+مسیر درست:
+• کاهش شدید دید، درد شدید یا زخم مشکوک قرنیه -> همان روز چشم‌پزشک/اورژانس
+• قرمزی ساده‌ی بدون درد و بدون تغییر دید -> بررسی پزشک در چند روز
+• بدون قطره/لنز خودسرانه.""",
+        "en": """Key questions:
+- Pain, light sensitivity, discharge or vision change? Contact lens user?
+- When did the redness start, one eye or both?
+
+The right path:
+- Severe vision loss, severe pain or suspected corneal ulcer -> ophthalmologist/emergency the same day
+- Simple redness without pain or vision change -> clinician within days
+- No self-prescribed drops or lenses.""",
+    },
+    "other_photo": {
+        "fa": """سوال‌های کلیدی:
+• این عکس مربوط به کدام ناحیه است و چه علامتی داری؟
+• از کِی شروع شده و چه چیزی آن را بدتر می‌کند؟
+
+توضیح بده تا احتمالات دقیق‌تر شود؛ اگر کلید OpenRouter فعال باشد تحلیل تصویری هم انجام می‌شود.""",
+        "en": """Key questions:
+- Which body area is this, and what symptom do you have?
+- When did it start and what makes it worse?
+
+Describe it and I can weigh possibilities better; with an OpenRouter key configured, real image analysis also runs.""",
+    },
+}
 
 
-def OFFLINE_IMAGE_RESPONSE() -> str:
-    from i18n import is_fa
-    return OFFLINE_IMAGE_RESPONSE_FA if is_fa() else OFFLINE_IMAGE_RESPONSE_EN
+def offline_analysis(type_info: dict, note: str) -> dict[str, Any]:
+    from common_2077 import MEDICAL_DISCLAIMER
+    fa = is_fa()
+    tkey = type_info.get("type", "other_photo")
+    body = OFFLINE_BODIES.get(tkey, OFFLINE_BODIES["other_photo"])[ "fa" if fa else "en"]
+    head = ("تحلیل تصویر آفلاین (بدون AI خارجی)\n\n" if fa else "Offline image analysis (no external AI)\n\n")
+    q = [head + _type_header(type_info, fa)]
+    if type_info.get("quality"):
+        q.append(("کیفیت عکس: " if fa else "Photo quality: ") + ("، ".join(type_info["quality"]) if fa else ", ".join(type_info["quality"])))
+    q.append(body)
+    # ارزیابی احتمالاتی از متنِ یادداشت (نه از خود تصویر — از عکس حدس بالینی نمی‌زنیم)
+    if tkey in ("skin_photo", "wound_photo", "eye_photo", "other_photo") and note:
+        try:
+            from bayesian_engine import rank_diseases
+            from medical_engine import detect_symptoms
+            cands = rank_diseases(detect_symptoms(note), {})
+            if cands:
+                head2 = ("بر اساس متنِ توضیحت (نه خود عکس)، چند احتمال مطرح — احتمالی، نه تشخیص:" if fa
+                         else "From your written note (not the image itself), possibilities to consider - probabilistic, not a diagnosis:")
+                lines = []
+                for c in cands[:3]:
+                    pct = int(c["percent"])
+                    lines.append(f"• {c['name']} ~{pct}" + ("٪" if fa else "%"))
+                q.append(head2 + "\n" + "\n".join(lines))
+        except Exception:
+            pass
+    if note:
+        q.append(("یادداشت تو: " if fa else "Your note: ") + note)
+    q.append(MEDICAL_DISCLAIMER())
+    return {"ok": True, "text": "\n\n".join(q), "source": "internal-image",
+            "red_flag": False, "image_type": type_info}
 
 
-def analyze_image_file(path: str, note: str, engine=None) -> dict[str, Any]:
-    """ورودی از فایل — برای UI دسکتاپ."""
+def analyze_image_file(path: str, note: str, engine=None, hint: str | None = None) -> dict[str, Any]:
     with open(path, "rb") as f:
-        b = f.read()
-    return analyze_image_bytes(b, note, engine)
+        return analyze_image_bytes(f.read(), note, engine, hint)
 
 
-def analyze_image_bytes(image_bytes: bytes, note: str, engine=None) -> dict[str, Any]:
+def analyze_image_bytes(image_bytes: bytes, note: str, engine=None, hint: str | None = None) -> dict[str, Any]:
+    from image_type_detector import classify_image
     try:
         b64, mime = prepare_image(image_bytes)
     except Exception as e:
-        return {"ok": False, "text": "تصویر قابل خواندن نبود ("+ str(e)[:80] + "). فرمت JPG/PNG را امتحان کن.", "source": "image-error"}
-    red = None
-    try:
-        from medical_engine import check_red_flags
-        red = check_red_flags(note or "")
-    except Exception:
-        red = {"flag": False}
+        from i18n import tt
+        return {"ok": False, "text": tt("Could not read the image (" + str(e)[:60] + "). Try a JPG or PNG file.",
+                                        "تصویر قابل خواندن نبود (" + str(e)[:60] + "). فرمت JPG/PNG را امتحان کن."),
+                "source": "image-error"}
+    # red flag check on the note first — before anything else
+    from medical_engine import check_red_flags
+    red = check_red_flags(note or "")
     if red and red.get("flag"):
         from medical_engine import emergency_response
-        return {"ok": True, "text": emergency_response(red["reasons"]), "source": "internal-emergency", "red_flag": True}
-    res = analyze_image_with_ai(b64, mime, note, engine)
+        return {"ok": True, "text": emergency_response(red["reasons"]),
+                "source": "internal-emergency", "red_flag": True, "image_type": classify_image(image_bytes, hint)}
+    type_info = classify_image(image_bytes, hint)
+    res = analyze_image_with_ai(b64, mime, note, engine, type_info)
     if res.get("ok"):
         try:
             from auto_learning import learn_from_exchange
-            learn_from_exchange(f"[تصویر پزشکی] {note}", res["text"], provider=res.get("provider", ""),
-                                model=res.get("model", ""), meta={"image": True})
+            learn_from_exchange(f"[image:{type_info['type']}] {note}", res["text"],
+                                provider=res.get("provider", ""), model=res.get("model", ""),
+                                meta={"image": True, "image_type": type_info["type"]})
         except Exception:
             pass
-        return {"ok": True, "text": res["text"], "source": f"external:{res.get('provider')}", "red_flag": False}
-    return {"ok": True, "text": OFFLINE_IMAGE_RESPONSE(), "source": "internal", "red_flag": False}
+        res["image_type"] = type_info
+        return res
+    out = offline_analysis(type_info, note)
+    return out
