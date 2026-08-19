@@ -46,7 +46,7 @@ def score_disease(d: dict, detected: dict, profile: dict) -> float:
             boost = 1.25 if present[sid]["severity"] == "severe" else 1.0
             logp += math.log(min(p * boost, 0.98))
             # علامتِ کمیابِ پراحتمال (شبیه pathognomonic) بر علامت عمومی مثل تب غلبه می‌کند
-            if p >= 0.9 and sid in rare:
+            if p >= 0.8 and sid in rare:
                 logp += math.log(2.0)
         elif sid in denied:
             logp += math.log(max(1.0 - p, SMOOTH))

@@ -51,12 +51,16 @@ def compose_offline_answer(analysis: dict[str, Any], dialogue_summary: dict[str,
     p = profile or {}
     name = str(p.get("name") or "").strip()
     greet = (f"{name} عزیز، " if name else "") if fa else (f"{name}, " if name else "")
-    sections["empathy"] = greet + random.choice(OPENERS_FA if fa else OPENERS_EN)
+    # اپنیر توسط سبک (apply_style) در ابتدای پاسخ می‌آید؛ بخش empathy جدا لازم نیست
+    # تا جمله‌ی شروع تکرار نشود.
 
     findings: list[str] = []
     syms = analysis.get("symptoms", [])
+    multi = bool(dialogue_summary and dialogue_summary.get("turns", 0) > 1 and syms)
     if syms:
-        findings.append(("علائمی که گفتی: " if fa else "Symptoms you mentioned: ") + ("، ".join(syms) if fa else ", ".join(syms)))
+        head = ("علائم ثبت‌شده تا اینجا: " if fa else "Symptoms logged so far: ") if multi \
+            else ("علائمی که گفتی: " if fa else "Symptoms you mentioned: ")
+        findings.append(head + ("، ".join(syms) if fa else ", ".join(syms)))
     denied = analysis.get("denied", [])
     if denied:
         findings.append(("این موارد را رد کردی: " if fa else "Ruled out by you: ") + ("، ".join(denied) if fa else ", ".join(denied)))
@@ -96,16 +100,18 @@ def compose_offline_answer(analysis: dict[str, Any], dialogue_summary: dict[str,
     sections["probables"] = probables
 
     advice: list[str] = []
+    seen_adv: set[str] = set()
     for c in cands[:2]:
-        advice.extend(c.get("advice", [])[:3])
+        for a in c.get("advice", [])[:3]:
+            key = a.strip()[:60]
+            if key not in seen_adv:
+                seen_adv.add(key)
+                advice.append(a)
     if not advice:
         advice = ["استراحت کافی و آب فراوان", "ثبت تغییر علائم (شدت/مدت) برای ارائه به پزشک"] if fa else \
                  ["Rest and stay hydrated", "Track how symptoms change (severity/duration) for the doctor"]
-    if rag_hits:
-        for h in rag_hits[:1]:
-            if h.get("title"):
-                advice.append(f"از حافظه‌ی آموخته‌شده‌ی قبلی برنامه: موضوع مشابه «{h['title']}» بررسی شد." if fa
-                              else f"From the assistant's learned memory: a similar topic '{h['title']}' was reviewed before.")
+    # یادداشت حافظه‌ی آموخته‌شده عمداً از پاسخ حذف شد: نویز می‌ساخت.
+    # RAG همچنان در پرامپت AI خارجی استفاده می‌شود.
     advice.append("داروی خاصی را بدون تجویز پزشک شروع یا قطع نکن." if fa
                   else "Do not start or stop any medication without a prescription.")
     sections["advice"] = advice

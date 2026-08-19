@@ -82,8 +82,9 @@ SYMPTOM_KEYWORDS: dict[str, list[str]] = {
     "diarrhea": ["اسهال", "رو گشاده", "مدفوع آبکی", "diarrhea", "loose stools", "watery stool"],
     "abdominal_pain": ["درد شکم", "دل درد", "شکم درد", "معده ام درد", "درد معده", "abdominal pain", "stomach ache", "stomach pain", "belly pain", "stomach hurts"],
     "dysuria": ["سوزش ادرار", "ادرار سوزش", "سوزش موقع ادرار", "burning urination", "painful urination", "burns when i pee", "dysuria",
-                "burning when i urinate", "burns urinating", "burning pee", "stings when i pee", "pain urinating", "stings urinating"],
-    "urinary_frequency": ["تکرر ادرار", "ادرار زیاد", "مدام دستشویی می روم", "frequent urination", "peeing a lot", "urinating often"],
+                "burning when i urinate", "burns urinating", "burning pee", "stings when i pee", "pain urinating", "stings urinating",
+                "burning when i pee", "burning sensation when i pee", "it burns when i pee", "it stings to pee", "burning to pee"],
+    "urinary_frequency": ["تکرر ادرار", "ادرار زیاد", "مدام دستشویی می روم", "frequent urination", "peeing a lot", "urinating often", "go to the toilet all the time", "going to the toilet a lot", "toilet all the time", "bathroom all the time", "keep going to the toilet", "always need to pee"],
     "skin_itch": ["خارش", "خارش دارم", "خارش شدید", "itching", "itchy", "itches a lot", "itch"],
     "rash": ["لک", "لک قرمز", "کهیر", "جوش", "بثورات", "قرمزی پوست", "تاول", "بثورات تاولی", "قرمزی", "قرمزی پخش شونده", "rash", "hives", "spots on skin", "red patch", "redness", "spreading redness", "skin redness", "blisters", "vesicles", "blister"],
     "anxiety": ["اضطراب", "مضطرب", "نگران هستم", "استرس دارم", "بی قرارم", "anxiety", "anxious", "stressed", "worried", "nervous"],
@@ -126,7 +127,7 @@ SYMPTOM_KEYWORDS: dict[str, list[str]] = {
     "bloating": ["نفخ", "پف کردم", "شکمم باد", "bloating", "bloated", "gassy"],
     "rapid_breathing": ["تنفس تند", "نفس تند", "rapid breathing", "breathing fast", "fast breathing"],
     "stiff_neck": ["سفتی گردن", "گردن نمی چرخد", "stiff neck", "neck stiffness"],
-    "photophobia": ["نور چشم می اذارد", "حساسیت به نور", "light hurts my eyes", "light sensitivity", "sensitive to light"],
+    "photophobia": ["نور چشم می اذارد", "حساسیت به نور", "نور اذیت", "نور می اذارد", "نور اذیتم می کند", "از نور اذیت", "light hurts my eyes", "light sensitivity", "sensitive to light", "light bothers", "bothered by light", "light hurts"],
     "apnea_observed": ["قطع تنفس در خواب", "اپنه", "breathing stops in sleep", "stops breathing at night", "sleep apnea"],
     "snoring": ["خروپف", "خر و پف", "خروپف شدید", "snoring", "snores loudly", "loud snoring"],
     "daytime_sleepiness": ["خواب آلودگی روزانه", "مدام خوابم می برد", "daytime sleepiness", "sleepy during the day", "falling asleep during the day"],
@@ -228,7 +229,7 @@ DISEASES: list[dict[str, Any]] = [
      "doctor_when": "تنگی نفس، اشباع اکسیژن پایین، درد قفسه سینه",
      "doctor_when_en": "Shortness of breath, low oxygen saturation, or chest pain"},
     {"id": "migraine", "fa": "میگرن احتمالی", "en": "Migraine (possible)", "prior": 0.06, "urgency": "routine",
-     "symptoms": {"headache": 1.0, "nausea": 0.6, "photophobia": 0.6, "vomiting": 0.3, "dizziness": 0.3, "blurred_vision": 0.25},
+     "symptoms": {"headache": 1.0, "nausea": 0.6, "photophobia": 0.8, "vomiting": 0.3, "dizziness": 0.3, "blurred_vision": 0.25},
      "advice": ["استراحت در اتاق تاریک و ساکت", "خواب کافی و پرهیز از محرک‌ها", "ثبت دفترچه‌ی سردرد برای یافتن محرک‌ها"],
      "advice_en": ["Rest in a dark, quiet room", "Regular sleep; avoid known triggers", "Keep a headache diary"],
      "doctor_when": "سردرد ناگهانی و شدیدترین عمر، تب با سفتی گردن، یا ضعف بدن → فوری",
@@ -478,7 +479,11 @@ def detect_symptoms(text: str) -> dict[str, Any]:
     """Returns {present: {sid: {count, severity, denied}}, duration_days, temp_c}.
     Negation is checked inside the same clause so 'no fever' does not leak
     onto earlier symptoms."""
-    clauses = [normalize(c) for c in re.split(r"[،؛,.!؟?!\n]", text or "")]
+    # «ولی/اما/but» مرز نفی است: «تب ندارم ولی عطسه می‌کنم»
+    _txt = (text or "")
+    _txt = re.sub(r"\s(ولی|اما)\s", "، ", _txt)
+    _txt = re.sub(r"\s(but|however|though)\s", ", ", _txt, flags=re.IGNORECASE)
+    clauses = [normalize(c) for c in re.split(r"[،؛,.!؟?!\n]", _txt)]
     clauses = [c for c in clauses if c]
     present: dict[str, dict] = {}
     for sid, kws in SYMPTOM_KEYWORDS.items():
