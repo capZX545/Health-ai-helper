@@ -1,9 +1,17 @@
 # NexusMed 2077
 
-NexusMed 2077 is a Persian-language medical assistant that runs entirely on your own
-computer. No account, no cloud, no telemetry. It has two frontends: a desktop app
-written in Tkinter, and a local web app served at `http://localhost:2077` (if that
-port is busy, it keeps trying 2078 through 2087 until it finds a free one).
+NexusMed 2077 is a bilingual (English/Farsi) medical assistant that runs entirely
+on your own computer. No account, no cloud, no telemetry. It has two frontends: a
+desktop app written in Tkinter, and a local web app served at
+`http://localhost:2077` (if that port is busy, it keeps trying 2078 through 2087
+until it finds a free one).
+
+English is the default language. One button in the header switches the whole
+thing to Farsi and back - the choice is saved, applies without a restart, and
+covers the interface, the assistant's answers, the offline engine, red flag
+warnings, lab interpretations, drug notes and the printed referral report.
+Symptom detection itself is bilingual too, so "chest pain" and "درد قفسه سینه"
+are understood the same way.
 
 The core of the project is a hybrid engine.
 
@@ -123,9 +131,9 @@ with:
     Output\NexusMed_Setup_v2.0.exe
 
 That installer is self-contained, so target machines do not need Python. The repo
-root also has a step-by-step Persian guide (`راهنمای_ساخت_فایل_نصبی_NexusMed_2077.txt`)
-with troubleshooting for the usual problems: PATH not set, Inno Setup not found,
-antivirus complaining about PyInstaller builds, busy ports.
+root also has a step-by-step guide (`BUILD_SETUP_GUIDE.txt`) with troubleshooting
+for the usual problems: PATH not set, Inno Setup not found, antivirus complaining
+about PyInstaller builds, busy ports.
 
 ## Files that never leave your machine
 

@@ -1,0 +1,111 @@
+======================================================================
+  NexusMed 2077 - Windows installer build guide
+  Final output:  Output\NexusMed_Setup_v2.0.exe
+======================================================================
+
+[1] Prerequisites (install once)
+----------------------------------------------------------------------
+ 1) Python 3.10 or newer
+    - Download from python.org
+    - During setup, tick "Add python.exe to PATH"
+
+ 2) Inno Setup 6
+    - Download and install from jrsoftware.org/isdl.php
+    - Default location: Program Files (x86)\Inno Setup 6
+
+ Note: building a real Windows EXE has to happen on Windows. On
+ Linux/macOS you can run the app from source, but the installer
+ scripts target a Windows machine.
+
+
+[2] Build the installer (two clicks)
+----------------------------------------------------------------------
+ 1) Extract the project folder on Windows (for example D:\NexusMed)
+ 2) Double-click:
+
+        Create_Setup_Installer.bat
+
+ The script then, in order:
+   [1/6] locates Python
+   [2/6] installs dependencies from requirements.txt
+         (requests, Pillow, numpy, scikit-learn, pyinstaller)
+   [3/6] compiles every Python file as a sanity check
+   [4/6] generates the CSV dataset and the SQLite database if missing
+   [5/6] builds the EXE with PyInstaller  ->  dist\NexusMed2077\
+   [6/6] builds the installer with Inno Setup
+
+ The final file lands at:
+
+        Output\NexusMed_Setup_v2.0.exe
+
+
+[3] Installing on other machines
+----------------------------------------------------------------------
+ - Copy NexusMed_Setup_v2.0.exe to any Windows machine
+ - No Python and no internet are needed to install
+ - Installs per-user (no Administrator rights required)
+ - Creates a desktop icon and a Start menu group
+ - First run works fully offline (internal brain)
+ - To use an external AI: open "API settings" inside the app
+
+
+[4] Setting up the API key
+----------------------------------------------------------------------
+ 1) Create a free key at https://openrouter.ai/keys
+ 2) In the app: API settings -> paste the OpenRouter key
+ 3) Press "Test connection" - you get a plain status message:
+      connection ok / invalid key / model not found /
+      not enough credit / rate limited / no internet
+ 4) Save - changes apply immediately, no restart needed
+
+ Keys are stored only in a local .env file and never end up inside
+ the ZIP, the installer or the repository. A sample is provided in
+ .env.example.
+
+
+[5] Language switching
+----------------------------------------------------------------------
+ - English is the default language
+ - Switch to Farsi (and back) with the language button in the header
+   (web and desktop) - the choice is saved and applies immediately,
+   including assistant answers, red flag warnings and reports
+
+
+[6] Local web version
+----------------------------------------------------------------------
+ - Start menu shortcut "NexusMed 2077 Web", or run:  python run_web.py
+ - Address: http://localhost:2077
+ - If port 2077 is busy, the app tries 2078 through 2087
+
+
+[7] Troubleshooting
+----------------------------------------------------------------------
+ - "Python not found" -> reinstall Python and tick the PATH option,
+   or install it from the Microsoft Store
+ - "Inno Setup not found" -> install Inno Setup 6, or fix the ISCC
+   path inside the .bat, then run it again
+ - Antivirus flags the EXE -> PyInstaller builds often trigger false
+   positives; allow the file or run from source instead
+ - Web port busy -> the app picks the next free port automatically
+ - Windows 7/8 -> install Python 3.8-3.12 (3.13+ is Windows 10/11 only)
+
+
+[8] After every code change
+----------------------------------------------------------------------
+ 1) Compile check:      python -m compileall -q .
+ 2) Rebuild ZIP/Setup:  Create_Setup_Installer.bat
+
+
+[9] Files that must never be shared
+----------------------------------------------------------------------
+ .env, patient_profile.json, vitals_history.json,
+ learned_knowledge.json, ai_behavior_profile.json,
+ local_llm_config.json, referral_report.html, reminders.json
+ (these hold your keys or personal data)
+
+
+Medical disclaimer:
+ This software is an informational assistant. It is not a substitute
+ for a doctor and gives no definitive diagnosis. In an emergency call
+ for help immediately: Iran 115 - Europe/Finland 112
+======================================================================

@@ -45,11 +45,24 @@ def try_beep(freq: int = 880, dur: int = 140):
 class App:
     def __init__(self, root: tk.Tk):
         self.root = root
-        root.title(f"{APP_NAME} — دستیار هوشمند پزشکی فارسی v{APP_VERSION}")
         root.geometry("1280x800")
         root.configure(bg=C["bg"])
         self.engine = None
         self.img_path = None
+        self._build()
+        self._refresh_status()
+        self._hello()
+
+    def L(self, en: str, fa: str) -> str:
+        from i18n import tt
+        return tt(en, fa)
+
+    def set_lang(self, lang: str):
+        from i18n import set_lang as _sl
+        _sl(lang)
+        for w in self.root.winfo_children():
+            w.destroy()
+        self.engine = None
         self._build()
         self._refresh_status()
         self._hello()
@@ -62,13 +75,19 @@ class App:
         top.pack(fill="x")
         tk.Label(top, text="NEXUS", bg="#0c1526", fg=C["cy"], font=F_TITLE).pack(side="right", padx=(16, 4))
         tk.Label(top, text="MED 2077", bg="#0c1526", fg=C["mg"], font=F_TITLE).pack(side="right", padx=4)
-        self.status_lbl = tk.Label(top, text="وضعیت: در حال بررسی…", bg="#0c1526", fg=C["dim"], font=F_SMALL)
+        self.root.title(self.L(f"{APP_NAME} - bilingual medical assistant v{APP_VERSION}",
+                               f"{APP_NAME} — دستیار هوشمند پزشکی فارسی v{APP_VERSION}"))
+        self.status_lbl = tk.Label(top, text=self.L("Status: checking...", "وضعیت: در حال بررسی…"), bg="#0c1526", fg=C["dim"], font=F_SMALL)
         self.status_lbl.pack(side="left", padx=12)
-        tk.Button(top, text="نسخه‌ی وب", command=self.launch_web, bg="#0d1930", fg=C["tx"],
+        from i18n import get_lang
+        tk.Button(top, text=("Farsi" if get_lang() == "en" else "English"),
+                  command=lambda: self.set_lang("fa" if get_lang() == "en" else "en"),
+                  bg="#0d1930", fg=C["cy"], relief="flat", font=F).pack(side="left", padx=4, pady=12)
+        tk.Button(top, text=self.L("Web version", "نسخه‌ی وب"), command=self.launch_web, bg="#0d1930", fg=C["tx"],
                   relief="flat", font=F, activebackground="#12233d").pack(side="left", padx=4, pady=12)
-        tk.Button(top, text="اورژانس ۱۱۵/۱۱۲", command=lambda: self._panel_emergency(),
+        tk.Button(top, text=self.L("Emergency 115/112", "اورژانس ۱۱۵/۱۱۲"), command=lambda: self._panel_emergency(),
                   bg="#2a0d1a", fg="#ff8fab", relief="flat", font=F).pack(side="left", padx=4, pady=12)
-        tk.Button(top, text="تنظیمات API", command=self._panel_settings,
+        tk.Button(top, text=self.L("API settings", "تنظیمات API"), command=self._panel_settings,
                   bg="#0d1930", fg=C["tx"], relief="flat", font=F).pack(side="left", padx=4, pady=12)
 
         body = tk.Frame(self.root, bg=C["bg"])
@@ -78,23 +97,24 @@ class App:
         nav.pack(side="right", fill="y")
         nav.pack_propagate(False)
         items = [
-            ("گفتگو (بازگشت)", lambda: None),
-            ("پروفایل بیمار", self._panel_profile),
-            ("علائم حیاتی", self._panel_vitals),
-            ("تحلیل آزمایش", self._panel_labs),
-            ("اسکن نسخه", self._panel_rx),
-            ("دارو و تداخلات", self._panel_drugs),
-            ("تحلیل تصویر پزشکی", self._panel_image),
-            ("سلامت روان", self._panel_mental),
-            ("تحلیل خواب", self._panel_sleep),
-            ("تقویم چکاپ", self._panel_checkup),
-            ("کمک‌های اولیه / CPR", self._panel_emergency),
-            ("گزارش ارجاع", self._panel_referral),
-            ("مغز داخلی / یادگیری", self._panel_brain),
-            ("هوش محلی (GPU/Ollama)", self._panel_gpu),
+            (("Chat (return)", "گفتگو (بازگشت)"), lambda: None),
+            (("Patient profile", "پروفایل بیمار"), self._panel_profile),
+            (("Vitals", "علائم حیاتی"), self._panel_vitals),
+            (("Lab analysis", "تحلیل آزمایش"), self._panel_labs),
+            (("Prescription scan", "اسکن نسخه"), self._panel_rx),
+            (("Drugs & interactions", "دارو و تداخلات"), self._panel_drugs),
+            (("Medical image", "تحلیل تصویر پزشکی"), self._panel_image),
+            (("Mental health", "سلامت روان"), self._panel_mental),
+            (("Sleep analysis", "تحلیل خواب"), self._panel_sleep),
+            (("Checkup calendar", "تقویم چکاپ"), self._panel_checkup),
+            (("First aid / CPR", "کمک‌های اولیه / CPR"), self._panel_emergency),
+            (("Referral report", "گزارش ارجاع"), self._panel_referral),
+            (("Brain & learning", "مغز داخلی / یادگیری"), self._panel_brain),
+            (("Local AI (GPU/Ollama)", "هوش محلی (GPU/Ollama)"), self._panel_gpu),
         ]
-        tk.Label(nav, text="ـ ماژول‌ها ـ", bg=C["panel"], fg=C["dim"], font=F_SMALL).pack(pady=8)
-        for txt, cmd in items:
+        tk.Label(nav, text=self.L("- modules -", "ـ ماژول‌ها ـ"), bg=C["panel"], fg=C["dim"], font=F_SMALL).pack(pady=8)
+        for pair, cmd in items:
+            txt = self.L(pair[0], pair[1])
             b = tk.Button(nav, text=txt, anchor="e", bg=C["panel"], fg=C["tx"], relief="flat",
                           font=F, activebackground="#101c36", activeforeground=C["cy"],
                           cursor="hand2", command=cmd)
@@ -118,9 +138,9 @@ class App:
         bar.pack(fill="x", padx=10, pady=(2, 4))
         self.attach_lbl = tk.Label(bar, text="", bg=C["bg"], fg=C["yl"], font=F_SMALL)
         self.attach_lbl.pack(side="right")
-        tk.Button(bar, text="عکس پزشکی", command=self._attach, bg="#0d1930", fg=C["tx"],
+        tk.Button(bar, text=self.L("Attach medical image", "عکس پزشکی"), command=self._attach, bg="#0d1930", fg=C["tx"],
                   relief="flat", font=F).pack(side="left", padx=3)
-        tk.Button(bar, text="گفتگوی جدید", command=self._reset_dialogue, bg="#0d1930", fg=C["tx"],
+        tk.Button(bar, text=self.L("New conversation", "گفتگوی جدید"), command=self._reset_dialogue, bg="#0d1930", fg=C["tx"],
                   relief="flat", font=F).pack(side="left", padx=3)
 
         inbar = tk.Frame(main, bg=C["bg"])
@@ -130,11 +150,11 @@ class App:
         self.entry.pack(side="right", fill="both", expand=True, ipady=2)
         self.entry.bind("<Return>", self._on_enter)
         self.entry.bind("<Shift-Return>", lambda e: None)
-        self.send_btn = tk.Button(inbar, text="ارسال", command=self._send, bg="#0077b6",
+        self.send_btn = tk.Button(inbar, text=self.L("Send", "ارسال"), command=self._send, bg="#0077b6",
                                   fg="#021018", font=pick_font(12, True), relief="flat")
         self.send_btn.pack(side="left", fill="y", padx=(6, 0))
 
-        tk.Label(self.root, text=MEDICAL_DISCLAIMER, bg="#070d18", fg="#41527a",
+        tk.Label(self.root, text=MEDICAL_DISCLAIMER(), bg="#070d18", fg="#41527a",
                  font=pick_font(8), pady=4).pack(fill="x", side="bottom")
 
     # -------------------------------------------------------------- موتور
@@ -145,10 +165,15 @@ class App:
         return self.engine
 
     def _hello(self):
-        self._bot("سلام! من نکسوس هستم — دستیار پزشکی فارسی NexusMed 2077\n"
-                  "علائمت را با جزئیات (شروع، شدت، مدت) بنویس تا مرحله‌به‌مرحله بررسی کنیم.\n"
-                  "در علائم اورژانسی فوراً راهنمایی اورژانس می‌گیری.\n"
-                  "برای اتصال به AI خارجی، از دکمه‌ی « تنظیمات API» کلید OpenRouter را وارد کن.")
+        self._bot(self.L(
+            "Hello, I am Nexus, the bilingual medical assistant of NexusMed 2077.\n"
+            "Describe your symptoms with details (onset, severity, duration) and we will go through them step by step.\n"
+            "Emergency signs get immediate emergency guidance.\n"
+            "To connect an external AI, open 'API settings' and paste your OpenRouter key.",
+            "سلام! من نکسوس هستم — دستیار پزشکی دوزبانه NexusMed 2077.\n"
+            "علائمت را با جزئیات (شروع، شدت، مدت) بنویس تا مرحله‌به‌مرحله بررسی کنیم.\n"
+            "در علائم اورژانسی فوراً راهنمایی اورژانس می‌گیری.\n"
+            "برای اتصال به AI خارجی، از دکمه‌ی «تنظیمات API» کلید OpenRouter را وارد کن."))
 
     def _bot(self, text: str, tag: str = "bot", meta: str = ""):
         self.chat.config(state="normal")
@@ -205,7 +230,7 @@ class App:
             except Exception as e:
                 self._bot("خطا: "+ str(e)[:200], "emg")
             finally:
-                self.send_btn.config(state="normal", text="ارسال")
+                self.send_btn.config(state="normal", text=self.L("Send", "ارسال"))
                 self._refresh_status()
 
         threading.Thread(target=work, daemon=True).start()

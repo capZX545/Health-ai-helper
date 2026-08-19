@@ -17,10 +17,20 @@ APP_NAME = "NexusMed 2077"
 APP_VERSION = "2.0.0"
 DATA_DIR = _BASE = os.path.dirname(os.path.abspath(sys.executable if getattr(sys, "frozen", False) else __file__))
 
-MEDICAL_DISCLAIMER = (
+MEDICAL_DISCLAIMER_FA = (
     "این نرم‌افزار یک دستیار اطلاعاتی است، جایگزین پزشک نیست و تشخیص قطعی نمی‌دهد. "
     "در موارد اورژانسی فوراً با اورژانس تماس بگیرید (ایران: ۱۱۵ — اروپا: ۱۱۲)."
 )
+MEDICAL_DISCLAIMER_EN = (
+    "This software is an informational assistant. It is not a substitute for a doctor "
+    "and it does not give definitive diagnoses. In an emergency, call for help "
+    "immediately (Iran: 115 - Europe: 112)."
+)
+
+
+def MEDICAL_DISCLAIMER() -> str:
+    from i18n import tt
+    return tt(MEDICAL_DISCLAIMER_EN, MEDICAL_DISCLAIMER_FA)
 
 EMERGENCY_NUMBERS = {
     "ایران": {"اورژانس پزشکی": "115", "اورژانس اجتماعی": "123", "مشاوره تلفنی سلامت": "1480"},

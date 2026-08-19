@@ -11,7 +11,7 @@ import threading
 from typing import Any
 
 from common_2077 import DATA_DIR, first_sentences, is_question, now_iso, read_json, write_json
-from medical_engine import SYMPTOM_NAMES_FA, detect_symptoms
+from medical_engine import detect_symptoms, sym_name
 
 LEARNED_PATH = os.path.join(DATA_DIR, "learned_knowledge.json")
 MAX_ENTRIES = 500
@@ -73,7 +73,8 @@ def learn_from_exchange(user_text: str, ai_text: str, provider: str = "", model:
             "red_flag": red_flag,
             "topic": _extract_topic(user_text, ai_text),
             "user_summary": first_sentences(user_text, 1, 160),
-            "symptoms_fa": [SYMPTOM_NAMES_FA.get(s, s) for s, i in det["present"].items() if not i.get("denied")][:12],
+            "symptoms": [sym_name(s) for s, i in det["present"].items() if not i.get("denied")][:12],
+            "symptoms_fa": [sym_name(s) for s, i in det["present"].items() if not i.get("denied")][:12],
             "ai_summary": first_sentences(ai_text, 3, 420),
             "advice_fa": _extract_advice(ai_text),
             "followups_fa": _extract_followups(ai_text),

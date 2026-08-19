@@ -6,7 +6,21 @@ from __future__ import annotations
 
 from typing import Any
 
-RANGE_NOTE = "محدوده‌ها بین آزمایشگاه‌ها متفاوت است؛ ملاک، بازه‌ی درج‌شده در برگه‌ی آزمایش شماست."
+from i18n import pick as _pick
+
+
+def _first_latin(aliases: list[str]) -> str:
+    for a in aliases:
+        if a and all(ord(c) < 128 for c in a):
+            return a
+    return ""
+
+RANGE_NOTE_BI = ("Reference ranges differ between labs; the range printed on your own report is what counts.",
+                 "محدوده‌ها بین آزمایشگاه‌ها متفاوت است؛ ملاک، بازه‌ی درج‌شده در برگه‌ی آزمایش شماست.")
+
+
+def RANGE_NOTE() -> str:
+    return _pick(RANGE_NOTE_BI)
 
 TESTS: dict[str, dict[str, Any]] = {
     "wbc": {"fa": "گویچه‌های سفید (WBC)", "unit": "×10³/µL", "lo": 4.5, "hi": 11.0, "aliases": ["wbc", "گویچه سفید", "سلول سفید", "وبسی", "لکوسیت"]},
@@ -52,16 +66,27 @@ def find_test(token: str) -> dict[str, Any] | None:
             continue
         for al in t["aliases"]:
             if normalize(al) == nq:
-                return {"key": key, **t}
+                out = {"key": key, **t}
+                out.setdefault("en", _first_latin(t["aliases"]) or key)
+                return out
     # تطبیق نسبی
     for key, t in TESTS.items():
         if not t:
             continue
         for al in t["aliases"]:
             if nq and (nq in normalize(al) or normalize(al) in nq) and len(normalize(al)) >= 2:
-                return {"key": key, **t}
+                out = {"key": key, **t}
+                out.setdefault("en", _first_latin(t["aliases"]) or key)
+                return out
     return None
 
 
 def all_tests() -> list[dict[str, Any]]:
-    return [{"key": k, **v} for k, v in TESTS.items() if v]
+    out = []
+    for k, v in TESTS.items():
+        if not v:
+            continue
+        row = {"key": k, **v}
+        row.setdefault("en", _first_latin(v["aliases"]) or k)
+        out.append(row)
+    return out

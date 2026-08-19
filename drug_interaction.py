@@ -92,9 +92,53 @@ INTERACTIONS: list[dict[str, Any]] = [
     {"a": "insulin", "b": "prednisolone", "sev": "moderate", "fa": "کورتون نیاز انسولین را بالا می‌برد؛ پایش قند ضروری است."},
 ]
 
-SEV_FA = {"major": "تداخل شدید", "moderate": "تداخل متوسط", "minor": "تداخل خفیف"}
+from i18n import pick as _pick
 
-DISCLAIMER = "این بررسی آموزشی است و کامل نیست؛ فهرست دارویی کامل خود را به پزشک/داروساز نشان بده."
+
+def SEV_FA() -> dict:
+    return {"major": _pick(("severe interaction", "تداخل شدید")),
+            "moderate": _pick(("moderate interaction", "تداخل متوسط")),
+            "minor": _pick(("minor interaction", "تداخل خفیف"))}
+
+
+INTERACTIONS_EN: dict[tuple[str, str], str] = {
+    ("warfarin", "aspirin"): "Significantly raises the risk of GI bleeding; only under a doctor with monitoring.",
+    ("warfarin", "ibuprofen"): "NSAIDs amplify anticoagulation and raise bleeding risk; avoid.",
+    ("warfarin", "diclofenac"): "Higher bleeding and stomach-injury risk; ask your doctor for an alternative.",
+    ("warfarin", "ginkgo"): "Ginkgo adds its own blood-thinning effect.",
+    ("warfarin", "ginseng"): "Ginseng may destabilize warfarin effect (erratic INR).",
+    ("warfarin", "greentea"): "Heavy green tea intake may weaken warfarin.",
+    ("warfarin", "turmeric"): "Curcumin strengthens the anticoagulant effect; more bruising/bleeding.",
+    ("warfarin", "garlic"): "Garlic supplements raise bleeding risk with warfarin.",
+    ("aspirin", "ibuprofen"): "Ibuprofen blunts aspirin heart protection and stresses the stomach.",
+    ("sertraline", "ibuprofen"): "SSRI + NSAID raises GI bleeding risk; only with doctor guidance.",
+    ("fluoxetine", "stjohnswort"): "Serotonin syndrome risk; combine only under close supervision.",
+    ("sertraline", "tramadol"): "Serotonin syndrome and seizure risk; prescription and monitoring only.",
+    ("atorvastatin", "grapefruit"): "Grapefruit raises statin levels and muscle-injury risk.",
+    ("metronidazole", "alcohol"): "Alcohol during metronidazole causes a severe reaction; avoid completely.",
+    ("metformin", "alcohol"): "Alcohol raises lactic acidosis and low-sugar risk with metformin.",
+    ("digoxin", "furosemide"): "Diuretics lower potassium and raise digoxin toxicity; electrolyte monitoring needed.",
+    ("hctz", "lisinopril"): "A common, effective combination, but BP/potassium/kidneys need monitoring.",
+    ("loratadine", "azithromycin"): "Possible QT prolongation in some people; check with a doctor if heart disease.",
+    ("levothyroxine", "calcium"): "Calcium/iron supplements reduce absorption; keep at least 4 hours apart.",
+    ("levothyroxine", "omeprazole"): "PPIs may slightly reduce thyroid hormone absorption; monitor TSH.",
+    ("prednisolone", "ibuprofen"): "Steroid + NSAID markedly raises ulcer and bleeding risk.",
+    ("prednisolone", "metformin"): "Steroids raise blood sugar; diabetes doses may need adjusting.",
+    ("senna", "licorice"): "Chronic use together disturbs potassium balance.",
+    ("licorice", "hctz"): "Licorice worsens potassium loss with diuretics.",
+    ("codeine", "alprazolam"): "Respiratory depression; opioid plus benzodiazepine only under close supervision.",
+    ("codeine", "tramadol"): "Respiratory depression and seizure risk.",
+    ("glibenclamide", "aspirin"): "High-dose aspirin strengthens the sugar-lowering effect; monitor glucose.",
+    ("captopril", "potassium"): "ACE inhibitors raise potassium; supplements only on doctor advice.",
+    ("nitroglycerin", "alprazolam"): "Postural low blood pressure may worsen.",
+    ("ciprofloxacin", "calcium"): "Dairy/calcium reduces ciprofloxacin absorption; keep 2 hours apart.",
+    ("insulin", "prednisolone"): "Steroids increase insulin needs; close glucose monitoring.",
+}
+
+
+def DISCLAIMER() -> str:
+    return _pick(("This check is educational and not exhaustive; show your full medication list to a doctor or pharmacist.",
+                  "این بررسی آموزشی است و کامل نیست؛ فهرست دارویی کامل خود را به پزشک/داروساز نشان بده."))
 
 
 def _norm_all(drug: dict) -> list[str]:
@@ -132,18 +176,24 @@ def check_interaction(a: str, b: str) -> dict[str, Any]:
     da, db = search_drug(a), search_drug(b)
     if not da or not db:
         return {"ok": False,
-                "message_fa": "یکی از داروها در پایگاه داخلی پیدا نشد؛ نام را دقیق‌تر بنویس (مثلاً «وارفارین» یا «warfarin»). "+ DISCLAIMER}
+                "message_fa": __import__("i18n").tt("One of the drugs was not found in the internal list; try the exact name (e.g. 'warfarin'). ", "یکی از داروها در پایگاه داخلی پیدا نشد؛ نام را دقیق‌تر بنویس (مثلاً «وارفارین» یا «warfarin»). ")+ DISCLAIMER()}
+    from i18n import is_fa
+    sev = SEV_FA()
+    disp = lambda d: d["fa"] if is_fa() else d["en"]
     ida, idb = da[0]["id"], db[0]["id"]
     matches = []
     for it in INTERACTIONS:
         if {it["a"], it["b"]} == {ida, idb}:
-            matches.append({"severity": it["sev"], "severity_fa": SEV_FA[it["sev"]],
-                            "a_fa": da[0]["fa"], "b_fa": db[0]["fa"], "detail_fa": it["fa"]})
+            detail_en = INTERACTIONS_EN.get((it["a"], it["b"])) or INTERACTIONS_EN.get((it["b"], it["a"])) or it["fa"]
+            matches.append({"severity": it["sev"], "severity_fa": sev[it["sev"]],
+                            "a_fa": disp(da[0]), "b_fa": disp(db[0]),
+                            "detail_fa": it["fa"] if is_fa() else detail_en})
     if not matches:
-        matches.append({"severity": "none", "severity_fa": "تداخل شناخته‌شده‌ای در پایگاه کوچک داخلی ثبت نشده",
-                        "a_fa": da[0]["fa"], "b_fa": db[0]["fa"],
-                        "detail_fa": "نبودِ تداخل در این پایگاه به معنای بی‌خطر بودن قطعی نیست."})
-    return {"ok": True, "a": da[0], "b": db[0], "interactions": matches, "disclaimer": DISCLAIMER}
+        matches.append({"severity": "none",
+                        "severity_fa": _pick(("no known interaction in this small internal list", "تداخل شناخته‌شده‌ای در پایگاه کوچک داخلی ثبت نشده")),
+                        "a_fa": disp(da[0]), "b_fa": disp(db[0]),
+                        "detail_fa": _pick(("absence here does not mean it is definitely safe.", "نبودِ تداخل در این پایگاه به معنای بی‌خطر بودن قطعی نیست."))})
+    return {"ok": True, "a": da[0], "b": db[0], "interactions": matches, "disclaimer": DISCLAIMER()}
 
 
 def allergy_alert(drug_names: list[str]) -> dict[str, Any]:
@@ -161,6 +211,8 @@ def allergy_alert(drug_names: list[str]) -> dict[str, Any]:
         for name in d[0:1]:
             for alias in [name["fa"], name["en"]]:
                 if normalize(alias) and normalize(alias) in al:
-                    alerts.append(f"«{name['fa']}» با حساسیت ثبت‌شده‌ی شما ({alias}) مطابقت دارد!")
+                    import i18n as _i18n
+                    alerts.append(_i18n.tt(f"'{name['en']}' matches an allergy on your profile ({alias})!",
+                                           f"«{name['fa']}» با حساسیت ثبت‌شده‌ی شما ({alias}) مطابقت دارد!"))
                     break
     return {"ok": True, "alerts": alerts}
