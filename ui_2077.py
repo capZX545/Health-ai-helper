@@ -417,14 +417,15 @@ class App:
                  bg=C["panel2"], fg=C["dim"], font=pick_font(10)).pack(padx=16, pady=(8, 0))
         hint_var = tk.StringVar(value=("Auto-detect" if not is_fa() else "تشخیص خودکار"))
         hint_menu = ttk.Combobox(w, textvariable=hint_var, state="readonly", font=pick_font(10),
-                                 values=(["Auto-detect", "Skin / rash", "Wound / burn", "X-ray / CT / MRI", "ECG", "Lab report / prescription", "Eye", "Other"] if not is_fa()
-                                         else ["تشخیص خودکار", "پوست / جوش", "زخم / سوختگی", "رادیوگرافی / سی‌تی / ام‌آرآی", "نوار قلب", "برگه‌ی آزمایش / نسخه", "چشم", "سایر"]))
+                                 values=(["Auto-detect", "Skin / rash", "Wound / burn", "X-ray / CT / MRI", "ECG", "Lab report / prescription", "Eye", "Dental / oral", "Device screen", "Other"] if not is_fa()
+                                         else ["تشخیص خودکار", "پوست / جوش", "زخم / سوختگی", "رادیوگرافی / سی‌تی / ام‌آرآی", "نوار قلب", "برگه‌ی آزمایش / نسخه", "چشم", "دندان / دهان", "نمایشگر دستگاه", "سایر"]))
         hint_menu.pack(fill="x", padx=16)
         HINT_MAP = {"Auto-detect": "", "تشخیص خودکار": "", "Skin / rash": "skin", "پوست / جوش": "skin",
                     "Wound / burn": "wound", "زخم / سوختگی": "wound", "X-ray / CT / MRI": "xray",
                     "رادیوگرافی / سی‌تی / ام‌آرآی": "xray", "ECG": "ecg", "نوار قلب": "ecg",
                     "Lab report / prescription": "lab", "برگه‌ی آزمایش / نسخه": "lab",
-                    "Eye": "eye", "چشم": "eye", "Other": "other", "سایر": "other"}
+                    "Eye": "eye", "چشم": "eye", "Dental / oral": "dental", "دندان / دهان": "dental",
+                    "Device screen": "device", "نمایشگر دستگاه": "device", "Other": "other", "سایر": "other"}
         tk.Button(w, text=("Choose image" if not is_fa() else "انتخاب عکس"), command=pick, bg="#0d1930", fg=C["tx"], relief="flat",
                   font=pick_font(11)).pack(pady=4)
         lbl = tk.Label(w, text="—", bg=C["panel2"], fg=C["yl"], font=pick_font(10))
@@ -483,6 +484,16 @@ class App:
                         lines.append("   -> " + c["doctor_when"])
             else:
                 lines.append("اطلاعات کافی نیست." if fa_mode else "Not enough information yet.")
+            # پیشنهاد تریاژ
+            if a["candidates"]:
+                urg = [c["urgency"] for c in a["candidates"][:3]]
+                level = "emergency" if "emergency" in urg else ("urgent" if "urgent" in urg else "routine")
+                where = {"emergency": ("Go to the emergency department NOW or call 115/112.", "همین حالا به اورژانس برو یا با ۱۱۵/۱۱۲ تماس بگیر."),
+                         "urgent": ("See a clinician today or at the first opportunity.", "امروز یا در اولین فرصت به پزشک مراجعه کن."),
+                         "routine": ("A routine visit is enough; monitor your symptoms.", "مراجعه‌ی سرپایی کافی است؛ علائم را زیر نظر بگیر.")}[level]
+                lines.append("")
+                lines.append(("پیشنهاد تریاژ: " if fa_mode else "Triage suggestion: ") + level)
+                lines.append("   " + (where[1] if fa_mode else where[0]))
             try:
                 ml = ml_predict(a["detected"], {}, None)
                 if ml:

@@ -103,7 +103,7 @@ class HybridEngine:
                               "user_hint": False, "quality": [], "size": "?"}
             external = analyze_image_with_ai(image_b64, image_mime, image_note or user_text, self, _type_info)
             if not external.get("ok"):
-                external = offline_analysis(_type_info, image_note or user_text)
+                external = offline_analysis(_type_info, image_note or user_text, _raw if isinstance(_raw, bytes) else None)
                 external["source"] = "internal-image"
             else:
                 external["image_type"] = _type_info
