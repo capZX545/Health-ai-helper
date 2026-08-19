@@ -12,7 +12,10 @@ import threading
 import time
 from typing import Any
 
-import requests
+try:
+    import requests
+except ImportError:  # برنامه بدون requests هم بالاست؛ فقط اتصال خارجی غیرفعال می‌شود
+    requests = None
 
 from common_2077 import DATA_DIR, env_get, read_json, write_json
 
@@ -97,6 +100,11 @@ def chat(provider: str, messages: list[dict], model: str | None = None,
     خروجی: {ok, text, provider, model, reasoning_details, error, error_code, error_fa}
     """
     from ai_api_manager import get_api_key
+    if requests is None:
+        from i18n import tt
+        return {"ok": False, "error": "no_requests",
+                "error_fa": tt("The 'requests' library is not installed. External AI needs it - run: pip install requests",
+                               "کتابخانه‌ی requests نصب نیست. برای اتصال به AI خارجی این را اجرا کن: pip install requests")}
     key = get_api_key(provider)
     if not key:
         from i18n import tt
