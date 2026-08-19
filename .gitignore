@@ -1,0 +1,22 @@
+# رازها و اطلاعات شخصی — هرگز کامیت/ZIP نشوند
+.env
+.reasoning_state.json
+
+# داده‌های شخصی کاربر
+patient_profile.json
+vitals_history.json
+learned_knowledge.json
+ai_behavior_profile.json
+local_llm_config.json
+referral_report.html
+reminders.json
+app_settings.json
+lab_report.html
+
+# خروجی ساخت
+__pycache__/
+build/
+dist/
+Output/
+*.spec
+medical_ai_assistant.zip
