@@ -40,8 +40,8 @@ def _extract_advice(ai_text: str) -> list[str]:
         s = ln.strip()
         if not s:
             continue
-        if s.startswith(("•", "-", "*", "✅", "💊", "🏠")) or re.match(r"^\d+[.)]", s):
-            clean = s.lstrip("•-*✅💊🏠0123456789.) ").strip()
+        if s.startswith(("•", "-", "*")) or re.match(r"^\d+[.)]", s):
+            clean = s.lstrip("•-*0123456789.) ").strip()
             if 8 <= len(clean) <= 200:
                 out.append(clean)
     return out[:8]
@@ -51,7 +51,7 @@ def _extract_followups(ai_text: str) -> list[str]:
     out = []
     for ln in ai_text.splitlines():
         if is_question(ln) and 8 <= len(ln.strip()) <= 200:
-            out.append(ln.strip().lstrip("•-*❓?0123456789.) ").strip())
+            out.append(ln.strip().lstrip("•-*?0123456789.) ").strip())
     return out[:6]
 
 

@@ -26,7 +26,7 @@ SAFETY_RULES_FA = """قوانین الزامی تو:
 5. فارسی روان و همدلانه جواب بده؛ مرحله‌به‌مرحله؛ بدون اغراق.
 6. در پایان یک یا دو سوال پیگیری برای دقیق‌ترشدن ارزیابی بپرس.
 7. یادآوری کن که خروجی تو جایگزین پزشک نیست.
-سبک پاسخ: بخش‌بندی با ایموجی (🔎 علائم، 🎯 احتمالات، 💊 مراقبت، ❓ سوال بعدی)، بولت‌پوینت کوتاه."""
+سبک پاسخ: بخش‌بندی با عنوان‌های کوتاه (علائم، احتمالات، مراقبت، سوال بعدی) و بولت‌پوینت‌های کوتاه."""
 
 
 def _profile_line(profile: dict) -> str:
@@ -37,10 +37,10 @@ def _profile_line(profile: dict) -> str:
         if profile.get(k):
             bits.append(f"{fa}: {profile[k]}")
     if profile.get("conditions"):
-        bits.append("بیماری زمینه‌ای: " + str(profile["conditions"]))
+        bits.append("بیماری زمینه‌ای: "+ str(profile["conditions"]))
     if profile.get("allergies"):
-        bits.append("حساسیت: " + str(profile["allergies"]))
-    return "پروفایل بیمار — " + ("، ".join(bits) if bits else "ثبت نشده") + "."
+        bits.append("حساسیت: "+ str(profile["allergies"]))
+    return "پروفایل بیمار — "+ ("، ".join(bits) if bits else "ثبت نشده") + "."
 
 
 class HybridEngine:
@@ -136,7 +136,7 @@ class HybridEngine:
         for p in order:
             from ai_client import chat as ext_chat
             kw = {"reasoning_enabled": bool(s.get("reasoning_enabled")) and p == "openrouter"}
-            r = ext_chat(p, msgs, model=(s.get("openrouter_model") if p == "openrouter" else None), **kw)
+            r = ext_chat(p, msgs, model=(s.get("openrouter_model") if p == "openrouter"else None), **kw)
             if r.get("ok"):
                 return r
             last_err = r
@@ -179,12 +179,12 @@ class HybridEngine:
         # اگر مغز داخلی خاموش است فقط راهنمایی محدود بده
         if not get_settings().get("brain_enabled"):
             text = ("مغز داخلی در تنظیمات خاموش است — فقط موارد الزامی:\n\n"
-                    + str(sections["warning"]) + "\n\n" + str(sections["followup"])
+                    + str(sections["warning"]) + "\n\n"+ str(sections["followup"])
                     + "\n\n(یادگیری پس‌زمینه از پاسخ‌های AI خارجی همچنان فعال است.)")
             return text, {"candidates": []}
         text = apply_style(sections)
         if MEDICAL_DISCLAIMER not in text:
-            text += "\n\n" + MEDICAL_DISCLAIMER
+            text += "\n\n"+ MEDICAL_DISCLAIMER
         return text, {"candidates": analysis.get("candidates", [])}
 
     def _remember(self, role: str, content: str):

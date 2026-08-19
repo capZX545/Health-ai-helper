@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-generate_dataset.py — ساخت دیتاست مصنوعی medical_ml_test_dataset.csv (۱۰۰۰ ردیف).
-⚠️ فقط برای تست روش‌های ماشین لرنینگ — نه برای استفاده‌ی پزشکی واقعی.
+generate_dataset.py — ساخت دیتاست مصنوعی medical_ml_test_dataset.csv (۱۰۰۰ ردیف). فقط برای تست روش‌های ماشین لرنینگ — نه برای استفاده‌ی پزشکی واقعی.
 اجرا: python generate_dataset.py
 """
 from __future__ import annotations
@@ -106,7 +105,7 @@ def main() -> int:
         w.writeheader()
         for i in range(1, ROWS + 1):
             w.writerow(gen_row(i))
-    print(f"✅ ساخته شد: {OUT} ({ROWS} ردیف مصنوعی — {NOTE})")
+    print(f"ساخته شد: {OUT} ({ROWS} ردیف مصنوعی — {NOTE})")
     return 0
 
 

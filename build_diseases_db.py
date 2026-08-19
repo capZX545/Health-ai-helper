@@ -43,7 +43,7 @@ def main() -> int:
     con.commit()
     n = cur.execute("SELECT COUNT(*) FROM diseases").fetchone()[0]
     con.close()
-    print(f"✅ دیتابیس ساخته شد: {DB_PATH} — {n} بیماری")
+    print(f"دیتابیس ساخته شد: {DB_PATH} — {n} بیماری")
     return 0
 
 

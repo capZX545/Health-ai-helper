@@ -76,7 +76,7 @@ def chat(messages: list[dict], model: str | None = None, **kw) -> dict[str, Any]
             return {"ok": False, "error": "empty", "error_fa": "پاسخ مدل محلی خالی بود."}
         return {"ok": True, "text": text, "provider": "local", "model": payload["model"]}
     except requests.exceptions.ConnectionError:
-        return {"ok": False, "error": "no_ollama", "error_fa": "Ollama اجرا نیست (آدرس: " + url + ")"}
+        return {"ok": False, "error": "no_ollama", "error_fa": "Ollama اجرا نیست (آدرس: "+ url + ")"}
     except Exception as e:
         return {"ok": False, "error": str(e)[:150], "error_fa": "خطا در ارتباط با مدل محلی."}
 
@@ -87,13 +87,13 @@ def test_setup() -> dict[str, Any]:
     up = is_up(cfg["base_url"])
     out: dict[str, Any] = {"up": up, "base_url": cfg["base_url"], "model": cfg["model"], "models": [], "test_ok": False}
     if not up:
-        out["message_fa"] = "❌ Ollama در دسترس نیست. مطمئن شوید `ollama serve` اجراست."
+        out["message_fa"] = "Ollama در دسترس نیست. مطمئن شوید `ollama serve` اجراست."
         return out
     out["models"] = list_models(cfg["base_url"])
     if cfg["model"] not in out["models"]:
-        out["message_fa"] = f"⚠️ مدل «{cfg['model']}» پیدا نشد. مدل‌های موجود: " + "، ".join(out["models"][:10])
+        out["message_fa"] = f"مدل «{cfg['model']}» پیدا نشد. مدل‌های موجود: "+ "، ".join(out["models"][:10])
         return out
     res = chat([{"role": "user", "content": "سلام، یک کلمه جواب بده."}])
     out["test_ok"] = bool(res.get("ok"))
-    out["message_fa"] = "✅ Ollama و مدل محلی سالم هستند." if res.get("ok") else "❌ " + res.get("error_fa", "تست پاسخ شکست خورد.")
+    out["message_fa"] = "Ollama و مدل محلی سالم هستند." if res.get("ok") else ""+ res.get("error_fa", "تست پاسخ شکست خورد.")
     return out

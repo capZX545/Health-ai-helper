@@ -56,21 +56,21 @@ def summary_for_prompt() -> str:
         return "پروفایل بیمار ثبت نشده."
     bits = []
     if p.get("name"):
-        bits.append("نام: " + p["name"])
+        bits.append("نام: "+ p["name"])
     if p.get("age"):
-        bits.append("سن: " + str(p["age"]))
+        bits.append("سن: "+ str(p["age"]))
     if p.get("gender"):
-        bits.append("جنسیت: " + p["gender"])
+        bits.append("جنسیت: "+ p["gender"])
     if p.get("weight_kg"):
-        bits.append("وزن: " + str(p["weight_kg"]) + " کیلوگرم")
+        bits.append("وزن: "+ str(p["weight_kg"]) + "کیلوگرم")
     if p.get("height_cm"):
-        bits.append("قد: " + str(p["height_cm"]) + " سانتی‌متر")
+        bits.append("قد: "+ str(p["height_cm"]) + "سانتی‌متر")
     if p.get("conditions"):
-        bits.append("بیماری زمینه‌ای: " + p["conditions"])
+        bits.append("بیماری زمینه‌ای: "+ p["conditions"])
     if p.get("allergies"):
-        bits.append("حساسیت‌ها: " + p["allergies"])
+        bits.append("حساسیت‌ها: "+ p["allergies"])
     if p.get("medications"):
-        bits.append("داروهای فعلی: " + p["medications"])
+        bits.append("داروهای فعلی: "+ p["medications"])
     return "؛ ".join(bits)
 
 

@@ -22,7 +22,7 @@ if not defined PY ( python --version >nul 2>&1 && set PY=python )
 if not defined PY (
   echo  [ERROR] Python yoft nashod!
   echo  Python 3.10+ ra az python.org nasb konid va dokme
-  echo  "Add python.exe to PATH" ra faal konid, dobare ejra konid.
+  echo  "Add python.exe to PATH"ra faal konid, dobare ejra konid.
   pause & exit /b 1
 )
 echo  [1/6] Python OK: %PY%
@@ -57,7 +57,7 @@ if not exist %ISCC% set ISCC="%LocalAppData%\Programs\Inno Setup 6\ISCC.exe"
 if not exist %ISCC% (
   echo  [ERROR] Inno Setup 6 yoft nashod!
   echo  Az jrsoftware.org  Inno Setup 6 ra nasb konid va dobare ejra konid.
-  start "" https://jrsoftware.org/isdl.php
+  start ""https://jrsoftware.org/isdl.php
   pause & exit /b 1
 )
 %ISCC% "NexusMed_Installer.iss"
@@ -68,5 +68,5 @@ echo  ============================================
 echo   DONE!  Output\NexusMed_Setup_v2.0.exe
 echo   Exitere bejaygozin-e pezek nist. Emergency 115/112
 echo  ============================================
-if exist Output\NexusMed_Setup_v2.0.exe ( start "" explorer /select, Output\NexusMed_Setup_v2.0.exe )
+if exist Output\NexusMed_Setup_v2.0.exe ( start ""explorer /select, Output\NexusMed_Setup_v2.0.exe )
 pause

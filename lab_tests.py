@@ -12,7 +12,7 @@ from common_2077 import fa_digits
 from lab_catalog import RANGE_NOTE, find_test
 
 _NUM = r"(\d{1,5}(?:[.,]\d{1,2})?)"
-LINE_RE = re.compile(r"([A-Za-z0-9\- آ-ی‌]{2,30}?)\s*[:=]?\s*" + _NUM + r"\s*([A-Za-z/%µ×°]*.*)?")
+LINE_RE = re.compile(r"([A-Za-z0-9\- آ-ی‌]{2,30}?)\s*[:=]?\s*"+ _NUM + r"\s*([A-Za-z/%µ×°]*.*)?")
 NUM_ONLY = re.compile(_NUM)
 
 CRITICAL_RULES = [
@@ -43,7 +43,7 @@ def parse_lines(text: str) -> list[dict[str, Any]]:
             continue
         # ابتدا نام آزمایش را جدا از عدد تطبیق می‌دهیم (مثل «K 6.9» یا «هموگلوبین ۱۰.۵»)
         line_en = line.translate(str.maketrans("۰۱۲۳۴۵۶۷۸۹٫", "0123456789."))
-        name_only = NUM_ONLY.sub(" ", line_en).strip(" :=-–")
+        name_only = NUM_ONLY.sub("", line_en).strip(":=-–")
         t = find_test(name_only) or find_test(line_en)
         if not t:
             continue
@@ -88,11 +88,11 @@ def interpret(results: list[dict[str, Any]]) -> dict[str, Any]:
     crits = [r for r in results if r.get("critical_fa")]
     summary: list[str] = []
     if crits:
-        summary.append("🚨 مقدار بحرانی شناسایی شد: " + "؛ ".join(f"{r['name_fa']}={r['value']} — {r['critical_fa']}" for r in crits))
+        summary.append("مقدار بحرانی شناسایی شد: "+ "؛ ".join(f"{r['name_fa']}={r['value']} — {r['critical_fa']}" for r in crits))
         summary.append("لطفاً همین حالا با اورژانس یا پزشک تماس بگیر.")
     if highs:
-        summary.append("موارد خارج از محدوده: " + "، ".join(f"{r['name_fa']} ({r['status_fa']})" for r in highs))
+        summary.append("موارد خارج از محدوده: "+ "، ".join(f"{r['name_fa']} ({r['status_fa']})" for r in highs))
     if not summary:
-        summary.append("همه‌ی موارد شناسایی‌شده در محدوده‌ی مرجع بودند. 👌")
+        summary.append("همه‌ی موارد شناسایی‌شده در محدوده‌ی مرجع بودند.")
     summary.append("این تفسیر عمومی است؛ تشخیص نهایی فقط توسط پزشک با معاینه و در نظر گرفتن سابقه‌ی شما انجام می‌شود.")
     return {"ok": True, "results": results, "summary_fa": summary, "note": RANGE_NOTE}

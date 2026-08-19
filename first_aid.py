@@ -103,7 +103,7 @@ def get_topic(key: str) -> dict[str, Any] | None:
     out = dict(t)
     out["key"] = key
     out["emergency_line"] = EMERGENCY_LINE
-    out["disclaimer"] = "⚠️ آموزش عمومی اولیا؛ در همه‌ی موارد با اورژانس هماهنگ باش. " + EMERGENCY_LINE
+    out["disclaimer"] = "آموزش عمومی اولیا؛ در همه‌ی موارد با اورژانس هماهنگ باش. "+ EMERGENCY_LINE
     return out
 
 

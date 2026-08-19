@@ -17,9 +17,9 @@ OPENERS = [
 ]
 
 URGENCY_FA = {
-    "emergency": "🚨 فوری — اورژانس",
-    "urgent": "⚠️ نیاز به بررسی پزشک در اولین فرصت",
-    "routine": "🩺 قابل پیگیری سرپایی",
+    "emergency": "فوری — اورژانس",
+    "urgent": "نیاز به بررسی پزشک در اولین فرصت",
+    "routine": "قابل پیگیری سرپایی",
 }
 
 
@@ -42,22 +42,22 @@ def compose_offline_answer(analysis: dict[str, Any], dialogue_summary: dict[str,
     findings: list[str] = []
     syms = analysis.get("symptoms_fa", [])
     if syms:
-        findings.append("علائمی که گفتی: " + "، ".join(syms))
+        findings.append("علائمی که گفتی: "+ "، ".join(syms))
     denied = analysis.get("denied_fa", [])
     if denied:
-        findings.append("این موارد را رد کردی: " + "، ".join(denied))
+        findings.append("این موارد را رد کردی: "+ "، ".join(denied))
     det = analysis.get("detected", {})
     if det.get("duration_days") is not None:
-        findings.append("مدت علائم: حدود " + fa_digits(str(det["duration_days"])) + " روز")
+        findings.append("مدت علائم: حدود "+ fa_digits(str(det["duration_days"])) + "روز")
     if det.get("temp_c") is not None:
-        findings.append("تب گزارش‌شده: " + fa_digits(str(det["temp_c"])) + " درجه")
+        findings.append("تب گزارش‌شده: "+ fa_digits(str(det["temp_c"])) + "درجه")
     if p.get("age") or p.get("gender"):
         bits = []
         if p.get("age"):
-            bits.append("سن " + fa_digits(str(p["age"])) + " سال")
+            bits.append("سن "+ fa_digits(str(p["age"])) + "سال")
         if p.get("gender"):
-            bits.append("جنسیت " + str(p["gender"]))
-        findings.append("پروفایل: " + "، ".join(bits))
+            bits.append("جنسیت "+ str(p["gender"]))
+        findings.append("پروفایل: "+ "، ".join(bits))
     if not findings:
         findings.append("هنوز علامت مشخصی ثبت نشده؛ کمی بیشتر توضیح بده.")
     sections["findings"] = findings
@@ -71,7 +71,7 @@ def compose_offline_answer(analysis: dict[str, Any], dialogue_summary: dict[str,
         probables.append("این درصد فقط اولویت‌بندی برای مراقبت است؛ «تشخیص قطعی» فقط با معاینه‌ی پزشک ممکن است.")
     if ml_preds:
         tops = [f"{m['label']} (~{_pct(m['percent'])})" for m in ml_preds[:2]]
-        probables.append("سیگنال طبقه‌بند ML (روی دیتاست مصنوعی تستی): " + "، ".join(tops))
+        probables.append("سیگنال طبقه‌بند ML (روی دیتاست مصنوعی تستی): "+ "، ".join(tops))
     if not probables:
         probables = ["با این اطلاعات هنوز احتمال مشخصی نمی‌شود گفت؛ به سوال پایین جواب بده تا دقیق‌تر شوم."]
     sections["probables"] = probables
@@ -95,7 +95,7 @@ def compose_offline_answer(analysis: dict[str, Any], dialogue_summary: dict[str,
     if doctor:
         sections["doctor"] = doctor
 
-    sections["warning"] = "🚨 اگر درد قفسه سینه، تنگی نفس شدید، خونریزی، بیهوشی، تشنج، ضعف یک‌طرفه یا اختلال تکلم داری، همین حالا با اورژانس تماس بگیر (ایران: ۱۱۵ | اروپا: ۱۱۲)."
+    sections["warning"] = "اگر درد قفسه سینه، تنگی نفس شدید، خونریزی، بیهوشی، تشنج، ضعف یک‌طرفه یا اختلال تکلم داری، همین حالا با اورژانس تماس بگیر (ایران: ۱۱۵ | اروپا: ۱۱۲)."
 
     if followup_question:
         sections["followup"] = followup_question

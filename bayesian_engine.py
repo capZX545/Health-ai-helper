@@ -41,7 +41,7 @@ def score_disease(d: dict, detected: dict, profile: dict) -> float:
     logp = math.log(max(d["prior"] * _age_sex_factor(d, profile), SMOOTH))
     for sid, p in d["symptoms"].items():
         if sid in present:
-            boost = 1.25 if present[sid]["severity"] == "severe" else 1.0
+            boost = 1.25 if present[sid]["severity"] == "severe"else 1.0
             logp += math.log(min(p * boost, 0.98))
         elif sid in denied:
             logp += math.log(max(1.0 - p, SMOOTH))

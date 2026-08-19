@@ -33,8 +33,8 @@ def main() -> int:
     if sys.platform.startswith("win"):
         pyinstaller = [sys.executable, "-m", "PyInstaller"]
     else:
-        print("⚠️ شما روی لینوکس هستید؛ EXE واقعی ویندوز فقط روی ویندوز ساخته می‌شود.")
-        print("   این اسکریپت را روی ویندوز (پس از نصب Python و PyInstaller) اجرا کنید.")
+        print("شما روی لینوکس هستید؛ EXE واقعی ویندوز فقط روی ویندوز ساخته می‌شود.")
+        print("این اسکریپت را روی ویندوز (پس از نصب Python و PyInstaller) اجرا کنید.")
         return 1
 
     sep = ";" if sys.platform.startswith("win") else ":"
@@ -49,7 +49,7 @@ def main() -> int:
     ]
     code = run(cmd)
     if code != 0:
-        print("❌ ساخت EXE ناموفق بود.")
+        print("ساخت EXE ناموفق بود.")
         return code
 
     # کپی داده‌ها کنار EXE
@@ -60,7 +60,7 @@ def main() -> int:
         if os.path.exists(src):
             shutil.copy2(src, os.path.join(dest, f))
             print("کپی شد:", f)
-    print(f"✅ EXE ساخته شد: dist\\{APP_NAME}\\{APP_NAME}.exe")
+    print(f"EXE ساخته شد: dist\\{APP_NAME}\\{APP_NAME}.exe")
     print("قدم بعدی: Create_Setup_Installer.bat  →  Output\\NexusMed_Setup_v2.0.exe")
     return 0
 

@@ -20,7 +20,7 @@ PHQ9 = [
 
 GAD7 = [
     ("احساس عصبانیت، اضطراب یا دل‌درد", "feeling nervous, anxious"),
-    ("ناتوانی در توقف یا کنترل نگرانی", "not being able to stop worrying"),
+    ("ناتوانی در توقف یا کنترل نگرانی", " not being able to stop worrying"),
     ("نگرانی زیاد درباره‌ی چیزهای مختلف", "worrying too much"),
     ("مشکل در آسوده‌شدن", "trouble relaxing"),
     ("بی‌قراری زیاد (سخت بیکار نشستن)", "being so restless"),
@@ -30,7 +30,7 @@ GAD7 = [
 
 ANSWERS = ["هرگز (۰)", "چند روز (۱)", "بیش از نیمی از روزها (۲)", "تقریباً هر روز (۳)"]
 
-CRISIS_TEXT = """🚨 پاسخ شما به سوال ۹ (افکار آسیب به خود) مهم است.
+CRISIS_TEXT = """پاسخ شما به سوال ۹ (افکار آسیب به خود) مهم است.
 لطفاً همین حالا با یک انسان صحبت کن:
 • ایران: مشاوره‌ی تلفنی سلامت ۱۴۸۰ — اورژانس اجتماعی ۱۲۳ — اورژانس پزشکی ۱۱۵
 • اروپا/فنلاند: اورژانس ۱۱۲ — خط بحران MIELI ۱۱۳
@@ -71,15 +71,15 @@ def phq9(answers: list) -> dict[str, Any]:
     total = _score(answers[:9])
     q9 = int(answers[8]) if len(answers) >= 9 and str(answers[8]).isdigit() else 0
     if total <= 4:
-        band, fa = "minimal", "علائم افسردگی در حد حداقل ✅"
+        band, fa = "minimal", "علائم افسردگی در حد حداقل"
     elif total <= 9:
-        band, fa = "mild", "افسردگی خفیف 🟡"
+        band, fa = "mild", "افسردگی خفیف"
     elif total <= 14:
-        band, fa = "moderate", "افسردگی متوسط 🟠 — ارزیابی توسط متخصص توصیه می‌شود"
+        band, fa = "moderate", "افسردگی متوسط  — ارزیابی توسط متخصص توصیه می‌شود"
     elif total <= 19:
-        band, fa = "mod_severe", "افسردگی متوسط تا شدید 🔶 — مراجعه به متخصص لازم است"
+        band, fa = "mod_severe", "افسردگی متوسط تا شدید  — مراجعه به متخصص لازم است"
     else:
-        band, fa = "severe", "افسردگی شدید 🔴 — حتماً به متخصص سلامت روان مراجعه کن"
+        band, fa = "severe", "افسردگی شدید  — حتماً به متخصص سلامت روان مراجعه کن"
     crisis = q9 >= 1
     rec = [
         "خواب منظم، فعالیت بدنی سبک روزانه، ارتباط با افراد مورد اعتماد",
@@ -95,13 +95,13 @@ def phq9(answers: list) -> dict[str, Any]:
 def gad7(answers: list) -> dict[str, Any]:
     total = _score(answers[:7])
     if total <= 4:
-        band, fa = "minimal", "اضطراب در حد حداقل ✅"
+        band, fa = "minimal", "اضطراب در حد حداقل"
     elif total <= 9:
-        band, fa = "mild", "اضطراب خفیف 🟡"
+        band, fa = "mild", "اضطراب خفیف"
     elif total <= 14:
-        band, fa = "moderate", "اضطراب متوسط 🟠"
+        band, fa = "moderate", "اضطراب متوسط"
     else:
-        band, fa = "severe", "اضطراب شدید 🔴 — ارزیابی متخصص توصیه می‌شود"
+        band, fa = "severe", "اضطراب شدید  — ارزیابی متخصص توصیه می‌شود"
     rec = ["تمرین تنفس ۴-۷-۸ روزانه (در همین برنامه)", "کاهش کافئین/نیکوتین", "درج نگرانی‌ها روی کاغذ قبل خواب"]
     if band in ("moderate", "severe"):
         rec.append("مشورت با متخصص سلامت روان (این آزمون فقط غربالگری است)")

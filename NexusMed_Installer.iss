@@ -46,7 +46,7 @@ Source: "diseases_offline.db"; DestDir: "{app}"; Flags: ignoreversion
 Source: "medical_ml_test_dataset.csv"; DestDir: "{app}"; Flags: ignoreversion
 Source: ".env.example"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 Source: "requirements.txt"; DestDir: "{app}"; Flags: ignoreversion
-; ⚠️ فایل‌های شخصی کاربر (.env و *_profile.json و ...) هرگز داخل Setup قرار نمی‌گیرند
+; فایل‌های شخصی کاربر (.env و *_profile.json و ...) هرگز داخل Setup قرار نمی‌گیرند
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"

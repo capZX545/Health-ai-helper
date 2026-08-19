@@ -33,7 +33,7 @@ def _vision_prompt(note: str) -> str:
 3. مواردی که در تصویر قابل تشخیص نیست را صادقانه بگو.
 4. مراقبت عمومی امن + علائم هشدار برای مراجعه فوری.
 5. تأکید کن تشخیص نهایی با معاینه‌ی حضوری پزشک/پوست/متخصص است.
-قوانین: هیچ‌گاه تشخیص قطعی نده؛ اطلاعات جعلی نساز؛ فارسی همدلانه؛ بخش‌بندی با ایموجی (🔎 🎯 💊 ❓)."""
+قوانین: هیچ‌گاه تشخیص قطعی نده؛ اطلاعات جعلی نساز؛ فارسی همدلانه؛ بخش‌بندی با عنوان‌های کوتاه (علائم، احتمالات، مراقبت، سوال بعدی)."""
 
 
 def analyze_image_with_ai(image_b64: str, mime: str, note: str, engine=None) -> dict[str, Any]:
@@ -44,7 +44,7 @@ def analyze_image_with_ai(image_b64: str, mime: str, note: str, engine=None) -> 
     s = get_settings()
     order = [p for p in s["provider_order"] if p != "local" and get_api_key(p)]
     for p in order:
-        model = s.get("openrouter_model") if p == "openrouter" else ("gpt-4o-mini" if p == "openai" else None)
+        model = s.get("openrouter_model") if p == "openrouter"else ("gpt-4o-mini" if p == "openai"else None)
         if p == "openrouter" and not is_vision_model(model or ""):
             from free_ai import vision_models
             model = vision_models()[0]
@@ -58,26 +58,25 @@ def analyze_image_with_ai(image_b64: str, mime: str, note: str, engine=None) -> 
     return {"ok": False, "error": "no_vision_ai", "error_fa": "مدل تصویری خارجی در دسترس نیست."}
 
 
-OFFLINE_IMAGE_RESPONSE = """🔧 تحلیل تصویر آفلاین (بدون AI خارجی)
+OFFLINE_IMAGE_RESPONSE = """تحلیل تصویر آفلاین (بدون AI خارجی)
 
 از اینکه عکس را فرستادی ممنونم؛ ولی بدون مدل تصویری فعال، من **حدس تصویری قطعی نمی‌زنم** — ایمنی‌ات مهم‌تر از جواب سریع است.
 
-🔎 سوال‌های کلیدی که جوابشان کمک می‌کند:
+ سوال‌های کلیدی که جوابشان کمک می‌کند:
 • این ضایعه چند روز/هفته است؟
 • خارش، درد، ترشح یا خونریزی دارد؟
 • پس از چه چیزی شروع شد (دارو، غذا، نیش، تماس با ماده‌ی جدید)؟
 • تب یا علائم عمومی هم داری؟
 
-🎯 مسیر درست:
+ مسیر درست:
 • ضایعه‌ی پوستی جدید با خارش/رشد → معاینه‌ی پزشک یا پوست‌شناس در چند روز آینده
 • همراه با تورم صورت/لب/زبان یا تنگی نفس → اورژانس فوری (۱۱۵ / ۱۱۲)
 • تب بالا با لک‌های پهن بنفش/قرمز که زیر فشار محو نمی‌شود → اورژانس فوری
 
-💊 تا زمان معاینه: ناحیه را تمیز و خشک نگه دار، از خاراندن پرهیز کن، مرطوب‌کننده‌ی ساده بدون عطر.
+ تا زمان معاینه: ناحیه را تمیز و خشک نگه دار، از خاراندن پرهیز کن، مرطوب‌کننده‌ی ساده بدون عطر.
 
-❓ جواب سوال‌های بالا را بنویس تا مغز داخلی، احتمالات را دقیق‌تر کند؛ و اگر کلید OpenRouter را در تنظیمات وارد کنی، تحلیل تصویری واقعی هم فعال می‌شود.
-
-⚠️ این برنامه جایگزین پزشک نیست."""
+ جواب سوال‌های بالا را بنویس تا مغز داخلی، احتمالات را دقیق‌تر کند؛ و اگر کلید OpenRouter را در تنظیمات وارد کنی، تحلیل تصویری واقعی هم فعال می‌شود.
+ این برنامه جایگزین پزشک نیست."""
 
 
 def analyze_image_file(path: str, note: str, engine=None) -> dict[str, Any]:
@@ -91,7 +90,7 @@ def analyze_image_bytes(image_bytes: bytes, note: str, engine=None) -> dict[str,
     try:
         b64, mime = prepare_image(image_bytes)
     except Exception as e:
-        return {"ok": False, "text": "تصویر قابل خواندن نبود (" + str(e)[:80] + "). فرمت JPG/PNG را امتحان کن.", "source": "image-error"}
+        return {"ok": False, "text": "تصویر قابل خواندن نبود ("+ str(e)[:80] + "). فرمت JPG/PNG را امتحان کن.", "source": "image-error"}
     red = None
     try:
         from medical_engine import check_red_flags
