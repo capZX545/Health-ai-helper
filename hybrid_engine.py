@@ -69,12 +69,25 @@ class HybridEngine:
 
     # ------------------------------------------------------------------ chat
     def chat(self, user_text: str, image_b64: str | None = None, image_mime: str = "image/jpeg",
-             image_note: str = "", image_hint: str | None = None) -> dict[str, Any]:
+             image_note: str = "", image_hint: str | None = None, lang: str | None = None) -> dict[str, Any]:
         with _lock:
-            return self._chat_inner(user_text, image_b64, image_mime, image_note, image_hint)
+            return self._chat_inner(user_text, image_b64, image_mime, image_note, image_hint, lang)
 
-    def _chat_inner(self, user_text: str, image_b64, image_mime, image_note, image_hint=None) -> dict[str, Any]:
+    def _chat_inner(self, user_text: str, image_b64, image_mime, image_note, image_hint=None, lang=None) -> dict[str, Any]:
         user_text = (user_text or "")[:8000]
+        # زبان پاسخ: انتخاب صریح کاربر > تشخیص خودکار از خط پیام > تنظیمات
+        import i18n as _i18n
+        if lang not in ("en", "fa"):
+            letters = [c for c in (user_text or "") + (image_note or "") if c.isalpha()]
+            fa_ratio = sum(1 for c in letters if "\u0600" <= c <= "\u06ff") / max(len(letters), 1)
+            lang = "fa" if fa_ratio > 0.15 else _i18n.get_lang()
+        _i18n.set_override(lang)
+        try:
+            return self._chat_body(user_text, image_b64, image_mime, image_note, image_hint)
+        finally:
+            _i18n.set_override(None)
+
+    def _chat_body(self, user_text: str, image_b64, image_mime, image_note, image_hint=None) -> dict[str, Any]:
         from patient_profile import load_profile
         profile = load_profile()
         # با تصویر، بررسی علائم خطر روی متن + یادداشت تصویر انجام می‌شود

@@ -55,6 +55,14 @@ def tt(en: str, fa: str) -> str:
     return fa if is_fa() else en
 
 
+def _get_setting_lang() -> str:
+    try:
+        from ai_api_manager import get_settings
+        return "fa" if get_settings().get("language") == "fa" else "en"
+    except Exception:
+        return "en"
+
+
 def set_override(lang: str | None) -> None:
     """Force a language for the current thread of work (used by tests)."""
     global _override
