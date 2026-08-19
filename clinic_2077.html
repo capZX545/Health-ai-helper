@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NexusMed 2077 — دستیار هوشمند پزشکی فارسی</title>
+<style>
+:root{--bg:#04060c;--panel:#0b1220;--panel2:#0e1730;--cy:#00f0ff;--mg:#ff2a6d;--yl:#ffd60a;--gr:#3bff9e;--tx:#d7e3ff;--dim:#6b7fa3;--bd:#16213e}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Vazirmatn','Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--tx);height:100vh;overflow:hidden;
+background-image:repeating-linear-gradient(0deg,transparent 0 39px,#09122b40 39px 40px),repeating-linear-gradient(90deg,transparent 0 39px,#09122b40 39px 40px)}
+button{font-family:inherit;cursor:pointer}
+::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:#1c2b52;border-radius:5px}::-webkit-scrollbar-track{background:transparent}
+#app{display:grid;grid-template-rows:56px 1fr;grid-template-columns:216px 1fr 0px;height:100vh}
+header{grid-column:1/4;display:flex;align-items:center;gap:14px;padding:0 16px;background:linear-gradient(180deg,#0c1526,#080f1d);border-bottom:1px solid var(--bd);z-index:5}
+.logo{font-size:19px;font-weight:800;letter-spacing:1px;color:var(--cy);text-shadow:0 0 14px #00f0ff88}
+.logo b{color:var(--mg);text-shadow:0 0 14px #ff2a6d88}
+.pill{display:flex;align-items:center;gap:6px;background:#0d1930;border:1px solid var(--bd);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--dim)}
+.dot{width:9px;height:9px;border-radius:50%;background:#555;box-shadow:0 0 8px #000}
+.dot.on{background:var(--gr);box-shadow:0 0 10px var(--gr)}.dot.off{background:#f55}.dot.brain{background:var(--cy);box-shadow:0 0 10px var(--cy)}
+.hspace{flex:1}
+.hbtn{background:#0d1930;border:1px solid var(--bd);color:var(--tx);border-radius:9px;padding:7px 13px;font-size:12.5px;transition:.2s}
+.hbtn:hover{border-color:var(--cy);color:var(--cy);box-shadow:0 0 12px #00f0ff33}
+.hbtn.red{border-color:#5c1430;color:#ff8fab}.hbtn.red:hover{border-color:var(--mg);color:var(--mg);box-shadow:0 0 12px #ff2a6d44}
+nav{background:var(--panel);border-left:1px solid var(--bd);padding:12px 10px;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
+.nbtn{display:flex;align-items:center;gap:9px;width:100%;background:transparent;border:1px solid transparent;color:var(--tx);border-radius:10px;padding:9px 10px;font-size:13px;text-align:right;transition:.15s}
+.nbtn:hover{background:#101c36;border-color:var(--bd)}
+.nbtn.act{background:linear-gradient(90deg,#0e2036,#0c1526);border-color:#1e4c63;color:var(--cy)}
+.nbtn .ic{width:20px;text-align:center}
+.nsep{margin:7px 6px 3px;font-size:10.5px;color:var(--dim)}
+main{display:grid;grid-template-rows:1fr auto;background:transparent;min-width:0}
+#chatwrap{display:flex;flex-direction:column;min-height:0;padding:14px 18px 6px}
+#chat{flex:1;overflow-y:auto;padding:6px 4px;display:flex;flex-direction:column;gap:14px;scroll-behavior:smooth}
+.msg{max-width:76%;padding:11px 15px;border-radius:14px;line-height:2;font-size:13.5px;white-space:pre-wrap;word-break:break-word}
+.msg.user{align-self:flex-start;background:linear-gradient(135deg,#12233d,#0e1b30);border:1px solid #24406b;border-bottom-left-radius:4px}
+.msg.bot{align-self:flex-end;background:linear-gradient(135deg,#0d1f33,#0b1626);border:1px solid #1e4c63;border-bottom-right-radius:4px;box-shadow:0 0 18px #00f0ff11}
+.msg.emg{border-color:#7a1836;background:linear-gradient(135deg,#2a0d1a,#160810);box-shadow:0 0 22px #ff2a6d33}
+.meta{display:block;font-size:10.5px;color:var(--dim);margin-top:7px;direction:ltr;text-align:left}
+.b{color:var(--cy);font-weight:700}
+#inputbar{display:flex;gap:10px;align-items:flex-end;padding:10px 18px 14px}
+#txt{flex:1;background:#0a1424;border:1px solid var(--bd);border-radius:12px;color:var(--tx);padding:11px 14px;font-family:inherit;font-size:13.5px;resize:none;height:52px;line-height:1.7;outline:none;transition:.2s}
+#txt:focus{border-color:#1e5c73;box-shadow:0 0 14px #00f0ff1e}
+.ibtn{background:#0d1930;border:1px solid var(--bd);border-radius:12px;color:var(--tx);padding:11px 15px;font-size:15px;transition:.2s}
+.ibtn:hover{border-color:var(--cy);color:var(--cy)}
+#send{background:linear-gradient(135deg,#00b8d4,#0077b6);border:none;color:#021018;font-weight:800;border-radius:12px;padding:11px 22px;font-size:14px;box-shadow:0 0 16px #00f0ff33}
+#send:hover{box-shadow:0 0 24px #00f0ff66}
+#send:disabled{opacity:.45;cursor:wait}
+#imgprev{display:none;margin:0 18px 6px;gap:10px;align-items:center;font-size:12px;color:var(--dim)}
+#imgprev img{height:44px;border-radius:8px;border:1px solid var(--bd)}
+footer{grid-column:1/4;text-align:center;font-size:10.5px;color:#41527a;padding:6px;border-top:1px solid var(--bd);background:#070d18}
+/* پنل‌ها */
+#panel{position:fixed;top:56px;bottom:0;left:0;width:min(560px,94vw);background:var(--panel2);border-right:1px solid var(--bd);transform:translateX(-102%);transition:.28s;z-index:20;display:flex;flex-direction:column;box-shadow:14px 0 40px #0009}
+#panel.open{transform:none}
+#panel .ph{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--bd);font-weight:800;color:var(--cy)}
+#panel .pb{flex:1;overflow-y:auto;padding:16px 18px;line-height:2;font-size:13px}
+.x{margin-right:auto;background:none;border:none;color:var(--dim);font-size:18px}
+.x:hover{color:var(--mg)}
+.card{background:#0c1526;border:1px solid var(--bd);border-radius:12px;padding:13px 15px;margin:10px 0}
+.card h3{font-size:13.5px;color:var(--cy);margin-bottom:6px}
+label.fl{display:block;font-size:11.5px;color:var(--dim);margin:9px 0 3px}
+input.f,select.f,textarea.f{width:100%;background:#0a1424;border:1px solid var(--bd);border-radius:9px;color:var(--tx);padding:8px 11px;font-family:inherit;font-size:12.5px;outline:none}
+textarea.f{min-height:90px;resize:vertical;line-height:1.9}
+input.f:focus,select.f,textarea.f:focus{border-color:#1e5c73}
+.btn{background:#0d1930;border:1px solid var(--bd);border-radius:9px;color:var(--tx);padding:8px 15px;font-size:12.5px;transition:.2s}
+.btn:hover{border-color:var(--cy);color:var(--cy)}
+.btn.pri{background:linear-gradient(135deg,#00b8d4,#0077b6);border:none;color:#021018;font-weight:700}
+.btn.mg{border-color:#5c1430;color:#ff8fab}.btn.mg:hover{border-color:var(--mg);color:var(--mg)}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.ok{color:var(--gr)}.bad{color:#ff8fab}.warn{color:var(--yl)}
+.tag{display:inline-block;background:#0e2036;color:var(--cy);border:1px solid #1e4c63;border-radius:14px;padding:2px 10px;font-size:11px;margin:2px}
+.chk{display:flex;gap:8px;align-items:flex-start;padding:6px 2px;font-size:12.5px}
+.chk input{margin-top:7px;accent-color:#00b8d4}
+.q{margin:8px 0;padding:8px 11px;background:#0c1526;border:1px solid var(--bd);border-radius:10px;font-size:12.5px}
+.q .opts{display:flex;gap:12px;margin-top:6px;flex-wrap:wrap;font-size:11.5px;color:var(--dim)}
+.q .opts label{display:flex;gap:4px;align-items:center;cursor:pointer}
+.bar{height:13px;background:#101c36;border-radius:7px;overflow:hidden;margin:6px 0;border:1px solid var(--bd)}
+.bar i{display:block;height:100%;border-radius:7px}
+#cprbtn{width:100%;padding:22px;border-radius:16px;border:2px solid var(--mg);background:#1c0a14;color:var(--mg);font-size:18px;font-weight:800;letter-spacing:2px;transition:.1s}
+#cprbtn.pulse{background:var(--mg);color:#fff;box-shadow:0 0 42px #ff2a6daa}
+.breath{width:130px;height:130px;border-radius:50%;margin:14px auto;border:2px solid var(--cy);display:flex;align-items:center;justify-content:center;color:var(--cy);font-size:13px;transition:transform 1s,box-shadow 1s;text-align:center}
+.steps li{margin-right:18px;margin-bottom:4px}
+.spin{width:15px;height:15px;border:2px solid #1e4c63;border-top-color:var(--cy);border-radius:50%;display:inline-block;animation:sp 1s linear infinite;vertical-align:-3px;margin-left:7px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.hide{display:none}
+.intro{color:var(--dim);font-size:12px;line-height:2.1}
+kbd{background:#101c36;border:1px solid var(--bd);border-radius:5px;padding:1px 7px;font-size:11px;color:var(--cy)}
+@media(max-width:860px){#app{grid-template-columns:64px 1fr 0}.nbtn span.t{display:none}.nsep{display:none}.nbtn{justify-content:center}.msg{max-width:92%}}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+  <div class="logo">NEXUS<b>MED</b> 2077</div>
+  <div class="pill"><span class="dot off" id="d-ai"></span><span id="t-ai">AI خارجی</span></div>
+  <div class="pill"><span class="dot brain"></span><span id="t-brain">مغز داخلی</span></div>
+  <div class="pill"><span id="t-learn">حافظه: ۰</span></div>
+  <div class="hspace"></div>
+  <button class="hbtn" onclick="toggleLang()">EN / فارسی</button>
+  <button class="hbtn red" onclick="quickEmg()">🚨 اورژانس ۱۱۵/۱۱۲</button>
+  <button class="hbtn" onclick="openPanel('settings')">⚙️ تنظیمات API</button>
+</header>
+
+<nav id="nav">
+  <div class="nsep">اصلی</div>
+  <button class="nbtn act" data-p="chat"><span class="ic">💬</span><span class="t">گفتگو با نکسوس</span></button>
+  <button class="nbtn" data-p="image"><span class="ic">🖼️</span><span class="t">تحلیل تصویر پزشکی</span></button>
+  <div class="nsep">بالینی</div>
+  <button class="nbtn" data-p="profile"><span class="ic">🧑‍⚕️</span><span class="t">پروفایل بیمار</span></button>
+  <button class="nbtn" data-p="vitals"><span class="ic">💓</span><span class="t">علائم حیاتی</span></button>
+  <button class="nbtn" data-p="labs"><span class="ic">🧪</span><span class="t">تحلیل آزمایش</span></button>
+  <button class="nbtn" data-p="rx"><span class="ic">📜</span><span class="t">اسکن نسخه</span></button>
+  <button class="nbtn" data-p="drugs"><span class="ic">💊</span><span class="t">دارو و تداخلات</span></button>
+  <button class="nbtn" data-p="mental"><span class="ic">🧠</span><span class="t">سلامت روان</span></button>
+  <button class="nbtn" data-p="sleep"><span class="ic">😴</span><span class="t">تحلیل خواب</span></button>
+  <button class="nbtn" data-p="checkup"><span class="ic">📅</span><span class="t">تقویم چکاپ</span></button>
+  <button class="nbtn" data-p="aid"><span class="ic">🚑</span><span class="t">کمک‌های اولیه / CPR</span></button>
+  <div class="nsep">سیستم</div>
+  <button class="nbtn" data-p="referral"><span class="ic">🖨️</span><span class="t">گزارش ارجاع به پزشک</span></button>
+  <button class="nbtn" data-p="brain"><span class="ic">🧬</span><span class="t">مغز داخلی / یادگیری</span></button>
+  <button class="nbtn" data-p="gpu"><span class="ic">🖥️</span><span class="t">هوش محلی (Ollama)</span></button>
+  <button class="nbtn" data-p="settings"><span class="ic">⚙️</span><span class="t">تنظیمات API</span></button>
+</nav>
+
+<main>
+  <div id="chatwrap">
+    <div id="chat">
+      <div class="msg bot" id="hello">🔐 <b>نکسوس آنلاین است.</b>
+سلام! من نکسوس هستم — دستیار هوشمند پزشکی فارسی NexusMed 2077.
+
+برای شروع:
+• علائمت را با جزئیات بنویس (شروع، شدت، مدت)
+• یا یکی از ابزارهای ستون کنار را باز کن
+• عکس پزشکی هم می‌توانی ضمیمه کنی 📎
+
+🚨 علائم اورژانسی (درد سینه، تنگی نفس شدید، بیهوشی، تشنج، ضعف یک‌طرفه...) را که بنویسی، فوراً راهنمایی اورژانس می‌گیری.
+      <span class="meta">internal-brain • NexusMed 2077</span></div>
+    </div>
+  </div>
+  <div id="imgprev"><img id="iprevimg" alt=""><span id="iprevtxt"></span><button class="btn" onclick="clearImg()">حذف</button></div>
+  <div id="inputbar">
+    <button class="ibtn" title="ضمیمه عکس پزشکی" onclick="document.getElementById('imgfile').click()">📎</button>
+    <input type="file" id="imgfile" accept="image/*" class="hide" onchange="pickImg(this)">
+    <textarea id="txt" placeholder="علائمت را بنویس… (Enter=ارسال، Shift+Enter=خط جدید)"></textarea>
+    <button id="send" onclick="sendMsg()">ارسال ⬆</button>
+  </div>
+</main>
+<footer id="foot">⚠️ NexusMed 2077 یک دستیار اطلاعاتی است؛ جایگزین پزشک نیست و تشخیص قطعی نمی‌دهد — اورژانس: ایران ۱۱۵ | اروپا/فنلاند ۱۱۲</footer>
+</div>
+
+<aside id="panel">
+  <div class="ph"><span id="ptitle">پنل</span><button class="x" onclick="closePanel()">✕</button></div>
+  <div class="pb" id="pbody"></div>
+</aside>
+
+<script>
+"use strict";
+/* ================= ابزارهای پایه ================= */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fa=n=>String(n??"").replace(/[0-9.]/g,d=>"۰۱۲۳۴۵۶۷۸۹٫"["0123456789.".indexOf(d)]);
+async function api(path,body){
+  try{
+    const r=await fetch(path,{method:body?"POST":"GET",headers:body?{"Content-Type":"application/json"}:{},body:body?JSON.stringify(body):undefined});
+    return await r.json();
+  }catch(e){return {ok:false,message_fa:"ارتباط با سرور محلی برقرار نشد: "+e}}
+}
+function fmt(t){ // رندر ساده‌ی متن پاسخ
+  return esc(t)
+    .replace(/\*\*(.+?)\*\*/g,'<span class="b">$1</span>')
+    .replace(/^### (.*)$/gm,'<span class="b">$1</span>')
+    .replace(/(🚨|⚠️|🔴|🔶|🟠|🟡|🟢|✅)/g,'<b>$1</b>');
+}
+function addMsg(cls,text,meta){
+  const d=document.createElement("div");d.className="msg "+cls;
+  d.innerHTML=fmt(text)+(meta?'<span class="meta">'+esc(meta)+'</span>':"");
+  if($("hello"))$("hello").remove();
+  $("chat").appendChild(d);$("chat").scrollTop=1e9;return d;
+}
+/* ================= چت ================= */
+let imgB64=null,imgMime="image/jpeg",busy=false;
+function pickImg(inp){
+  const f=inp.files&&inp.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{const s=String(rd.result||"");imgB64=s.split(",")[1];imgMime=(f.type||"image/jpeg");
+    $("iprevimg").src=s;$("iprevtxt").textContent=f.name;$("imgprev").style.display="flex";};
+  rd.readAsDataURL(f);inp.value="";
+}
+function clearImg(){imgB64=null;$("imgprev").style.display="none";}
+$("txt").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMsg();}});
+async function sendMsg(){
+  const t=$("txt").value.trim();
+  if(busy)return;
+  if(!t&&!imgB64)return;
+  addMsg("user",t||"[تصویر پزشکی]");
+  $("txt").value="";const note=t;
+  const holder=addMsg("bot","");
+  holder.innerHTML='<span class="spin"></span>'+(imgB64?"در حال تحلیل تصویر و متن…":"نکسوس در حال فکر کردن است…");
+  busy=true;$("send").disabled=true;
+  const res=await api("/api/chat",{text:imgB64?"":t,image_b64:imgB64,image_mime:imgMime,image_note:note});
+  busy=false;$("send").disabled=false;
+  holder.remove();clearImg();
+  const src=res.red_flag?"🚨 پاسخ اورژانسی":(res.source==="internal"?"🧠 مغز داخلی آفلاین":(res.source||""));
+  addMsg(res.red_flag?"bot emg":"bot",res.text||res.message_fa||"پاسخی دریافت نشد.",src+(res.learned?" • 🧬 یادگیری انجام شد":""));
+  refreshStatus();
+}
+function quickEmg(){openPanel("aid");loadFirstAid("cpr");}
+/* ================= وضعیت ================= */
+async function refreshStatus(){
+  const s=await api("/api/status");if(!s.ok)return;
+  $("d-ai").className="dot "+(s.external_available?"on":"off");
+  $("t-ai").textContent=s.external_available?("AI خارجی فعال ("+Object.keys(s.masked_keys||{}).filter(k=>s.masked_keys[k]).length+")"):"AI خارجی: کلید ندارد";
+  $("t-brain").textContent=s.settings&&s.settings.brain_enabled?"مغز داخلی: روشن":"مغز داخلی: خاموش (یادگیری پس‌زمینه فعال)";
+  $("t-learn").textContent="حافظه: "+fa((s.learning&&s.learning.entries)||0)+" مورد";
+}
+setInterval(refreshStatus,15000);refreshStatus();
+/* ================= پنل‌ها ================= */
+const T={settings:"⚙️ تنظیمات API",profile:"🧑‍⚕️ پروفایل بیمار",vitals:"💓 علائم حیاتی",labs:"🧪 تحلیل آزمایش",
+rx:"📜 اسکن نسخه و اصطلاحات",drugs:"💊 دارو و تداخلات دارویی",mental:"🧠 سلامت روان",sleep:"😴 تحلیل خواب",
+checkup:"📅 تقویم چکاپ و واکسن",aid:"🚑 کمک‌های اولیه",referral:"🖨️ گزارش ارجاع به پزشک",brain:"🧬 مغز داخلی و یادگیری",
+gpu:"🖥️ هوش مصنوعی محلی (Ollama)",image:"🖼️ تحلیل تصویر پزشکی",chat:"گفتگو"};
+function openPanel(k){if(k==="chat"){closePanel();return;}
+  $("panel").classList.add("open");$("ptitle").textContent=T[k]||k;
+  const P={settings:uiSettings,profile:uiProfile,vitals:uiVitals,labs:uiLabs,rx:uiRx,drugs:uiDrugs,
+    mental:uiMental,sleep:uiSleep,checkup:uiCheckup,aid:uiAid,referral:uiReferral,brain:uiBrain,gpu:uiGpu,image:uiImage};
+  (P[k]||(()=>{}))();}
+function closePanel(){$("panel").classList.remove("open");}
+document.querySelectorAll(".nbtn").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll(".nbtn").forEach(x=>x.classList.remove("act"));b.classList.add("act");openPanel(b.dataset.p);}));
+/* ---------- تنظیمات ---------- */
+async function uiSettings(){
+  const s=await api("/api/status"),m=await api("/api/models"),st=s.settings||{};
+  const models=(m.models||[]).map(x=>`<option value="${esc(x.id)}" ${x.id===st.openrouter_model?"selected":""}>${esc(x.fa)}</option>`).join("");
+  $("pbody").innerHTML=`
+  <div class="card"><h3>🔑 کلیدهای API</h3>
+    <p style="font-size:11.5px;color:var(--dim)">کلیدها فقط در فایل .env روی سیستم خودتان ذخیره می‌شوند و هرگز داخل کد یا بسته‌ی نصبی قرار نمی‌گیرند.</p>
+    ${["openrouter","openai","deepseek"].map(p=>`
+    <label class="fl">${p==="openrouter"?"OpenRouter (پیشنهادی)":p==="openai"?"OpenAI":"DeepSeek"} — وضعیت: ${s.masked_keys&&s.masked_keys[p]?"✅ "+esc(s.masked_keys[p]):"— ثبت نشده"}</label>
+    <div class="row" style="margin:2px 0 8px">
+      <input class="f" style="flex:1" type="password" id="key-${p}" placeholder="sk-or-...">
+      ${p==="openrouter"?'<button class="btn" onclick="window.open(\'https://openrouter.ai/keys\',\'_blank\')">🔑 گرفتن کلید رایگان</button>':""}
+      <button class="btn" onclick="testKey('${p}')">تست اتصال</button>
+    </div>`).join("")}
+    <span id="testmsg"></span>
+    <button class="btn pri" onclick="saveKeys()">💾 ذخیره کلیدها (بدون ری‌استارت)</button>
+  </div>
+  <div class="card"><h3>🤖 مدل OpenRouter</h3>
+    <label class="fl">انتخاب از لیست مدل‌های رایگان/پیشنهادی</label>
+    <select class="f" id="model" onchange="$('manual').value=this.value">${models}</select>
+    <label class="fl">یا نوشتن دستی model id</label>
+    <input class="f" id="manual" value="${esc(st.openrouter_model||"")}" placeholder="openai/gpt-oss-120b:free">
+    <div class="chk"><input type="checkbox" id="reason" ${st.reasoning_enabled?"checked":""}><span>پشتیبانی از <b>reasoning</b> (استدلال مدل) — پیش‌فرض خاموش؛ مصرف توکن/هزینه را بیشتر می‌کند و همه مدل‌ها پشتیبانی نمی‌کنند.</span></div>
+    <div class="chk"><input type="checkbox" id="brainon" ${st.brain_enabled!==false?"checked":""}><span>مغز داخلی روشن باشد (پاسخ آفلاین). یادگیری پس‌زمینه در هر حالتی انجام می‌شود.</span></div>
+    <button class="btn pri" onclick="saveModel()">💾 ذخیره مدل</button>
+  </div>`;
+}
+async function saveKeys(){
+  const body={};
+  ["openrouter","openai","deepseek"].forEach(p=>{const v=$("key-"+p).value.trim();if(v)body[p+"_key"]=v;});
+  const r=await api("/api/settings/keys",body);
+  $("testmsg").innerHTML='<span class="'+(r.ok?"ok":"bad")+'">'+esc(r.message_fa)+"</span>";
+  uiSettings2();
+}
+async function uiSettings2(){setTimeout(()=>{if($("panel").classList.contains("open")&&$("key-openrouter"))uiSettings();},900);}
+async function testKey(p){
+  $("testmsg").innerHTML='<span class="spin"></span> در حال تست '+esc(p)+"…";
+  const r=await api("/api/settings/test",{provider:p});
+  $("testmsg").innerHTML='<span class="'+(r.ok?"ok":"bad")+'">'+esc(r.message_fa||String(r.error||""))+"</span>";
+}
+async function saveModel(){
+  const mdl=$("manual").value.trim()||$("model").value;
+  const r=await api("/api/settings",{openrouter_model:mdl,reasoning_enabled:$("reason").checked,brain_enabled:$("brainon").checked});
+  addMsg("bot","⚙️ تنظیمات ذخیره شد: مدل `"+mdl+"` — reasoning: "+($("reason").checked?"روشن":"خاموش")+" — بدون نیاز به ری‌استارت.","system");
+  refreshStatus();
+}
+/* ---------- پروفایل ---------- */
+async function uiProfile(){
+  const r=await api("/api/profile");const p=r.profile||{};
+  const F=[["name","نام"],["age","سن (سال)"],["gender","جنسیت (مرد/زن)"],["weight_kg","وزن (kg)"],["height_cm","قد (cm)"],["conditions","بیماری زمینه‌ای"],["allergies","حساسیت دارویی/غذایی"],["medications","داروهای فعلی"],["notes","یادداشت"]];
+  $("pbody").innerHTML=`<div class="card"><h3>پروفایل بیمار</h3>
+  ${F.map(([k,l])=>`<label class="fl">${l}</label><input class="f" id="pf-${k}" value="${esc(p[k]??"")}">`).join("")}
+  <div class="row"><button class="btn pri" onclick="saveProfile()">💾 ذخیره</button><button class="btn" onclick="api('/api/profile',{__clear:1});uiProfile()">پاک‌کردن</button></div>
+  <p style="font-size:11px;color:var(--dim);margin-top:8px">این اطلاعات فقط در فایل patient_profile.json روی سیستم خودتان ذخیره می‌شود و در بسته‌ی نصبی نیست.</p></div>`;
+}
+async function saveProfile(){
+  const body={};["name","age","gender","weight_kg","height_cm","conditions","allergies","medications","notes"].forEach(k=>body[k]=$("pf-"+k).value);
+  const r=await api("/api/profile",body);addMsg("bot","🧑‍⚕️ پروفایل ذخیره شد و در ارزیابی‌ها لحاظ می‌شود.","system");uiProfile();
+}
+/* ---------- علائم حیاتی ---------- */
+async function uiVitals(){
+  const r=await api("/api/vitals/history");
+  const rows=(r.history||[]).slice(0,8).map(v=>`<tr><td>${fa(v.systolic_bp??"—")}/${fa(v.diastolic_bp??"—")}</td><td>${fa(v.weight_kg??"—")}</td><td>${fa(v.heart_rate??"—")}</td><td>${fa(v.temp_c??"—")}</td><td>${fa(v.glucose??"—")}</td></tr>`).join("");
+  $("pbody").innerHTML=`<div class="card"><h3>ثبت علائم حیاتی جدید</h3>
+  <label class="fl">فشار خون — سیستول</label><input class="f" id="v-sys" placeholder="120">
+  <label class="fl">فشار خون — دیاستول</label><input class="f" id="v-dia" placeholder="80">
+  <label class="fl">وزن (kg) و قد (cm)</label><div class="row" style="margin:0"><input class="f" id="v-w" placeholder="وزن" style="flex:1"><input class="f" id="v-h" placeholder="قد" style="flex:1"></div>
+  <label class="fl">نبض و دمای بدن و قند (اختیاری)</label><div class="row" style="margin:0"><input class="f" id="v-hr" placeholder="نبض" style="flex:1"><input class="f" id="v-t" placeholder="دمای بدن" style="flex:1"><input class="f" id="v-g" placeholder="قند" style="flex:1"></div>
+  <button class="btn pri" onclick="saveVitals()">💾 ثبت و تحلیل</button><div id="vres"></div></div>
+  <div class="card"><h3>تاریخچه‌ی اخیر</h3><table style="width:100%;font-size:12px;text-align:center">
+  <tr style="color:var(--dim)"><th>فشار</th><th>وزن</th><th>نبض</th><th>دما</th><th>قند</th></tr>${rows||"<tr><td colspan=5>—</td></tr>"}</table></div>`;
+}
+async function saveVitals(){
+  const b={};[["v-sys","systolic_bp"],["v-dia","diastolic_bp"],["v-w","weight_kg"],["v-h","height_cm"],["v-hr","heart_rate"],["v-t","temp_c"],["v-g","glucose"]].forEach(([i,k])=>{if($(i).value)b[k]=$(i).value});
+  const r=await api("/api/vitals",b);let h="";
+  if(r.bmi)h+=`<p>BMI: <b>${fa(r.bmi.bmi)}</b> — ${esc(r.bmi.category_fa)}<br><small>${esc(r.bmi.tip_fa)}</small></p>`;
+  if(r.bp)h+=`<p>فشار: <b class="${r.bp.level==="red"?"bad":r.bp.level==="green"?"ok":"warn"}">${fa(r.bp.systolic)}/${fa(r.bp.diastolic)}</b> — ${esc(r.bp.category_fa)}<br><small>${esc(r.bp.action_fa)}</small></p>`;
+  $("vres").innerHTML=h||"<p class='warn'>مقادیر معتبر وارد کن.</p>";
+}
+/* ---------- آزمایش ---------- */
+function uiLabs(){
+  $("pbody").innerHTML=`<div class="card"><h3>تحلیل آزمایش خون</h3>
+  <p style="font-size:11.5px;color:var(--dim)">مقادیر را تایپ کن؛ هر خط یک آزمایش. مثال:<br><kbd>FBS 132</kbd> <kbd>Hb 10.5</kbd> <kbd>TSH 6.2</kbd> <kbd>کلسترول 210</kbd></p>
+  <textarea class="f" id="labtxt" placeholder="FBS 105&#10;Hb 13&#10;LDL 150&#10;TSH 3"></textarea>
+  <button class="btn pri" onclick="runLabs()">🔬 تحلیل و تفسیر فارسی</button><div id="labres"></div></div>`;
+}
+async function runLabs(){
+  const r=await api("/api/labs",{text:$("labtxt").value,save:true});
+  $("labres").innerHTML=(r.text_report||"").split("\n").map(l=>`<div>${fmt(l)}</div>`).join("")+
+   (r.summary_fa||[]).map(l=>`<div class="${l.includes("بحرانی")?"bad":""}" style="margin-top:6px">${fmt(l)}</div>`).join("")+
+   `<p style="font-size:11px;color:var(--dim);margin-top:8px">${esc(r.note||"")}</p>`;
+}
+/* ---------- نسخه ---------- */
+function uiRx(){
+  $("pbody").innerHTML=`<div class="card"><h3>اسکن نسخه / اصطلاحات آزمایش</h3>
+  <p style="font-size:11.5px;color:var(--dim)">متن نسخه یا برگه‌ی آزمایش را بنویس: <kbd>BID</kbd> <kbd>PO</kbd> <kbd>PRN</kbd> <kbd>WBC</kbd> <kbd>FBS</kbd>…</p>
+  <textarea class="f" id="rxtxt" placeholder="Amoxicillin 500mg BID PO 7d&#10;WBC 12000"></textarea>
+  <button class="btn pri" onclick="runRx()">📜 ترجمه به فارسی</button><div id="rxres"></div></div>`;
+}
+async function runRx(){
+  const r=await api("/api/prescription",{text:$("rxtxt").value});
+  if(!r.ok){$("rxres").innerHTML='<p class="warn">'+esc(r.message_fa)+"</p>";return;}
+  let h=(r.translations||[]).map(t=>`<div class="tag" title="${esc(t.fa)}">${esc(t.abbr)}</div> → ${esc(t.fa)} <small style="color:var(--dim)">(${esc(t.type)})</small>`).join("<br>");
+  if(r.drugs&&r.drugs.length)h+="<p class='ok'>💊 داروهای شناسایی‌شده: "+r.drugs.map(d=>esc(d.fa)).join("، ")+"</p>";
+  (r.alerts||[]).forEach(a=>h+="<p class='bad'>"+fmt(a)+"</p>");
+  h+="<p style='font-size:11px;color:var(--dim)'>"+esc(r.disclaimer||"")+"</p>";
+  $("rxres").innerHTML=h;
+}
+/* ---------- دارو ---------- */
+function uiDrugs(){
+  $("pbody").innerHTML=`<div class="card"><h3>جست‌وجوی دارو / گیاه دارویی</h3>
+  <div class="row" style="margin:0"><input class="f" id="dq" style="flex:1" placeholder="مثلاً: وارفارین، ژلوفن، سیر، زنجبیل"><button class="btn pri" onclick="searchDrug()">🔍</button></div><div id="dres"></div></div>
+  <div class="card"><h3>بررسی تداخل دو دارو</h3>
+  <input class="f" id="da" placeholder="داروی اول — مثلاً وارفارین">
+  <input class="f" id="db" placeholder="داروی دوم — مثلاً ژلوفن" style="margin-top:6px">
+  <button class="btn pri" onclick="interact()">⚗️ بررسی تداخل</button><div id="ires"></div></div>`;
+}
+async function searchDrug(){
+  const r=await api("/api/drugs",{q:$("dq").value,mode:"search"});
+  $("dres").innerHTML=(r.results||[]).map(d=>`<div class="tag">${esc(d.fa)}</div> <small>${esc(d.cat)} • ${esc(d.en)}</small>`).join("<br>")||'<p class="warn">پیدا نشد؛ نام دقیق‌تر یا انگلیسی بنویس.</p>';
+}
+async function interact(){
+  const r=await api("/api/drugs",{a:$("da").value,b:$("db").value,mode:"interact"});
+  if(!r.ok){$("ires").innerHTML='<p class="warn">'+esc(r.message_fa)+"</p>";return;}
+  $("ires").innerHTML=(r.interactions||[]).map(i=>`<div class="card"><b>${esc(i.severity_fa)}</b><br>${esc(i.detail_fa)}</div>`).join("")+
+  '<p style="font-size:11px;color:var(--dim)">'+esc(r.disclaimer||"")+"</p>";
+}
+/* ---------- سلامت روان ---------- */
+let MHQ={};
+async function uiMental(){
+  MHQ={type:"phq9",ans:{}};
+  const PHQ=["کم‌علاقگی یا لذت نبردن","احساس غم/افسردگی","مشکل خواب","خستگی","اشتهای تغییر یافته","احساس بد نسبت به خود","مشکل تمرکز","حرکت/صحبت کند یا بی‌قراری","⚠️ افکار آسیب به خود"];
+  const GAD=["عصبانیت/اضطراب","توقف‌ناپذیری نگرانی","نگرانی زیاد","مشکل در آسوده‌شدن","بی‌قراری","زودرنجی","ترس از اتفاق بد"];
+  $("pbody").innerHTML=`<div class="card"><h3>پرسش‌نامه‌های غربالگری</h3>
+  <div class="row"><button class="btn pri" onclick="mh('phq9')">PHQ-9 (افسردگی)</button><button class="btn" onclick="mh('gad7')">GAD-7 (اضطراب)</button></div><div id="mhbody"></div></div>
+  <div class="card"><h3>🫁 تمرین تنفس ۴-۷-۸</h3>
+  <div class="breath" id="brball">آماده</div>
+  <button class="btn pri" id="brbtn" onclick="breath()">شروع تمرین</button>
+  <p style="font-size:11.5px;color:var(--dim);margin-top:8px">دم ۴ ثانیه — نگه‌داشتن ۷ ثانیه — بازدم ۸ ثانیه • ۴ چرخه</p></div>`;
+  window._qs={phq9:PHQ,gad7:GAD};mh("phq9");
+}
+function mh(t){
+  MHQ.type=t;MHQ.ans={};
+  const qs=window._qs[t];
+  $("mhbody").innerHTML=qs.map((q,i)=>`<div class="q">${esc(q)}<div class="opts">${[0,1,2,3].map(v=>`<label><input type="radio" name="q${i}" value="${v}" onchange="MHQ.ans[${i}]=${v}"> ${["هرگز","چند روز","نیمی از روزها","هر روز"][v]}</label>`).join("")}</div></div>`).join("")+
+  `<button class="btn pri" onclick="mhSubmit()">✅ محاسبه‌ی نتیجه</button><div id="mhres"></div>`;
+}
+async function mhSubmit(){
+  const n=MHQ.type==="phq9"?9:7;const a=[];for(let i=0;i<n;i++)a.push(MHQ.ans[i]??0);
+  const r=await api("/api/mental",{type:MHQ.type,answers:a});
+  let h=`<div class="card"><b>نمره: ${fa(r.total)}</b> — ${esc(r.band_fa)}</div>`;
+  if(r.crisis)h+=`<div class="card" style="border-color:#7a1836">${fmt(r.crisis_text)}</div>`;
+  (r.recommendations_fa||[]).forEach(x=>h+="<div>• "+esc(x)+"</div>");
+  h+="<p style='font-size:11px;color:var(--dim)'>"+esc(r.note||"")+"</p>";
+  $("mhres").innerHTML=h;
+}
+let brT=null;
+function breath(){
+  if(brT){clearInterval(brT);brT=null;$("brball").style.transform="";$("brball").textContent="آماده";$("brbtn").textContent="شروع تمرین";return;}
+  $("brbtn").textContent="توقف";let c=0;
+  const cyc=[["دم…",4,1.5],["نگه دار…",7,1.15],["بازدم…",8,0.6]];let ci=0;
+  const step=()=>{const [txt,sec,scale]=cyc[ci];$("brball").textContent=txt+" "+fa(sec);$("brball").style.transform=`scale(${scale})`;ci=(ci+1)%3;c++;if(c>12){breath();}};
+  step();brT=setInterval(step,1000);setTimeout(()=>{if(brT){clearInterval(brT);brT=null;$("brball").textContent="تمام شد ✅";$("brbtn").textContent="شروع تمرین";}},93000);
+}
+/* ---------- خواب ---------- */
+async function uiSleep(){
+  const r=await api("/api/sleep/questions");
+  const sb=(r.stopbang||[]).map((q,i)=>`<div class="chk"><input type="checkbox" id="sb${i}"><span><b>${esc(q.letter)}</b> — ${esc(q.q_fa)}</span></div>`).join("");
+  const ps=(r.psqi_lite||[]).map((q,i)=>`<div class="chk"><input type="checkbox" id="ps${i}"><span>${esc(q)}</span></div>`).join("");
+  $("pbody").innerHTML=`<div class="card"><h3>STOP-BANG — خطر آپنه‌ی خواب</h3>${sb}
+  <button class="btn pri" onclick="sleepRun('stopbang')">✅ محاسبه</button><div id="sbres"></div></div>
+  <div class="card"><h3>PSQI ساده — کیفیت خواب</h3>${ps}
+  <button class="btn pri" onclick="sleepRun('psqi')">✅ محاسبه</button><div id="psres"></div></div>`;
+}
+async function sleepRun(t){
+  const n=t==="stopbang"?8:9,a=[];for(let i=0;i<n;i++)a.push($( (t==="stopbang"?"sb":"ps")+i).checked?1:0);
+  const r=await api("/api/sleep",{type:t,answers:a});
+  const el=t==="stopbang"?$("sbres"):$("psres");
+  el.innerHTML=`<div class="card"><b>${t==="stopbang"?esc(r.risk_fa):esc(r.band_fa)}</b>${r.answers_fa?`<br><small>${r.answers_fa.map(esc).join("، ")}</small>`:"</b>"}${(r.recommendations_fa||[]).map(x=>"<br>• "+esc(x)).join("")}<p style="font-size:11px;color:var(--dim)">${esc(r.note||"")}</p></div>`;
+}
+/* ---------- چکاپ ---------- */
+async function uiCheckup(){
+  const r=await api("/api/checkup");
+  $("pbody").innerHTML=`<div class="card"><h3>پیشنهاد چکاپ (سن ${fa(r.age||"—")})</h3>
+  ${(r.checkups||[]).map(c=>`<div class="q"><b>${esc(c.title)}</b><br><small style="color:var(--cy)">${esc(c.interval_fa)}</small> — <small style="color:var(--dim)">${esc(c.reason_fa)}</small></div>`).join("")||"<p class='warn'>ابتدا پروفایل را کامل کن.</p>"}
+  <p class="warn" style="font-size:11.5px">${esc(r.note_fa||"")}</p></div>
+  <div class="card"><h3>💉 واکسن‌ها</h3>${(r.vaccines||[]).map(v=>`<div class="q"><b>${esc(v.title)}</b><br><small style="color:var(--cy)">${esc(v.interval_fa)}</small></div>`).join("")}</div>
+  <div class="card"><h3>⏰ یادآورها</h3>
+  <div class="row" style="margin:0"><input class="f" id="remt" style="flex:1" placeholder="مثلاً: آزمایش HbA1c"><input class="f" id="remw" style="flex:1" placeholder="زمان (اختیاری)"><button class="btn pri" onclick="addRem()">+</button></div>
+  ${(r.reminders||[]).filter(x=>!x.done).slice(0,8).map(x=>`<div class="tag">${esc(x.title)} ${x.when?"• "+esc(x.when):""}</div>`).join("")||"<p style='color:var(--dim)'>—</p>"}</div>`;
+}
+async function addRem(){await api("/api/checkup/reminders",{title:$("remt").value,when:$("remw").value});uiCheckup();}
+/* ---------- کمک‌های اولیه ---------- */
+async function uiAid(){
+  const r=await api("/api/firstaid");
+  $("pbody").innerHTML=`<div class="card"><h3>موضوع را انتخاب کن</h3>
+  <div class="row">${(r.topics||[]).map(t=>`<button class="btn" onclick="loadFirstAid('${esc(t.key)}')">${esc(t.title)}</button>`).join("")}</div></div>
+  <div class="card"><h3>🫀 مترونوم CPR</h3>
+  <button id="cprbtn" onclick="cprToggle()">START / STOP<br>۱۱۰ BPM</button>
+  <p style="font-size:11.5px;color:var(--dim);margin-top:8px">ضرباهنگ ۱۱۰ فشار در دقیقه • عمق ۵–۶ سانتی‌متر • نسبت ۳۰:۲ — تمرین/راهنما، جایگزین دوره‌ی رسمی نیست.</p></div>
+  <div id="aidbody"></div>`;
+}
+async function loadFirstAid(k){
+  const r=await api("/api/firstaid/"+k);const t=r.topic;if(!t)return;
+  $("aidbody").innerHTML=`<div class="card"><h3>${esc(t.title)}</h3>
+  <ol class="steps">${(t.steps||[]).map(s=>"<li>"+fmt(s)+"</li>").join("")}</ol>
+  ${(t.warnings||[]).map(w=>"<p class='warn'>⚠️ "+fmt(w)+"</p>").join("")}
+  <p class="bad" style="margin-top:6px">🚨 ${esc(t.emergency_line||"")}</p></div>`;
+}
+let cprT=null,cprA=null;
+function cprToggle(){
+  if(cprT){clearInterval(cprT);cprT=null;$("cprbtn").classList.remove("pulse");$("cprbtn").firstChild.textContent="START / STOP";return;}
+  try{cprA=cprA||new (window.AudioContext||window.webkitAudioContext)();}catch(e){cprA=null;}
+  const tick=()=>{ $("cprbtn").classList.add("pulse");
+    if(cprA){const o=cprA.createOscillator(),g=cprA.createGain();o.frequency.value=880;o.connect(g);g.connect(cprA.destination);g.gain.setValueAtTime(.25,cprA.currentTime);g.gain.exponentialRampToValueAtTime(.001,cprA.currentTime+.12);o.start();o.stop(cprA.currentTime+.13);}
+    setTimeout(()=>$("cprbtn").classList.remove("pulse"),240);};
+  tick();cprT=setInterval(tick,545);
+}
+/* ---------- ارجاع ---------- */
+function uiReferral(){
+  $("pbody").innerHTML=`<div class="card"><h3>🖨️ گزارش ارجاع قابل چاپ</h3>
+  <p style="font-size:11.5px;color:var(--dim)">جمع‌بندی پروفایل + علائم حیاتی + ارزیابی احتمالی برای ارائه به پزشک.</p>
+  <label class="fl">متن نتایج آزمایش (اختیاری)</label><textarea class="f" id="rlabs" placeholder="FBS 105، Hb 13…"></textarea>
+  <label class="fl">علائم فعلی (اختیاری — خالی بگذار تا از گفتگو برداشته شود)</label><textarea class="f" id="rsx"></textarea>
+  <button class="btn pri" onclick="makeRef()">📄 تولید referral_report.html</button><div id="rres"></div></div>`;
+}
+async function makeRef(){
+  const r=await api("/api/referral",{labs_text:$("rlabs").value,text:$("rsx").value});
+  if(!r.ok){$("rres").innerHTML='<p class="bad">'+esc(r.message_fa)+"</p>";return;}
+  const blob=new Blob([r.html],{type:"text/html;charset=utf-8"});const u=URL.createObjectURL(blob);
+  $("rres").innerHTML=`<p class="ok">✅ ساخته شد: ${esc(r.path)}</p><div class="row"><a class="btn pri" href="${u}" target="_blank" rel="noopener">👁️ بازکردن و چاپ</a><a class="btn" href="${u}" download="referral_report.html">⬇️ دانلود</a></div>`;
+}
+/* ---------- مغز/یادگیری ---------- */
+async function uiBrain(){
+  const s=await api("/api/status"),l=await api("/api/learning");
+  $("pbody").innerHTML=`<div class="card"><h3>🧬 وضعیت مغز داخلی</h3>
+  <p>دانشآموخته‌شده از AI خارجی: <b>${fa((l.entries)||0)}</b> مورد (سقف ۵۰۰)</p>
+  <p>RAG: ${fa(s.rag&&s.rag.indexed_docs||0)} سند نمایه‌شده (${esc(s.rag&&s.rag.vectorizer||"—")})</p>
+  <p>آخرین منبع پاسخ: ${esc(s.last_source||"—")}</p>
+  ${(l.top_topics||[]).map(t=>`<div class="tag">${esc(t)}</div>`).join("")}
+  <div class="row"><button class="btn" onclick="api('/api/dialogue/reset',{});uiBrain()">🔄 شروع گفتگوی جدید</button>
+  <button class="btn mg" onclick="if(confirm('همه‌ی حافظه‌ی یادگیری پاک شود؟')){api('/api/learning/reset',{});uiBrain();}">🗑️ پاک‌کردن حافظه</button></div>
+  <p style="font-size:11px;color:var(--dim);margin-top:8px">یادگیری از هر پاسخ AI خارجی — حتی وقتی مغز داخلی خاموش است — همیشه انجام می‌شود و فقط لحن/ساختار را تقلید می‌کند، نه محتوای پزشکی.</p></div>
+  <div class="card"><h3>آخرین موارد یادگیری</h3>
+  ${(l.recent||[]).map(e=>`<div class="q"><b>${esc(e.topic)}</b><br><small>${esc(e.provider||"")} ${esc(e.model||"")} • ${esc((e.ts||"").slice(0,16).replace("T"," "))}</small><br><small style="color:var(--dim)">${esc((e.ai_summary||"").slice(0,140))}…</small></div>`).join("")||"<p style='color:var(--dim)'>هنوز چیزی یاد گرفته نشده — یک گفتگو با AI خارجی انجام بده.</p>"}</div>`;
+}
+/* ---------- Ollama ---------- */
+async function uiGpu(){
+  const r=await api("/api/localllm");const c=r.config||{};
+  $("pbody").innerHTML=`<div class="card"><h3>🖥️ هوش مصنوعی محلی (Ollama)</h3>
+  <p style="font-size:11.5px;color:var(--dim)">پیش‌فرض: qwen2.5:7b-instruct در آدرس http://localhost:11434 — نیازمند نصب Ollama و GPU/CPU قوی.</p>
+  <div class="chk"><input type="checkbox" id="llon" ${c.enabled?"checked":""}><span>فعال‌سازی مدل محلی در زنجیره‌ی پاسخ</span></div>
+  <label class="fl">آدرس Ollama</label><input class="f" id="llurl" value="${esc(c.base_url)}">
+  <label class="fl">مدل</label><input class="f" id="llmodel" value="${esc(c.model)}">
+  <div class="row"><button class="btn pri" onclick="saveLL()">💾 ذخیره</button><button class="btn" onclick="testLL()">🔌 بررسی و تست</button></div><div id="llres"></div></div>`;
+}
+async function saveLL(){
+  await api("/api/localllm",{enabled:$("llon").checked,base_url:$("llurl").value.trim(),model:$("llmodel").value.trim()});
+  $("llres").innerHTML='<p class="ok">ذخیره شد (local_llm_config.json).</p>';
+}
+async function testLL(){
+  $("llres").innerHTML='<p><span class="spin"></span> در حال بررسی Ollama…</p>';
+  const r=await api("/api/localllm/test",{});
+  $("llres").innerHTML=`<p class="${r.up?"ok":"bad"}">${esc(r.message_fa||"")}</p>${(r.models||[]).length?"<p><small>مدل‌ها: "+esc(r.models.join("، "))+"</small></p>":""}`;
+}
+/* ---------- تصویر ---------- */
+function uiImage(){
+  $("pbody").innerHTML=`<div class="card"><h3>🖼️ تحلیل تصویر پزشکی + متن</h3>
+  <p style="font-size:12px;color:var(--tx)">۱) عکس را انتخاب کن ۲) توضیح کوتاه بنویس ۳) ارسال.<br><small style="color:var(--dim)">مثال: «این لک قرمز روی دستم ۳ روزه خارش شدید دارد»</small></p>
+  <input type="file" class="f" id="imgf2" accept="image/*" onchange="pickImg(this)">
+  <label class="fl">توضیح همراه عکس</label><textarea class="f" id="imgnote" placeholder="توضیح علائم، مدت، خارش/درد…"></textarea>
+  <button class="btn pri" onclick="sendImg()">📤 ارسال برای تحلیل</button>
+  <p style="font-size:11px;color:var(--dim);margin-top:8px">اگر کلید OpenRouter با مدل تصویری تنظیم شده باشد، تحلیل AI انجام می‌شود؛ وگرنه پاسخ امن آفلاین می‌گیری (بدون حدس جعلی). نتیجه در گفتگو ظاهر می‌شود.</p></div>`;
+}
+async function sendImg(){
+  const f=$("imgf2").files[0];if(!f){alert("اول عکس را انتخاب کن");return;}
+  await new Promise(res=>{const rd=new FileReader();rd.onload=()=>{imgB64=String(rd.result).split(",")[1];imgMime=f.type;res();};rd.readAsDataURL(f);});
+  const note=$("imgnote").value.trim();
+  $("txt").value=note;await sendMsg();closePanel();
+}
+/* ---------- زبان ---------- */
+let LANG="fa";
+const LBL={fa:{ph:"علائمت را بنویس… (Enter=ارسال)",send:"ارسال ⬆"},en:{ph:"Describe your symptoms… (Enter=send)",send:"Send ⬆"}};
+function toggleLang(){LANG=LANG==="fa"?"en":"fa";$("txt").placeholder=LBL[LANG].ph;$("send").textContent=LBL[LANG].send;}
+refreshStatus();
+</script>
+</body>
+</html>
