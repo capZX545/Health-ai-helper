@@ -696,6 +696,69 @@ def t_builders():
     return "compile + dataset + db"
 
 
+
+
+def t_html_i18n():
+    html = open("clinic_2077.html", encoding="utf-8").read()
+    js = html.split("<script>")[1].split("</script>")[0]
+    en_block = js.split("T.en = {")[1].split("\n};")[0]
+    fa_block = js.split("T.fa = {")[1].split("\n};")[0]
+    vocab_en = set(re.findall(r'([A-Za-z_][A-Za-z_0-9]*):(?=["\'{\[])', en_block)) - {"http"}
+    vocab_fa = set(re.findall(r'([A-Za-z_][A-Za-z_0-9]*):(?=["\'{\[])', fa_block)) - {"http"}
+    used = set(re.findall(r'\bt\("([A-Za-z_0-9]+)"\)', js))
+    missing = used - vocab_en
+    expect(not missing, f"undefined t() keys: {missing}")
+    top_diff = {k for k in (vocab_en ^ vocab_fa) if k in used}
+    expect(not top_diff, f"en/fa mismatch for used keys: {top_diff}")
+    used_api = set(re.findall(r'api\("(/api/[a-z/\-]+)"', js))
+    srv = open("run_web.py", encoding="utf-8").read()
+    server_paths = set(re.findall(r'"(/api/[a-z/\-]+)"', srv))
+    expect(used_api <= server_paths, f"JS routes missing in server: {used_api - server_paths}")
+    return f"{len(used)} keys + {len(used_api)} routes consistent"
+
+
+def t_ui_structure():
+    src = open("ui_2077.py", encoding="utf-8").read()
+    defs = set(re.findall(r"def (_panel_\w+)\(", src))
+    refs = set(re.findall(r"self\.(_panel_\w+)", src))
+    expect(defs and refs <= defs, f"dangling panel refs: {refs - defs}")
+    for mod in ("hybrid_engine", "image_caption", "medical_engine", "ai_api_manager",
+                "patient_profile", "health_vitals", "drug_interaction", "first_aid",
+                "mental_health", "sleep_analyzer", "checkup_calendar", "lab_visualizer",
+                "prescription_scanner", "doctor_referral", "local_llm", "auto_learning",
+                "semantic_rag", "ml_classifier"):
+        expect(f"import {mod}" in src or f"from {mod}" in src, mod)
+    return f"{len(defs)} panels + 18 module hooks"
+
+
+def t_misc_infra():
+    import socket
+    import subprocess
+    import csv as _csv
+    import sqlite3
+    from run_web import find_free_port
+    s = socket.socket()
+    s.bind(("127.0.0.1", 2078))
+    s.listen(1)
+    p = find_free_port(2077, 2087, "127.0.0.1") if os.path.exists("/proc/net/tcp") else None
+    # 2077 ممکن است آزاد باشد در محیط تست؛ فقط بررسی بازه معتبر
+    expect(p is None or 2077 <= p <= 2087, p)
+    s.close()
+    if sys.platform != "win32":
+        r = subprocess.run([sys.executable, "build_exe.py"], capture_output=True, text=True, timeout=90)
+        expect(r.returncode == 1 and ("ویندوز" in r.stdout or "Windows" in r.stdout))
+    # تولید مجدد داده‌ها
+    subprocess.run([sys.executable, "generate_dataset.py"], capture_output=True, timeout=120)
+    rows = list(_csv.DictReader(open("medical_ml_test_dataset.csv", encoding="utf-8-sig")))
+    expect(len(rows) == 1000)
+    subprocess.run([sys.executable, "build_diseases_db.py"], capture_output=True, timeout=120)
+    con = sqlite3.connect("diseases_offline.db")
+    n = con.execute("SELECT COUNT(*) FROM diseases").fetchone()[0]
+    con.close()
+    expect(n >= 50, n)
+    return "ports/build_exe/dataset/db"
+
+
 # ================================================================ main
 
 def main():
@@ -731,6 +794,9 @@ def main():
     run_module("doctor_referral", t_doctor_referral)
     run_module("hybrid_engine", t_hybrid_engine)
     run_module("builders/ui/run scripts", t_builders)
+    run_module("clinic_2077.html i18n+routes", t_html_i18n)
+    run_module("ui_2077 structure", t_ui_structure)
+    run_module("infrastructure (ports/builders)", t_misc_infra)
     clean()
     total = len(RESULTS)
     passed = sum(1 for _, ok, _ in RESULTS if ok)
