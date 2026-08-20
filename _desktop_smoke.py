@@ -43,6 +43,7 @@ class MockWidget:
     def update_idletasks(self): pass
     def protocol(self, *a): return self
     def mainloop(self): pass
+    def minsize(self, *a): return self
     def focus_set(self): return self
     def lift(self): return self
     def selection_get(self): return ""
@@ -58,6 +59,12 @@ class MockWidget:
     def index(self, *a): return "1.0"
     def curselection(self): return ()
     def select(self, *a): return self
+    def create_window(self, *a, **kw): return self
+    def bbox(self, *a): return (0, 0, 100, 100)
+    def itemconfig(self, *a, **kw): return self
+    def yview_scroll(self, *a): return self
+    def yview(self, *a, **kw): return self
+    def winfo_width(self): return 600
 
 
 class MockVar(MockWidget):
