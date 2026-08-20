@@ -390,23 +390,23 @@ Answer in Farsi. Be specific about medications (name them) but always note presc
                     from medical_engine import emergency_response
                     return self._json({"ok": True, "text": emergency_response(a["red_flag_reasons"]), "source": "doctor:internal-emergency", "red_flag": True})
                 parts = []
-                parts.append("📋 خلاصه‌ی کیس:")
+                parts.append(" خلاصه‌ی کیس:")
                 parts.append(f"  علائم: {'، '.join(a['symptoms']) if a['symptoms'] else '—'}")
                 if a.get("duration_days"):
                     parts.append(f"  مدت: {a['detected']['duration_days']} روز")
                 parts.append("")
-                parts.append("🎯 تشخیص افتراقی (مغز داخلی — برای تحلیل عمیق‌تر کلید OpenRouter را فعال کنید):")
+                parts.append(" تشخیص افتراقی (مغز داخلی — برای تحلیل عمیق‌تر کلید OpenRouter را فعال کنید):")
                 if a["candidates"]:
                     for c in a["candidates"][:5]:
                         parts.append(f"  • {c['name']} (~{c['percent']}%) [{c['urgency']}]")
                         if c.get("matched_symptoms"):
                             parts.append(f"    منطبق: {'، '.join(c['matched_symptoms'])}")
                         if c.get("doctor_when"):
-                            parts.append(f"    ⚕ {c['doctor_when']}")
+                            parts.append(f"     {c['doctor_when']}")
                 else:
                     parts.append("  اطلاعات کافی نیست — جزئیات بیشتری بنویسید.")
                 parts.append("")
-                parts.append("🔬 بررسی‌های پیشنهادی:")
+                parts.append(" بررسی‌های پیشنهادی:")
                 parts.append("  • معاینه‌ی فیزیکی هدفمند بر اساس علائم")
                 parts.append("  • آزمایش‌های عمومی: CBC, FBS, Cr, ALT/AST")
                 parts.append("  • در صورت لزوم: تصویربرداری هدفمند")
