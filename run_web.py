@@ -135,6 +135,10 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/localllm":
                 from local_llm import get_config
                 return self._json({"ok": True, "config": get_config()})
+            if path == "/api/who/profile":
+                from who_connector import get_country_profile
+                country = "IRN"
+                return self._json(get_country_profile(country))
             if path == "/api/learning/status":
                 from auto_learning import stats, recent
                 from behavior_imitation import load_profile
@@ -407,6 +411,10 @@ Answer in Farsi. Be specific about medications (name them) but always note presc
                 parts.append("  • آزمایش‌های عمومی: CBC, FBS, Cr, ALT/AST")
                 parts.append("  • در صورت لزوم: تصویربرداری هدفمند")
                 return self._json({"ok": True, "text": "\n".join(parts), "source": "doctor:internal", "learned": False})
+            if path == "/api/who/profile":
+                from who_connector import get_country_profile
+                country = "IRN"
+                return self._json(get_country_profile(country))
             if path == "/api/learning/status":
                 from auto_learning import stats, recent
                 from behavior_imitation import load_profile
@@ -428,9 +436,44 @@ Answer in Farsi. Be specific about medications (name them) but always note presc
                     "learning_active": True,
                     "note_fa": "یادگیری پس‌زمینه از هر پاسخ AI خارجی همیشه فعال است، حتی وقتی مغز داخلی خاموش است." if fa else
                                "Background learning from every external AI reply is always active, even when the internal brain is off."})
+            if path == "/api/fda/search":
+                from openfda_connector import search_adverse_events, search_drug_label, learn_from_fda
+                drug = str(data.get("drug") or "").strip()
+                mode = data.get("mode", "events")
+                if not drug:
+                    from i18n import tt
+                    return self._json({"ok": False, "message_fa": tt("Enter a drug name.", "نام دارو را وارد کنید.")}, 400)
+                if mode == "label":
+                    res = search_drug_label(drug)
+                elif mode == "learn":
+                    res = learn_from_fda(drug)
+                else:
+                    res = search_adverse_events(drug)
+                return self._json(res)
+            if path == "/api/who/profile":
+                from who_connector import get_country_profile, learn_who_data
+                country = str(data.get("country") or "IRN").strip().upper()
+                if data.get("learn"):
+                    res = learn_who_data(country)
+                else:
+                    res = get_country_profile(country)
+                return self._json(res)
+            if path == "/api/trials/search":
+                from clinical_trials_connector import search_trials
+                res = search_trials(
+                    condition=str(data.get("condition") or ""),
+                    intervention=str(data.get("intervention") or ""),
+                    status=str(data.get("status") or "RECRUITING"),
+                    limit=min(int(data.get("limit") or 5), 10),
+                )
+                return self._json(res)
             if path == "/api/learning/reset":
                 from auto_learning import reset
                 return self._json({"ok": reset()})
+            if path == "/api/who/profile":
+                from who_connector import get_country_profile
+                country = "IRN"
+                return self._json(get_country_profile(country))
             if path == "/api/learning/status":
                 from auto_learning import stats, recent
                 from behavior_imitation import load_profile
