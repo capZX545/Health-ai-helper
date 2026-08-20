@@ -26,10 +26,24 @@ def main() -> int:
             sys.argv.append("--no-browser")
         return web_main()
 
+    # بررسی Tkinter (ممکن است روی ویندوز ناقص نصب باشد)
     try:
-        import tkinter  # noqa: F401
-    except Exception:
-        print("Tkinter در دسترس نیست؛ نسخه‌ی وب اجرا می‌شود...")
+        import tkinter
+        root_test = tkinter.Tk()
+        root_test.destroy()
+    except Exception as e:
+        print("=" * 56)
+        print("  رابط گرافیکی (Tkinter) در دسترس نیست.")
+        print(f"  علت: {e}")
+        print()
+        print("  راه حل ۱: Python را دوباره نصب کنید و حتماً تیک")
+        print("            'tcl/tk and IDLE' را بزنید (Download from python.org)")
+        print("  راه حل ۲: نسخه‌ی وب را استفاده کنید (همان امکانات):")
+        print()
+        print("            python run_web.py")
+        print()
+        print("  الان نسخه‌ی وب برای شما اجرا می‌شود...")
+        print("=" * 56)
         from run_web import main as web_main
         sys.argv = ["run_web.py"]
         return web_main()
