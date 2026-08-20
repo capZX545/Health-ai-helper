@@ -101,6 +101,8 @@ def rank_diseases(detected: dict, profile: dict, top_n: int = 5) -> list[dict[st
     global _RARE
     if not _RARE:
         _RARE = _rare_symptoms()
+    # اورژانس‌ها همیشه صدر بمانند حتی اگر احتمال عددی کمتری بگیرند
+    present_now = {s for s, i in detected.get("present", {}).items() if not i.get("denied")}
     """رتبه‌بندی با نرمال‌سازی softmax تقریبی؛ درصد = احتمال نسبی در بین کاندیدها."""
     if not any(not i.get("denied") for i in detected.get("present", {}).values()):
         return []
@@ -113,7 +115,15 @@ def rank_diseases(detected: dict, profile: dict, top_n: int = 5) -> list[dict[st
     if not scored:
         return []
     scored.sort(key=lambda x: x[0], reverse=True)
-    top = scored[:top_n]
+    top = scored[:max(top_n, 8)]
+    # کاندیدهای اورژانسی که علامت کمیاب اختصاصی‌شان حاضر است را به صدر بیاور
+    emergency_boost = []
+    rest = []
+    for s, d, ov in top:
+        is_em = d.get("urgency") == "emergency"
+        has_spec = any(p >= 0.9 and sid in present_now for sid, p in d["symptoms"].items())
+        (emergency_boost if (is_em and has_spec) else rest).append((s, d, ov))
+    top = (emergency_boost + rest)[:top_n]
     mx = top[0][0]
     exps = [math.exp(s - mx) for s, _, _ in top]
     total = sum(exps)
