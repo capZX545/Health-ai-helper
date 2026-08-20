@@ -111,6 +111,7 @@ class App:
             (("First aid / CPR", "کمک‌های اولیه / CPR"), self._panel_emergency),
             (("Referral report", "گزارش ارجاع"), self._panel_referral),
             (("Brain & learning", "مغز داخلی / یادگیری"), self._panel_brain),
+            (("Doctor Mode", "حالت دکتر"), self._panel_doctor),
             (("Local AI (GPU/Ollama)", "هوش محلی (GPU/Ollama)"), self._panel_gpu),
         ]
         tk.Label(nav, text=self.L("- modules -", "ـ ماژول‌ها ـ"), bg=C["panel"], fg=C["dim"], font=F_SMALL).pack(pady=8)
@@ -151,6 +152,14 @@ class App:
         self.entry.pack(side="right", fill="both", expand=True, ipady=2)
         self.entry.bind("<Return>", self._on_enter)
         self.entry.bind("<Shift-Return>", lambda e: None)
+        self.root.bind("<Control-Return>", lambda e: self._send())
+        self.root.bind("<Control-n>", lambda e: self._new_conversation())
+        self.root.bind("<Control-N>", lambda e: self._new_conversation())
+        self.root.bind("<Control-comma>", lambda e: self._panel_settings())
+        self.root.bind("<Control-e>", lambda e: self._panel_emergency())
+        self.root.bind("<Control-E>", lambda e: self._panel_emergency())
+        self.root.bind("<F1>", lambda e: self._show_shortcuts())
+        self.root.bind("<Escape>", lambda e: [w.destroy() for w in self.root.winfo_children() if isinstance(w, tk.Toplevel)])
         self.send_btn = tk.Button(inbar, text=self.L("Send", "ارسال"), command=self._send, bg="#0077b6",
                                   fg="#021018", font=pick_font(12, True), relief="flat")
         self.send_btn.pack(side="left", fill="y", padx=(6, 0))
@@ -200,9 +209,84 @@ class App:
             self.img_path = p
             self.attach_lbl.config(text=""+ os.path.basename(p))
 
+    def _new_conversation(self):
+        """گفتگوی جدید: قبلی را در تاریخچه ذخیره می‌کند."""
+        eng = self._engine()
+        dlg = eng.dialogue.summary()
+        if dlg.get("turns", 0) > 0 and (eng.memory or []):
+            from common_2077 import read_json, write_json, DATA_DIR
+            import os as _os
+            hist_path = _os.path.join(DATA_DIR, "conversation_history.json")
+            hist = read_json(hist_path, default=[]) or []
+            conv = {
+                "ts": __import__("common_2077", fromlist=["now_iso"]).now_iso(),
+                "turns": dlg["turns"],
+                "symptoms": dlg.get("symptoms", []),
+                "messages": [{"role": m["role"], "content": m["content"][:500]} for m in eng.memory[-20:]],
+            }
+            hist.insert(0, conv)
+            hist = hist[:50]
+            write_json(hist_path, hist)
+        eng.dialogue.reset()
+        eng.memory = []
+        self.chat.config(state="normal")
+        self.chat.delete("1.0", "end")
+        self.chat.config(state="disabled")
+        self._hello()
+        self._refresh_status()
+
     def _reset_dialogue(self):
-        self._engine().dialogue.reset()
-        self._bot("— گفتگوی جدید شروع شد —", "meta")
+        self._new_conversation()
+
+    def _show_shortcuts(self):
+        from i18n import is_fa
+        fa = is_fa()
+        w = self._win(self.L("Keyboard Shortcuts", "میانبرهای کیبورد"))
+        items = [
+            ("Ctrl+Enter", self.L("Send message", "ارسال پیام")),
+            ("Ctrl+N", self.L("New conversation (saves previous)", "گفتگوی جدید (قبلی ذخیره می‌شود)")),
+            ("Ctrl+,", self.L("Settings", "تنظیمات")),
+            ("Ctrl+E", self.L("Emergency panel", "پنل اورژانس")),
+            ("F1", self.L("This help", "راهنمای میانبرها")),
+            ("Esc", self.L("Close dialogs", "بستن پنجره‌ها")),
+        ]
+        for key, desc in items:
+            tk.Label(w, text=f"{key}  →  {desc}", bg=C["panel2"], fg=C["tx"],
+                     font=pick_font(11), anchor="e").pack(fill="x", padx=16, pady=3)
+
+    def _panel_doctor(self):
+        """حالت دکتر: سناریوی بیمار → تشخیص افتراقی"""
+        from i18n import is_fa
+        w = self._win(self.L("Doctor Mode — Clinical Analysis", "حالت دکتر — تحلیل بالینی"))
+        tk.Label(w, text=("Describe a patient scenario and get a clinical differential diagnosis." if not is_fa()
+                          else "سناریوی بیمار را بنویسید و تشخیص افتراقی بالینی بگیرید."),
+                 bg=C["panel2"], fg=C["dim"], font=pick_font(10)).pack(padx=16, pady=8)
+        txt = scrolledtext.ScrolledText(w, bg="#0a1424", fg=C["tx"], font=pick_font(12), height=5, relief="flat")
+        txt.pack(fill="x", padx=16)
+        box = self._result_box(w)
+
+        def go():
+            import json as _json
+            import requests as _req
+            try:
+                r = _req.post("http://localhost:2077/api/doctor_mode",
+                             json={"text": txt.get("1.0", "end").strip()}, timeout=120)
+                d = r.json()
+            except Exception:
+                # fallback: مغز داخلی مستقیم
+                from medical_engine import analyze
+                a = analyze(txt.get("1.0", "end").strip())
+                lines = ["[offline] تشخیص افتراقی مغز داخلی:"]
+                for c in a["candidates"][:5]:
+                    lines.append(f"  • {c['name']} ~{c['percent']}% [{c['urgency']}]")
+                box.delete("1.0", "end")
+                box.insert("1.0", "\n".join(lines))
+                return
+            box.delete("1.0", "end")
+            box.insert("1.0", f"[{d.get('source', '')}]\n\n" + d.get("text", d.get("message_fa", "error")))
+
+        tk.Button(w, text=self.L("Clinical Analysis", "تحلیل بالینی"), command=go, bg="#0077b6",
+                  fg="#021018", font=pick_font(11, True), relief="flat").pack(pady=8, ipadx=24, ipady=4)
 
     def _send(self):
         text = self.entry.get("1.0", "end").strip()
