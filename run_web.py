@@ -482,6 +482,21 @@ Answer in Farsi. Be specific about medications (name them) but always note presc
                     drugs = search_by_class(cls)
                     return self._json({"ok": True, "drugs": drugs})
                 return self._json({"ok": True, "all": list_all()})
+            if path == "/api/catalog/search":
+                from medical_catalog import search_conditions, search_drugs, stats, get_chapter_fa
+                q = str(data.get("q") or "").strip()
+                mode = data.get("mode", "all")
+                if not q:
+                    st = stats()
+                    return self._json({"ok": True, "total_conditions": st["conditions"], "total_drugs": st["drugs"]})
+                results = {}
+                if mode in ("all", "conditions"):
+                    conds = search_conditions(q, 20)
+                    results["conditions"] = [{"name": c["name"], "icd10": c["icd10"],
+                                              "chapter_fa": get_chapter_fa(c["icd10"])} for c in conds]
+                if mode in ("all", "drugs"):
+                    results["drugs"] = search_drugs(q, 20)
+                return self._json({"ok": True, "query": q, **results})
             if path == "/api/learning/reset":
                 from auto_learning import reset
                 return self._json({"ok": reset()})
