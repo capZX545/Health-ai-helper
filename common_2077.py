@@ -93,8 +93,18 @@ def write_json(path: str, data) -> bool:
 # -------------------------------------------------------------------- .env
 
 def load_env(path: str | None = None) -> dict:
-    """بارگذاری ساده‌ی فایل .env بدون وابستگی خارجی."""
+    """بارگذاری ساده‌ی فایل .env بدون وابستگی خارجی.
+    اگر .env نباشد ولی .env.example باشد، خودکار کپی می‌شود."""
     path = path or os.path.join(_BASE, ".env")
+    if not os.path.exists(path):
+        example = os.path.join(_BASE, ".env.example")
+        if os.path.exists(example):
+            try:
+                import shutil
+                shutil.copy2(example, path)
+                print("[setup] .env created from .env.example")
+            except Exception:
+                pass
     env = {}
     if not os.path.exists(path):
         return env
