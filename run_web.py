@@ -467,6 +467,21 @@ Answer in Farsi. Be specific about medications (name them) but always note presc
                     limit=min(int(data.get("limit") or 5), 10),
                 )
                 return self._json(res)
+            if path == "/api/drugbank/info":
+                from drugbank_connector import get_drug_info, search_by_atc, search_by_class, ATC_CATEGORIES, list_all
+                drug_id = str(data.get("id") or "").strip()
+                atc = str(data.get("atc") or "").strip()
+                cls = str(data.get("class") or "").strip()
+                if drug_id:
+                    info = get_drug_info(drug_id)
+                    return self._json({"ok": bool(info), "drug": info})
+                if atc:
+                    drugs = search_by_atc(atc)
+                    return self._json({"ok": True, "drugs": drugs, "category": ATC_CATEGORIES.get(atc, "")})
+                if cls:
+                    drugs = search_by_class(cls)
+                    return self._json({"ok": True, "drugs": drugs})
+                return self._json({"ok": True, "all": list_all()})
             if path == "/api/learning/reset":
                 from auto_learning import reset
                 return self._json({"ok": reset()})
