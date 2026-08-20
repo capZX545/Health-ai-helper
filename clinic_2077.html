@@ -384,7 +384,7 @@ async function uiSettings(){
   provs.map(function(pr){var p=pr[0];
     var cur=s.masked_keys&&s.masked_keys[p]?" - "+esc(s.masked_keys[p]):" - "+t("notset");
     return '<label class="fl">'+pr[1]+cur+'</label><div class="row" style="margin:2px 0 8px">'+
-    '<input class="f" style="flex:1" type="password" id="key-'+p+'" placeholder="'+t("ph_key")+'">'+
+    '<input class="f" style="flex:1" type="text" autocomplete="off" spellcheck="false" id="key-'+p+'" placeholder="'+t("ph_key")+'">'+
     (p==="openrouter"?'<button class="btn" onclick="window.open(\'https://openrouter.ai/keys\',\'_blank\')">'+t("getkey")+'</button>':"")+
     '<button class="btn" onclick="testKey(\''+p+'\')">'+t("testconn")+'</button></div>'}).join("")+
   '<span id="testmsg"></span><button class="btn pri" onclick="saveKeys()">'+t("savekeys")+'</button></div>'+
