@@ -383,38 +383,88 @@ function openPanel(k){
 function closePanel(){$("panel").classList.remove("open")}
 
 async function uiSettings(){
-  var s=await api("/api/status"),m=await api("/api/models"),st=s.settings||{};
-  var models=(m.models||[]).map(function(x){return '<option value="'+esc(x.id)+'"'+(x.id===st.openrouter_model?" selected":"")+'>'+esc(LANG==="fa"?x.fa:x.id)+'</option>'}).join("");
-  var provs=[["openrouter",t("openrouter")],["openai",t("openai")],["deepseek",t("deepseek")]];
-  $("pbody").innerHTML=
-  '<div class="card"><h3>'+t("keys")+'</h3><p style="font-size:11.5px;color:var(--dim)">'+t("keys_note")+'</p>'+
-  provs.map(function(pr){var p=pr[0];
-    var cur=s.masked_keys&&s.masked_keys[p]?" - "+esc(s.masked_keys[p]):" - "+t("notset");
-    return '<label class="fl">'+pr[1]+cur+'</label><div class="row" style="margin:2px 0 8px">'+
-    '<input class="f" style="flex:1" type="text" autocomplete="off" spellcheck="false" id="key-'+p+'" placeholder="'+t("ph_key")+'">'+
-    (p==="openrouter"?'<button class="btn" onclick="window.open(\'https://openrouter.ai/keys\',\'_blank\')">'+t("getkey")+'</button>':"")+
-    '<button class="btn" onclick="testKey(\''+p+'\')">'+t("testconn")+'</button></div>'}).join("")+
-  '<span id="testmsg"></span><button class="btn pri" onclick="saveKeys()">'+t("savekeys")+'</button></div>'+
-  '<div class="card"><h3>'+t("model")+'</h3><label class="fl">'+t("model_list")+'</label>'+
-  '<select class="f" id="model" onchange="$(\'manual\').value=this.value">'+models+'</select>'+
-  '<label class="fl">'+t("model_manual")+'</label><input class="f" id="manual" value="'+esc(st.openrouter_model||"")+'">'+
-  '<div class="chk"><input type="checkbox" id="reason"'+(st.reasoning_enabled?" checked":"")+'><span>'+t("reasoning")+'</span></div>'+
-  '<div class="chk"><input type="checkbox" id="brainon"'+(st.brain_enabled!==false?" checked":"")+'><span>'+t("brainon")+'</span></div>'+
-  '<button class="btn pri" onclick="saveModel()">'+t("savemodel")+'</button></div>';
+  var s = await api("/api/settings/full");
+  if(!s.ok){$("pbody").innerHTML="<p class=bad>Error loading settings</p>";return}
+  var S=s.settings, ST=s.stats||{};
+  var lang=LANG;
+  function row(key,label,type,val,opts){
+    if(type==="bool"){
+      return '<div class="chk"><input type="checkbox" id="set-'+key+'" '+(val?" checked":"")+'><span>'+esc(label)+'</span></div>';
+    }
+    if(type==="choice"){
+      var o=(opts||["en","fa"]).map(function(x){return '<option value="'+x+'" '+(x===val?"selected":"")+'>'+x+'</option>'}).join("");
+      return '<label class="fl">'+esc(label)+'</label><select class="f" id="set-'+key+'">'+o+'</select>';
+    }
+    return '<label class="fl">'+esc(label)+'</label><input class="f" id="set-'+key+'" value="'+esc(val)+'">';
+  }
+  var h='<div class="card"><h3>'+(lang==="fa"?"API Keys":"API Keys")+'</h3>';
+  h+='<p style="font-size:11.5px;color:var(--dim)">'+(lang==="fa"?"Keys stored only on your machine":"Keys stored only on your machine")+'</p>';
+  var provs=[["openrouter","OpenRouter (free)"],["openai","OpenAI"],["deepseek","DeepSeek"]];
+  for(var i=0;i<provs.length;i++){
+    var p=provs[i];
+    var cur=ST.masked_keys&&ST.masked_keys[p[0]]?" | "+esc(ST.masked_keys[p[0]]):" | not set";
+    h+='<label class="fl">'+p[1]+cur+'</label>';
+    h+='<div class="row" style="margin:2px 0 8px">';
+    h+='<input class="f" style="flex:1" type="text" autocomplete="off" spellcheck="false" id="key-'+p[0]+'" placeholder="sk-or-...">';
+    if(p[0]==="openrouter"){
+      h+='<button class="btn" onclick="window.open(\'https://openrouter.ai/keys\',\'_blank\')">Free key</button>';
+    }
+    h+='<button class="btn" onclick="testOneKey(\''+p[0]+'\')">Test</button>';
+    h+='</div>';
+  }
+  h+='<button class="btn pri" onclick="saveAllSettings()">'+(lang==="fa"?"Save All":"Save All")+'</button></div>';
+  h+='<div class="card"><h3>'+(lang==="fa"?"Settings":"Settings")+'</h3>';
+  var keys=["language","brain_enabled","openrouter_model","reasoning_enabled","local_llm_enabled","local_llm_model"];
+  for(var j=0;j<keys.length;j++){
+    var k=keys[j];
+    if(S[k]) h+=row(k,S[k].label,S[k].type,S[k].value,S[k].options);
+  }
+  h+='<button class="btn pri" onclick="saveAllSettings()">Save All</button></div>';
+  h+='<div class="card"><h3>'+(lang==="fa"?"Knowledge Base":"Knowledge Base")+'</h3>';
+  var stats=[["diseases","Diseases"],["symptoms","Symptoms"],["drugs","Drugs"],["interactions","Interactions"],
+    ["catalog_conditions","Catalog"],["learning_entries","Learned"],["rag_docs","RAG docs"],["ml_ready","ML"]];
+  for(var m=0;m<stats.length;m++){
+    var sk=stats[m][0];
+    var val=ST[sk];
+    if(sk==="ml_ready") val=val?"Yes":"No";
+    h+='<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #0d1930">';
+    h+='<span>'+stats[m][1]+'</span><b style="color:var(--cy)">'+(val!==undefined?val:"?")+'</b></div>';
+  }
+  h+='</div>';
+  $("pbody").innerHTML=h;
   return 0;
 }
-async function saveKeys(){
-  var body={};
-  ["openrouter","openai","deepseek"].forEach(function(p){var v=$("key-"+p).value.trim();if(v)body[p+"_key"]=v});
-  var r=await api("/api/settings/keys",body);
-  $("testmsg").innerHTML='<span class="'+(r.ok?"ok":"bad")+'">'+esc(r.message_fa)+"</span>";
-  setTimeout(function(){if($("panel").classList.contains("open")&&$("key-openrouter"))uiSettings()},900);
-}
-async function testKey(p){
-  $("testmsg").innerHTML='<span class="spin"></span>'+t("testing")+" "+esc(p)+"...";
+async function testOneKey(p){
+  var btn=event.target;
+  btn.textContent="...";
   var r=await api("/api/settings/test",{provider:p});
-  $("testmsg").innerHTML='<span class="'+(r.ok?"ok":"bad")+'">'+esc(r.message_fa||String(r.error||""))+"</span>";
+  btn.textContent="Test";
+  var msg=document.createElement("span");
+  msg.className=r.ok?"ok":"bad";
+  msg.textContent=" "+(r.message_fa||"done");
+  btn.parentNode.appendChild(msg);
+  setTimeout(function(){msg.remove()},5000);
 }
+async function saveAllSettings(){
+  var body={};
+  ["openrouter","openai","deepseek"].forEach(function(p){
+    var el=$("key-"+p);
+    if(el&&el.value.trim())body[p+"_key"]=el.value.trim();
+  });
+  ["language","openrouter_model","local_llm_model"].forEach(function(k){
+    var el=$("set-"+k);
+    if(el&&el.value)body[k]=el.value;
+  });
+  ["brain_enabled","reasoning_enabled","local_llm_enabled"].forEach(function(k){
+    var el=$("set-"+k);
+    if(el)body[k]=el.checked;
+  });
+  var r=await api("/api/settings/save_all",body);
+  alert(r.message_fa||"Saved");
+  refreshStatus();
+  uiSettings();
+}
+
 async function saveModel(){
   var mdl=$("manual").value.trim()||$("model").value;
   await api("/api/settings",{openrouter_model:mdl,reasoning_enabled:$("reason").checked,brain_enabled:$("brainon").checked,language:LANG});

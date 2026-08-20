@@ -149,6 +149,39 @@ class Handler(BaseHTTPRequestHandler):
                     "style_samples": load_profile().get("samples", 0),
                     "brain_on": st.get("settings", {}).get("brain_enabled", True),
                     "learning_active": True})
+            if path == "/api/settings/full":
+                # همین کد در do_POST هم هست ولی GET لازم است برای UI
+                from ai_api_manager import get_settings, masked_keys, has_any_external
+                from local_llm import get_config as llm_config
+                from auto_learning import stats as learn_stats
+                from semantic_rag import status as rag_status
+                from ml_classifier import status as ml_status
+                from medical_engine import DISEASES, SYMPTOM_KEYWORDS
+                from drug_interaction import DRUGS, INTERACTIONS
+                s = get_settings()
+                lc = llm_config()
+                all_settings = {
+                    "language": {"value": s["language"], "type": "choice", "options": ["en", "fa"]},
+                    "brain_enabled": {"value": s["brain_enabled"], "type": "bool"},
+                    "openrouter_model": {"value": s["openrouter_model"], "type": "text"},
+                    "reasoning_enabled": {"value": s["reasoning_enabled"], "type": "bool"},
+                    "local_llm_enabled": {"value": lc.get("enabled", False), "type": "bool"},
+                    "local_llm_model": {"value": lc.get("model", ""), "type": "text"},
+                }
+                from medical_catalog import stats as cat_stats
+                cs = cat_stats()
+                stats_block = {
+                    "diseases": len(DISEASES), "symptoms": len(SYMPTOM_KEYWORDS),
+                    "drugs": len(DRUGS), "interactions": len(INTERACTIONS),
+                    "learning_entries": learn_stats()["entries"],
+                    "rag_docs": rag_status().get("indexed_docs", 0),
+                    "ml_ready": ml_status().get("ready", False),
+                    "catalog_conditions": cs["conditions"],
+                    "catalog_drugs": cs["drugs"],
+                    "external_available": has_any_external(),
+                    "masked_keys": masked_keys(),
+                }
+                return self._json({"ok": True, "settings": all_settings, "stats": stats_block})
             if path == "/api/conversations":
                 from common_2077 import read_json
                 import os as _os
@@ -482,6 +515,75 @@ Answer in Farsi. Be specific about medications (name them) but always note presc
                     drugs = search_by_class(cls)
                     return self._json({"ok": True, "drugs": drugs})
                 return self._json({"ok": True, "all": list_all()})
+            if path == "/api/settings/save_all":
+                from ai_api_manager import save_settings, set_api_key
+                from local_llm import save_config
+                changed = []
+                # API keys
+                for provider, field in (("openrouter","openrouter_key"),("openai","openai_key"),("deepseek","deepseek_key")):
+                    v = data.get(field)
+                    if v and str(v).strip() and len(str(v).strip()) >= 10:
+                        set_api_key(provider, str(v).strip())
+                        changed.append(provider)
+                # تنظیمات عمومی
+                updates = {}
+                for key in ("language","brain_enabled","openrouter_model","reasoning_enabled"):
+                    if key in data:
+                        updates[key] = data[key]
+                if updates:
+                    save_settings(updates)
+                    changed.extend(updates.keys())
+                # Ollama
+                llm_updates = {}
+                for key in ("enabled","model","base_url"):
+                    if key in data:
+                        llm_updates[key] = data[key]
+                if llm_updates:
+                    save_config(llm_updates)
+                    changed.append("local_llm")
+                from i18n import tt
+                return self._json({"ok": True, "changed": changed,
+                    "message_fa": tt("All settings saved", "همه‌ی تنظیمات ذخیره شد")})
+            if path == "/api/settings/full":
+                from ai_api_manager import get_settings, save_settings, masked_keys, has_any_external, test_connection
+                from local_llm import get_config as llm_config
+                from i18n import is_fa
+                from auto_learning import stats as learn_stats
+                from semantic_rag import status as rag_status
+                from ml_classifier import status as ml_status
+                from medical_engine import DISEASES, SYMPTOM_KEYWORDS
+                from drug_interaction import DRUGS, INTERACTIONS
+                from common_2077 import DATA_DIR
+                import os as _os
+                fa = is_fa()
+                L = lambda en, f: f if fa else en
+                s = get_settings()
+                st = get_engine().status()
+                all_settings = {
+                    "language": {"value": s["language"], "type": "choice", "options": ["en", "fa"], "label": L("Language", "زبان")},
+                    "brain_enabled": {"value": s["brain_enabled"], "type": "bool", "label": L("Offline brain (diagnosis engine)", "مغز داخلی (موتور تشخیص)")},
+                    "openrouter_model": {"value": s["openrouter_model"], "type": "text", "label": L("AI Model", "مدل هوش مصنوعی")},
+                    "reasoning_enabled": {"value": s["reasoning_enabled"], "type": "bool", "label": L("Reasoning (uses more tokens)", "استدلال (توکن بیشتر)")},
+                    "local_llm_enabled": {"value": llm_config().get("enabled", False), "type": "bool", "label": L("Local AI (Ollama)", "هوش محلی (Ollama)")},
+                    "local_llm_model": {"value": llm_config().get("model", ""), "type": "text", "label": L("Local model", "مدل محلی")},
+                }
+                stats_block = {
+                    "diseases": len(DISEASES),
+                    "symptoms": len(SYMPTOM_KEYWORDS),
+                    "drugs": len(DRUGS),
+                    "interactions": len(INTERACTIONS),
+                    "learning_entries": learn_stats()["entries"],
+                    "rag_docs": rag_status().get("indexed_docs", 0),
+                    "ml_ready": ml_status().get("ready", False),
+                    "catalog_conditions": _DATA.get("conditions", 0),
+                    "external_available": has_any_external(),
+                    "masked_keys": masked_keys(),
+                    "env_exists": _os.path.exists(_os.path.join(DATA_DIR, ".env")),
+                }
+                from medical_catalog import stats as cat_stats
+                stats_block["catalog_conditions"] = cat_stats()["conditions"]
+                stats_block["catalog_drugs"] = cat_stats()["drugs"]
+                return self._json({"ok": True, "settings": all_settings, "stats": stats_block})
             if path == "/api/catalog/search":
                 from medical_catalog import search_conditions, search_drugs, stats, get_chapter_fa
                 q = str(data.get("q") or "").strip()
@@ -514,6 +616,39 @@ Answer in Farsi. Be specific about medications (name them) but always note presc
                     "style_samples": load_profile().get("samples", 0),
                     "brain_on": st.get("settings", {}).get("brain_enabled", True),
                     "learning_active": True})
+            if path == "/api/settings/full":
+                # همین کد در do_POST هم هست ولی GET لازم است برای UI
+                from ai_api_manager import get_settings, masked_keys, has_any_external
+                from local_llm import get_config as llm_config
+                from auto_learning import stats as learn_stats
+                from semantic_rag import status as rag_status
+                from ml_classifier import status as ml_status
+                from medical_engine import DISEASES, SYMPTOM_KEYWORDS
+                from drug_interaction import DRUGS, INTERACTIONS
+                s = get_settings()
+                lc = llm_config()
+                all_settings = {
+                    "language": {"value": s["language"], "type": "choice", "options": ["en", "fa"]},
+                    "brain_enabled": {"value": s["brain_enabled"], "type": "bool"},
+                    "openrouter_model": {"value": s["openrouter_model"], "type": "text"},
+                    "reasoning_enabled": {"value": s["reasoning_enabled"], "type": "bool"},
+                    "local_llm_enabled": {"value": lc.get("enabled", False), "type": "bool"},
+                    "local_llm_model": {"value": lc.get("model", ""), "type": "text"},
+                }
+                from medical_catalog import stats as cat_stats
+                cs = cat_stats()
+                stats_block = {
+                    "diseases": len(DISEASES), "symptoms": len(SYMPTOM_KEYWORDS),
+                    "drugs": len(DRUGS), "interactions": len(INTERACTIONS),
+                    "learning_entries": learn_stats()["entries"],
+                    "rag_docs": rag_status().get("indexed_docs", 0),
+                    "ml_ready": ml_status().get("ready", False),
+                    "catalog_conditions": cs["conditions"],
+                    "catalog_drugs": cs["drugs"],
+                    "external_available": has_any_external(),
+                    "masked_keys": masked_keys(),
+                }
+                return self._json({"ok": True, "settings": all_settings, "stats": stats_block})
             if path == "/api/conversations":
                 from common_2077 import read_json, write_json, DATA_DIR
                 import os as _os
