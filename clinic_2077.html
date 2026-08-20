@@ -96,6 +96,7 @@ kbd{background:#101c36;border:1px solid var(--bd);border-radius:5px;padding:1px 
   <div class="pill"><span id="t-learn">memory: 0</span></div>
   <div class="hspace"></div>
   <button class="hbtn" id="langbtn" onclick="toggleLang()">Farsi</button>
+  <button class="hbtn" onclick="doctorMode()" id="docbtn">Doctor Mode</button>
   <button class="hbtn red" onclick="quickEmg()" id="emgbtn">Emergency 115/112</button>
   <button class="hbtn" onclick="openPanel('settings')" id="setbtn">API settings</button>
 </header>
@@ -177,7 +178,8 @@ T.en = {
   img_note:"1) Pick a photo 2) Add a short note 3) Send", img_note_ph:"e.g. this red patch has itched badly for 3 days",
   img_send:"Send for analysis", img_hint:"With a vision model configured you get AI analysis; otherwise a safe offline answer (no fake guesses).",
   pickimg:"Choose image", empty:"Nothing to send.", img_first:"Pick an image first.",
-  assess_h:"Disease likelihood assessment", assess_hint:"Describe symptoms in one or a few lines (onset, severity, duration)",
+  assess_h:"Disease likelihood assessment",
+  kb_new:"New conversation", kb_send:"Send message", kb_settings:"Settings", kb_emg:"Emergency", kb_help:"Keyboard shortcuts", kb_title:"Keyboard Shortcuts", doc_mode:"Doctor Mode — describe a patient scenario and get a clinical differential", doc_ph:"Describe a patient scenario: age, symptoms, duration, history...", assess_hint:"Describe symptoms in one or a few lines (onset, severity, duration)",
   assess_btn:"Assess", assess_symptoms:"Detected symptoms", assess_denied:"Ruled out", assess_dur:"Duration",
   assess_cands:"Possibilities (probabilistic ranking - NOT a diagnosis)", assess_matched:"matched",
   assess_ml:"ML classifier signal (synthetic test dataset)", assess_rag:"Related knowledge in local memory",
@@ -238,7 +240,8 @@ T.fa = {
   img_note:"۱) عکس را انتخاب کن ۲) توضیح کوتاه بنویس ۳) ارسال", img_note_ph:"مثلاً: این لک قرمز ۳ روزه خارش شدید دارد",
   img_send:"ارسال برای تحلیل", img_hint:"با مدل تصویری فعال، تحلیل AI انجام می‌شود؛ وگرنه پاسخ امن آفلاین می‌گیری (بدون حدس جعلی).",
   pickimg:"انتخاب عکس", empty:"چیزی ارسال نشد.", img_first:"اول عکس را انتخاب کن.",
-  assess_h:"ارزیابی احتمال بیماری‌ها", assess_hint:"علائم را در یک یا چند خط بنویس (شروع، شدت، مدت)",
+  assess_h:"ارزیابی احتمال بیماری‌ها",
+  kb_new:"گفتگوی جدید", kb_send:"ارسال پیام", kb_settings:"تنظیمات", kb_emg:"اورژانس", kb_help:"میانبرهای کیبورد", kb_title:"میانبرهای کیبورد", doc_mode:"حالت دکتر — سناریوی بیمار را بنویسید و تشخیص افتراقی بگیرید", doc_ph:"سناریوی بیمار بنویسید: سن، علائم، مدت، سابقه...", assess_hint:"علائم را در یک یا چند خط بنویس (شروع، شدت، مدت)",
   assess_btn:"ارزیابی", assess_symptoms:"علائم شناسایی‌شده", assess_denied:"ردشده", assess_dur:"مدت",
   assess_cands:"احتمالات (رتبه‌بندی احتمالی — تشخیص قطعی نیست)", assess_matched:"منطبق",
   assess_ml:"سیگنال طبقه‌بند ML (دیتاست مصنوعی تستی)", assess_rag:"دانش مرتبط در حافظه‌ی محلی",
@@ -334,6 +337,23 @@ async function sendMsg(){
   refreshStatus();
 }
 function quickEmg(){openPanel("aid");loadFirstAid("cpr")}
+async function doctorMode(){
+  $("pbody").innerHTML='<div class="card"><h3>'+t("doc_mode")+'</h3>'+
+  '<p style="font-size:12px;color:var(--dim)">'+t("doc_ph")+'</p>'+
+  '<textarea class="f" id="docsc" placeholder="'+(LANG==="fa"?"مثلاً: مرد ۵۵ ساله با درد سینه فشاری ۲ ساعته که به بازوی چپ تیر می‌کشد و عرق سرد دارد":"e.g. 55yo male with 2h of pressure-like chest pain radiating to left arm with cold sweats")+'" style="min-height:120px"></textarea>'+
+  '<button class="btn pri" onclick="runDoctor()">'+(LANG==="fa"?"تحلیل بالینی":"Clinical analysis")+'</button><div id="docres"></div></div>';
+  $("panel").classList.add("open");$("ptitle").textContent=t("doc_mode");
+}
+async function runDoctor(){
+  var r=await api("/api/doctor_mode",{text:$("docsc").value});
+  var el=$("docres");
+  if(!r.ok){el.innerHTML='<p class="warn">'+esc(r.message_fa)+"</p>";return}
+  var src=r.source||"";
+  var badge=src.indexOf("emergency")>=0?'<span style="color:#ff2a6d">EMERGENCY</span>':esc(src);
+  el.innerHTML='<div class="card" style="border-color:'+(r.red_flag?"#ff2a6d":"#1e4c63")+'">'+
+  '<small style="color:var(--dim)">'+badge+(r.learned?' | learned':'')+'</small><br>'+
+  '<div style="white-space:pre-wrap;font-size:13px">'+fmt(r.text)+'</div></div>';
+}
 
 /* ================= status ================= */
 async function refreshStatus(){
@@ -690,6 +710,30 @@ async function runAssess(){
 }
 /* ================= boot ================= */
 window._QS={phq9:[],gad7:[]};
+document.addEventListener("keydown",function(e){
+  var k=e.key.toLowerCase();
+  if(e.ctrlKey&&!e.altKey&&!e.metaKey){
+    if(k==="enter"){e.preventDefault();sendMsg();return}
+    if(k==="n"){e.preventDefault();newConversation();return}
+    if(k===","){e.preventDefault();openPanel("settings");return}
+    if(k==="e"){e.preventDefault();quickEmg();return}
+    if(k==="/"){e.preventDefault();showShortcuts();return}
+  }
+  if(e.key==="Escape"){closePanel()}
+  if(e.key==="F1"){e.preventDefault();showShortcuts()}
+});
+function showShortcuts(){
+  var items=[["Ctrl+Enter",t("kb_send")],["Ctrl+N",t("kb_new")],["Ctrl+,",t("kb_settings")],["Ctrl+E",t("kb_emg")],["Ctrl+/",t("kb_help")],["Esc","Close panel"],["F1",t("kb_help")]];
+  $("pbody").innerHTML='<div class="card"><h3>'+t("kb_title")+'</h3>'+items.map(function(x){return '<div class="q"><b>'+esc(x[0])+'</b> — '+esc(x[1])+'</div>'}).join("")+'</div>';
+  $("panel").classList.add("open");$("ptitle").textContent=t("kb_title");
+}
+function newConversation(){
+  api("/api/dialogue/reset",{});
+  api("/api/learning/reset",{});
+  $("chat").innerHTML='<div class="msg bot" id="hello"></div>';
+  applyLang();
+  refreshStatus();
+}
 (function boot(){
   applyLang();
   api("/api/sleep/questions").then(function(r){window._QS={phq9:r.phq9||[],gad7:r.gad7||[]}});

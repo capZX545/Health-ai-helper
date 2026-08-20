@@ -135,6 +135,21 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/localllm":
                 from local_llm import get_config
                 return self._json({"ok": True, "config": get_config()})
+            if path == "/api/learning/status":
+                from auto_learning import stats, recent
+                from behavior_imitation import load_profile
+                st = get_engine().status()
+                return self._json({"ok": True,
+                    "entries": stats()["entries"],
+                    "recent": recent(3),
+                    "style_samples": load_profile().get("samples", 0),
+                    "brain_on": st.get("settings", {}).get("brain_enabled", True),
+                    "learning_active": True})
+            if path == "/api/conversations":
+                from common_2077 import read_json
+                import os as _os
+                hist = read_json(_os.path.join(DATA_DIR, "conversation_history.json"), default=[]) or []
+                return self._json({"ok": True, "conversations": hist[:20]})
             if path == "/api/learning":
                 from auto_learning import recent, stats
                 return self._json({"ok": True, **stats(), "recent": recent(5)})
@@ -314,9 +329,143 @@ class Handler(BaseHTTPRequestHandler):
                                    "temp_c": a["detected"].get("temp_c"),
                                    "candidates": a["candidates"], "ml": ml, "rag": rag,
                                    "triage": triage})
+            if path == "/api/doctor_mode":
+                # حالت «بشین دکتر بشه»: پرامپت تخصصی + پاسخ AI خارجی یا مغز داخلی
+                text = str(data.get("text") or "").strip()
+                if not text:
+                    from i18n import tt
+                    return self._json({"ok": False, "message_fa": tt("Describe a patient scenario first.", "یک سناریوی بیمار بنویسید.")}, 400)
+                from ai_api_manager import get_api_key, get_settings
+                from common_2077 import now_iso
+                from patient_profile import load_profile
+                s = get_settings()
+                # ساخت پرامپت تخصصی «پزشک جواب می‌دهد»
+                dlg = get_engine().dialogue.summary()
+                prof = load_profile()
+                scenario_prompt = f"""You are now in DOCTOR MODE. The user describes a patient scenario and you respond as an experienced physician explaining the differential diagnosis to a colleague. Be clinical, structured and specific. Use medical terminology but explain each term briefly in Farsi.
+
+Patient scenario: {text}
+
+Previous conversation context: symptoms={dlg.get("symptoms",[])}; turns={dlg.get("turns",0)}
+Patient profile: {prof}
+
+Structure your answer as:
+1. Summary of the case (خلاصه‌ی کیس)
+2. Differential diagnosis with probabilities (تشخیص افتراقی با احتمال)
+3. Key distinguishing features between top differentials (نکات افتراقی)
+4. Recommended workup (آزمایش‌ها و بررسی‌های پیشنهادی)
+5. Immediate management considerations (درمان اولیه)
+6. Red flags to watch for (علائم خطر)
+
+Answer in Farsi. Be specific about medications (name them) but always note prescription requirement."""
+                # تلاش برای AI خارجی
+                ext_res = None
+                for p in [x for x in s["provider_order"] if x != "local" and get_api_key(x)]:
+                    from ai_client import chat as ext_chat
+                    mdl = s.get("openrouter_model") if p == "openrouter" else None
+                    kw = {"reasoning_enabled": bool(s.get("reasoning_enabled")) and p == "openrouter"}
+                    r = ext_chat(p, [{"role": "system", "content": "You are an experienced physician."},
+                                     {"role": "user", "content": scenario_prompt}], model=mdl, max_tokens=2000, **kw)
+                    if r.get("ok"):
+                        ext_res = r
+                        break
+                if ext_res:
+                    # یادگیری خودکار
+                    try:
+                        from auto_learning import learn_from_exchange
+                        learn_from_exchange(f"[doctor-mode] {text[:200]}", ext_res["text"],
+                                            provider=ext_res.get("provider", ""), model=ext_res.get("model", ""),
+                                            meta={"mode": "doctor"})
+                    except Exception:
+                        pass
+                    return self._json({"ok": True, "text": ext_res["text"], "source": f"doctor:{ext_res.get('provider','?')}", "learned": True})
+                # fallback: مغز داخلی
+                from medical_engine import analyze
+                a = analyze(text, load_profile())
+                if a["red_flag"]:
+                    from medical_engine import emergency_response
+                    return self._json({"ok": True, "text": emergency_response(a["red_flag_reasons"]), "source": "doctor:internal-emergency", "red_flag": True})
+                parts = []
+                parts.append("📋 خلاصه‌ی کیس:")
+                parts.append(f"  علائم: {'، '.join(a['symptoms']) if a['symptoms'] else '—'}")
+                if a.get("duration_days"):
+                    parts.append(f"  مدت: {a['detected']['duration_days']} روز")
+                parts.append("")
+                parts.append("🎯 تشخیص افتراقی (مغز داخلی — برای تحلیل عمیق‌تر کلید OpenRouter را فعال کنید):")
+                if a["candidates"]:
+                    for c in a["candidates"][:5]:
+                        parts.append(f"  • {c['name']} (~{c['percent']}%) [{c['urgency']}]")
+                        if c.get("matched_symptoms"):
+                            parts.append(f"    منطبق: {'، '.join(c['matched_symptoms'])}")
+                        if c.get("doctor_when"):
+                            parts.append(f"    ⚕ {c['doctor_when']}")
+                else:
+                    parts.append("  اطلاعات کافی نیست — جزئیات بیشتری بنویسید.")
+                parts.append("")
+                parts.append("🔬 بررسی‌های پیشنهادی:")
+                parts.append("  • معاینه‌ی فیزیکی هدفمند بر اساس علائم")
+                parts.append("  • آزمایش‌های عمومی: CBC, FBS, Cr, ALT/AST")
+                parts.append("  • در صورت لزوم: تصویربرداری هدفمند")
+                return self._json({"ok": True, "text": "\n".join(parts), "source": "doctor:internal", "learned": False})
+            if path == "/api/learning/status":
+                from auto_learning import stats, recent
+                from behavior_imitation import load_profile
+                from semantic_rag import status as rag_status
+                from i18n import is_fa
+                fa = is_fa()
+                labels = {
+                    "entries": ("Learned entries", "موارد آموخته‌شده"),
+                    "brain_on": ("Internal brain", "مغز داخلی"),
+                    "style_samples": ("Style profile samples", "نمونه‌های سبک"),
+                    "rag_docs": ("RAG indexed docs", "اسناد نمایه‌شده"),
+                }
+                st = get_engine().status()
+                return self._json({"ok": True,
+                    "entries": stats()["entries"],
+                    "recent": recent(3),
+                    "style_samples": load_profile().get("samples", 0),
+                    "brain_on": st.get("settings", {}).get("brain_enabled", True),
+                    "learning_active": True,
+                    "note_fa": "یادگیری پس‌زمینه از هر پاسخ AI خارجی همیشه فعال است، حتی وقتی مغز داخلی خاموش است." if fa else
+                               "Background learning from every external AI reply is always active, even when the internal brain is off."})
             if path == "/api/learning/reset":
                 from auto_learning import reset
                 return self._json({"ok": reset()})
+            if path == "/api/learning/status":
+                from auto_learning import stats, recent
+                from behavior_imitation import load_profile
+                st = get_engine().status()
+                return self._json({"ok": True,
+                    "entries": stats()["entries"],
+                    "recent": recent(3),
+                    "style_samples": load_profile().get("samples", 0),
+                    "brain_on": st.get("settings", {}).get("brain_enabled", True),
+                    "learning_active": True})
+            if path == "/api/conversations":
+                from common_2077 import read_json, write_json, DATA_DIR
+                import os as _os
+                hist_path = _os.path.join(DATA_DIR, "conversation_history.json")
+                hist = read_json(hist_path, default=[]) or []
+                if self.command == "POST":
+                    # ذخیره‌ی گفتگوی فعلی هنگام شروع گفتگوی جدید
+                    eng = get_engine()
+                    dlg = eng.dialogue.summary()
+                    if dlg.get("turns", 0) > 0 and (eng.memory or []):
+                        conv = {
+                            "ts": __import__("common_2077", fromlist=["now_iso"]).now_iso(),
+                            "turns": dlg["turns"],
+                            "symptoms": dlg.get("symptoms", []),
+                            "messages": [{"role": m["role"], "content": m["content"][:500]} for m in eng.memory[-20:]],
+                        }
+                        hist.insert(0, conv)
+                        hist = hist[:50]  # آخرین ۵۰ گفتگو
+                        write_json(hist_path, hist)
+                    # ریست گفتگو
+                    eng.dialogue.reset()
+                    eng.memory = []
+                    from auto_learning import stats as learn_stats
+                    return self._json({"ok": True, "saved": True, "total_saved": len(hist), "learning": learn_stats()})
+                return self._json({"ok": True, "conversations": hist[:20]})
             if path == "/api/dialogue/reset":
                 get_engine().dialogue.reset()
                 return self._json({"ok": True})
