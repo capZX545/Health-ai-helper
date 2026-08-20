@@ -26,27 +26,23 @@ def main() -> int:
             sys.argv.append("--no-browser")
         return web_main()
 
-    # بررسی Tkinter (ممکن است روی ویندوز ناقص نصب باشد)
+    # بررسی Tkinter — اگر نبود، فقط خطا بده (بدون fallback)
     try:
         import tkinter
         root_test = tkinter.Tk()
         root_test.destroy()
     except Exception as e:
         print("=" * 56)
-        print("  رابط گرافیکی (Tkinter) در دسترس نیست.")
-        print(f"  علت: {e}")
+        print("  ERROR: Desktop GUI is not available.")
+        print(f"  Reason: {e}")
         print()
-        print("  راه حل ۱: Python را دوباره نصب کنید و حتماً تیک")
-        print("            'tcl/tk and IDLE' را بزنید (Download from python.org)")
-        print("  راه حل ۲: نسخه‌ی وب را استفاده کنید (همان امکانات):")
+        print("  FIX: Reinstall Python 3.12 from python.org")
+        print("       and check 'tcl/tk and IDLE' during install.")
         print()
-        print("            python run_web.py")
-        print()
-        print("  الان نسخه‌ی وب برای شما اجرا می‌شود...")
+        print("  For the web version, run: python run_web.py")
         print("=" * 56)
-        from run_web import main as web_main
-        sys.argv = ["run_web.py"]
-        return web_main()
+        input("  Press Enter to exit...")
+        return 1
 
     from ui_2077 import run_app
     return run_app()
