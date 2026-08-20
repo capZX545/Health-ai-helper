@@ -84,8 +84,8 @@ class App:
         tk.Button(top, text=("Farsi" if get_lang() == "en" else "English"),
                   command=lambda: self.set_lang("fa" if get_lang() == "en" else "en"),
                   bg="#0d1930", fg=C["cy"], relief="flat", font=F).pack(side="left", padx=4, pady=12)
-        tk.Button(top, text=self.L("Web version", "نسخه‌ی وب"), command=self.launch_web, bg="#0d1930", fg=C["tx"],
-                  relief="flat", font=F, activebackground="#12233d").pack(side="left", padx=4, pady=12)
+
+
         tk.Button(top, text=self.L("Emergency 115/112", "اورژانس ۱۱۵/۱۱۲"), command=lambda: self._panel_emergency(),
                   bg="#2a0d1a", fg="#ff8fab", relief="flat", font=F).pack(side="left", padx=4, pady=12)
         tk.Button(top, text=self.L("API settings", "تنظیمات API"), command=self._panel_settings,
@@ -339,13 +339,6 @@ class App:
             self.status_lbl.config(text=msg)
         threading.Thread(target=work, daemon=True).start()
 
-    def launch_web(self):
-        import subprocess
-        import sys
-        exe = sys.executable
-        script = os.path.join(DATA_DIR, "run_web.py")
-        threading.Thread(target=lambda: subprocess.Popen([exe, script], cwd=DATA_DIR), daemon=True).start()
-        self._bot("نسخه‌ی وب در حال اجراست: http://localhost:2077 (در مرورگر باز می‌شود)", "meta")
 
     # ============================================================= پنل‌ها
     def _win(self, title: str):
