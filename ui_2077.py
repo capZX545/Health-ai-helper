@@ -46,6 +46,7 @@ class App:
     def __init__(self, root: tk.Tk):
         self.root = root
         root.geometry("1280x800")
+        root.minsize(900, 600)
         root.configure(bg=C["bg"])
         self.engine = None
         self.img_path = None
@@ -352,8 +353,31 @@ class App:
         w.title(title)
         w.configure(bg=C["panel2"])
         w.geometry("660x640")
+        w.minsize(500, 400)
         w.transient(self.root)
-        return w
+        w.protocol("WM_DELETE_WINDOW", w.destroy)
+        # اسکرول‌بار برای محتوا
+        canvas = tk.Canvas(w, bg=C["panel2"], highlightthickness=0)
+        vsb = ttk.Scrollbar(w, orient="vertical", command=canvas.yview)
+        canvas.configure(yscrollcommand=vsb.set)
+        vsb.pack(side="right", fill="y")
+        canvas.pack(side="left", fill="both", expand=True)
+        frame = tk.Frame(canvas, bg=C["panel2"])
+        canvas_window = canvas.create_window((0, 0), window=frame, anchor="nw")
+        def _configure(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+            canvas.itemconfig(canvas_window, width=canvas.winfo_width())
+        frame.bind("<Configure>", _configure)
+        # ماوس-اسکرول
+        def _mouse_scroll(event):
+            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+        canvas.bind("<MouseWheel>", _mouse_scroll)
+        canvas.bind("<Button-4>", lambda e: canvas.yview_scroll(-1, "units"))
+        canvas.bind("<Button-5>", lambda e: canvas.yview_scroll(1, "units"))
+        w._scroll_frame = frame
+        w._canvas = canvas
+        # فریم قابل‌اسکرول را برمی‌گردانیم تا همه‌ی ویجت‌ها داخل آن قرار بگیرند
+        return frame
 
     def _form(self, w, fields: list[tuple[str, str, str]]) -> dict[str, tk.Entry]:
         out = {}
