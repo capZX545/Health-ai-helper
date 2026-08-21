@@ -584,6 +584,38 @@ Answer in Farsi. Be specific about medications (name them) but always note presc
                 stats_block["catalog_conditions"] = cat_stats()["conditions"]
                 stats_block["catalog_drugs"] = cat_stats()["drugs"]
                 return self._json({"ok": True, "settings": all_settings, "stats": stats_block})
+            if path == "/api/knowledge/symptoms":
+                from knowledge_browser import get_all_symptoms, search_symptoms
+                from urllib.parse import parse_qs
+                qs = parse_qs(urlparse(self.path).query)
+                q = (qs.get("q", [""])[0] or "").strip()
+                syms = search_symptoms(q) if q else get_all_symptoms()
+                fa_mode = __import__("i18n").is_fa()
+                return self._json({"ok": True, "total": len(syms), "symptoms": syms})
+
+            if path == "/api/knowledge/diseases":
+                from knowledge_browser import get_all_diseases, search_diseases
+                from urllib.parse import parse_qs
+                qs = parse_qs(urlparse(self.path).query)
+                q = (qs.get("q", [""])[0] or "").strip()
+                dis = search_diseases(q) if q else get_all_diseases()
+                return self._json({"ok": True, "total": len(dis), "diseases": dis})
+
+            if path == "/api/knowledge/drugs":
+                from knowledge_browser import get_all_drugs, search_drugs, get_drug_count, get_interaction_count
+                from urllib.parse import parse_qs
+                qs = parse_qs(urlparse(self.path).query)
+                q = (qs.get("q", [""])[0] or "").strip()
+                drugs = search_drugs(q) if q else get_all_drugs()
+                return self._json({"ok": True, "total": get_drug_count(), "interactions": get_interaction_count(), "drugs": drugs})
+
+            if path == "/api/knowledge/catalog":
+                from knowledge_browser import get_catalog_diseases
+                from urllib.parse import parse_qs
+                qs = parse_qs(urlparse(self.path).query)
+                q = (qs.get("q", [""])[0] or "").strip()
+                return self._json(get_catalog_diseases(q, 30))
+
             if path == "/api/catalog/search":
                 from medical_catalog import search_conditions, search_drugs, stats, get_chapter_fa
                 q = str(data.get("q") or "").strip()

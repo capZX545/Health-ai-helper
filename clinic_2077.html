@@ -143,7 +143,7 @@ T.en = {
   nav:[["chat","Talk to Nexus"],["image","Medical image analysis"],["profile","Patient profile"],
        ["vitals","Vitals"],["labs","Lab analysis"],["rx","Prescription scan"],["drugs","Drugs & interactions"],
        ["mental","Mental health"],["sleep","Sleep analysis"],["checkup","Checkup calendar"],
-       ["aid","First aid / CPR"],["referral","Doctor referral report"],["brain","Brain & learning"],
+       ["aid","First aid / CPR"],["referral","Doctor referral report"],["symptoms_browser","Symptoms"],["diseases_browser","Diseases"],["drugs_browser","Drugs"],["brain","Brain & learning"],
        ["gpu","Local AI (Ollama)"],["settings","API settings"]],
   ph:"Describe your symptoms... (Enter = send, Shift+Enter = new line)", send:"Send",
   attach:"Attach a medical image", rmimg:"remove",
@@ -153,7 +153,7 @@ T.en = {
   foot:"NexusMed 2077 is an informational assistant; it does not replace a doctor and gives no definitive diagnosis. Emergency: Iran 115 | Europe/Finland 112",
   p_titles:{settings:"API settings",profile:"Patient profile",vitals:"Vitals",labs:"Lab analysis",rx:"Prescription & lab terms",
     drugs:"Drugs & interactions",mental:"Mental health",sleep:"Sleep analysis",checkup:"Checkup & vaccines",aid:"First aid",
-    referral:"Printable referral report",brain:"Internal brain & learning",gpu:"Local AI (Ollama)",image:"Medical image + text",assess:"Disease likelihood assessment"},
+    referral:"Printable referral report", symptoms_browser:"Symptoms Browser", diseases_browser:"Diseases Database", drugs_browser:"Drugs Database",brain:"Internal brain & learning",gpu:"Local AI (Ollama)",image:"Medical image + text",assess:"Disease likelihood assessment"},
   keys:"API keys", keys_note:"Keys are stored only in a local .env file on your machine. They never enter the code, the ZIP or the installer.",
   getkey:"Get a free key", testconn:"Test connection", savekeys:"Save keys (no restart)", savemodel:"Save model",
   model:"OpenRouter model", model_list:"pick from the free/suggested list", model_manual:"or type a model id manually",
@@ -205,7 +205,7 @@ T.fa = {
   nav:[["chat","گفتگو با نکسوس"],["image","تحلیل تصویر پزشکی"],["profile","پروفایل بیمار"],
        ["vitals","علائم حیاتی"],["labs","تحلیل آزمایش"],["rx","اسکن نسخه"],["drugs","دارو و تداخلات"],
        ["mental","سلامت روان"],["sleep","تحلیل خواب"],["checkup","تقویم چکاپ"],
-       ["aid","کمک‌های اولیه / CPR"],["referral","گزارش ارجاع به پزشک"],["brain","مغز داخلی / یادگیری"],
+       ["aid","کمک‌های اولیه / CPR"],["referral","گزارش ارجاع به پزشک"],["symptoms_browser","علائم"],["diseases_browser","بیماری‌ها"],["drugs_browser","داروها"],["brain","مغز داخلی / یادگیری"],
        ["gpu","هوش محلی (Ollama)"],["settings","تنظیمات API"]],
   ph:"علائمت را بنویس... (Enter=ارسال، Shift+Enter=خط جدید)", send:"ارسال",
   attach:"ضمیمه عکس پزشکی", rmimg:"حذف",
@@ -215,7 +215,7 @@ T.fa = {
   foot:"NexusMed 2077 یک دستیار اطلاعاتی است؛ جایگزین پزشک نیست و تشخیص قطعی نمی‌دهد — اورژانس: ایران ۱۱۵ | اروپا/فنلاند ۱۱۲",
   p_titles:{settings:"تنظیمات API",profile:"پروفایل بیمار",vitals:"علائم حیاتی",labs:"تحلیل آزمایش",rx:"اسکن نسخه و اصطلاحات",
     drugs:"دارو و تداخلات دارویی",mental:"سلامت روان",sleep:"تحلیل خواب",checkup:"تقویم چکاپ و واکسن",aid:"کمک‌های اولیه",
-    referral:"گزارش ارجاع قابل چاپ",brain:"مغز داخلی و یادگیری",gpu:"هوش مصنوعی محلی (Ollama)",image:"تحلیل تصویر پزشکی",assess:"ارزیابی احتمال بیماری‌ها"},
+    referral:"گزارش ارجاع قابل چاپ", symptoms_browser:"مرور علائم", diseases_browser:"بانک بیماری‌ها", drugs_browser:"بانک داروها",brain:"مغز داخلی و یادگیری",gpu:"هوش مصنوعی محلی (Ollama)",image:"تحلیل تصویر پزشکی",assess:"ارزیابی احتمال بیماری‌ها"},
   keys:"کلیدهای API", keys_note:"کلیدها فقط در فایل .env روی سیستم خودتان ذخیره می‌شوند و هرگز داخل کد، ZIP یا بسته‌ی نصبی قرار نمی‌گیرند.",
   getkey:"گرفتن کلید رایگان", testconn:"تست اتصال", savekeys:"ذخیره‌ی کلیدها (بدون ری‌استارت)", savemodel:"ذخیره‌ی مدل",
   model:"مدل OpenRouter", model_list:"انتخاب از لیست مدل‌های رایگان/پیشنهادی", model_manual:"یا نوشتن دستی model id",
@@ -376,7 +376,7 @@ var currentPanel="chat";
 function openPanel(k){
   currentPanel=k;if(k==="chat"){closePanel();return}
   $("panel").classList.add("open");$("ptitle").textContent=t("p_titles")[k]||k;
-  var P={settings:uiSettings,profile:uiProfile,vitals:uiVitals,labs:uiLabs,rx:uiRx,drugs:uiDrugs,
+  var P={settings:uiSettings,profile:uiProfile,vitals:uiVitals,labs:uiLabs,rx:uiRx,drugs:uiDrugs,symptoms_browser:uiSymptomsBrowser,diseases_browser:uiDiseasesBrowser,drugs_browser:uiDrugsBrowser,
     mental:uiMental,sleep:uiSleep,checkup:uiCheckup,aid:uiAid,referral:uiReferral,brain:uiBrain,gpu:uiGpu,image:uiImage,assess:uiAssess};
   (P[k]||function(){})();
 }
@@ -765,6 +765,120 @@ async function runAssess(){
   }
   el.innerHTML=h;
 }
+async function uiSymptomsBrowser(){
+  var r=await api("/api/knowledge/symptoms");
+  var el=$("pbody");
+  if(!r.ok){el.innerHTML="<p class=bad>Error</p>";return}
+  var syms=r.symptoms||[];
+  var h='<div class="card"><h3>'+(LANG==="fa"?"علائم ("+fa(r.total)+" مورد)":"Symptoms ("+r.total+")")+'</h3>';
+  h+='<input class="f" id="symq" placeholder="'+(LANG==="fa"?"جستجو...":"Search...")+'" oninput="filterSymptoms(this.value)">';
+  h+='<div id="symlist">';
+  for(var i=0;i<syms.length;i++){
+    var s=syms[i];
+    h+='<div class="q" data-search="'+esc(s.fa+" "+s.en+" "+s.id)+'">';
+    h+='<b>'+esc(LANG==="fa"?s.fa:s.en)+'</b> <small style="color:var(--cy)">'+esc(s.id)+'</small>';
+    h+='<br><small style="color:var(--dim)">'+(LANG==="fa"?"بیماری‌های مرتبط":"Related")+": "+s.related_diseases.map(function(d){return esc(d.name)}).join(", ")+'</small>';
+    h+='</div>';
+  }
+  h+='</div></div>';
+  el.innerHTML=h;
+}
+function filterSymptoms(q){
+  q=q.toLowerCase();
+  var items=document.querySelectorAll("#symlist .q");
+  for(var i=0;i<items.length;i++){
+    var txt=items[i].getAttribute("data-search")||"";
+    items[i].style.display=txt.indexOf(q)>=0?"":"none";
+  }
+}
+
+async function uiDiseasesBrowser(){
+  var r=await api("/api/knowledge/diseases");
+  var el=$("pbody");
+  if(!r.ok){el.innerHTML="<p class=bad>Error</p>";return}
+  var dis=r.diseases||[];
+  var h='<div class="card"><h3>'+(LANG==="fa"?"بیماری‌ها ("+fa(r.total)+" مورد)":"Diseases ("+r.total+")")+'</h3>';
+  h+='<input class="f" id="disq" placeholder="'+(LANG==="fa"?"جستجو...":"Search...")+'" oninput="filterDiseases(this.value)">';
+  h+='<div id="dislist">';
+  for(var i=0;i<dis.length;i++){
+    var d=dis[i];
+    var urg_color=d.urgency==="emergency"?"#ff2a6d":(d.urgency==="urgent"?"#ffd60a":"#3bff9e");
+    h+='<div class="q" data-search="'+esc(d.fa+" "+d.en+" "+d.id)+'">';
+    h+='<b style="color:'+urg_color+'">'+esc(d.name)+'</b>';
+    h+='<br><small>Symptoms: '+d.symptoms.map(function(s){return esc(s.name)+"("+Math.round(s.probability*100)+"%)"}).join(", ")+'</small>';
+    if(d.advice&&d.advice.length){
+      h+='<br><small style="color:var(--cy)">Advice: '+esc(d.advice[0])+'</small>';
+    }
+    h+='</div>';
+  }
+  h+='</div></div>';
+  h+='<div class="card"><h3>ICD-10 Catalog</h3>';
+  h+='<input class="f" id="catq" placeholder="'+(LANG==="fa"?"جستجو در ۲۷هزار بیماری...":"Search 27,000+ conditions...")+'">';
+  h+='<button class="btn pri" onclick="searchCatalog()">'+(LANG==="fa"?"جستجو":"Search")+'</button><div id="catres"></div></div>';
+  el.innerHTML=h;
+}
+function filterDiseases(q){
+  q=q.toLowerCase();
+  var items=document.querySelectorAll("#dislist .q");
+  for(var i=0;i<items.length;i++){
+    var txt=items[i].getAttribute("data-search")||"";
+    items[i].style.display=txt.indexOf(q)>=0?"":"none";
+  }
+}
+async function searchCatalog(){
+  var q=$("catq").value.trim();
+  if(!q)return;
+  $("catres").innerHTML='<span class="spin"></span>';
+  var r=await api("/api/knowledge/catalog?q="+encodeURIComponent(q));
+  var h='';
+  if(r.ok&&r.results){
+    for(var i=0;i<r.results.length;i++){
+      var c=r.results[i];
+      h+='<div class="q"><b>'+esc(c.name)+'</b> <span class="tag">'+esc(c.icd10)+'</span> <small>'+esc(c.chapter||"")+'</small></div>';
+    }
+    if(!r.results.length)h='<p class=warn>Not found</p>';
+  }
+  $("catres").innerHTML=h||'<p class=warn>'+esc(r.message_fa||"Error")+'</p>';
+}
+
+async function uiDrugsBrowser(){
+  var r=await api("/api/knowledge/drugs");
+  var el=$("pbody");
+  if(!r.ok){el.innerHTML="<p class=bad>Error</p>";return}
+  var drugs=r.drugs||[];
+  var h='<div class="card"><h3>'+(LANG==="fa"?"داروها ("+fa(r.total)+" مورد | "+fa(r.interactions||0)+" تداخل)":"Drugs ("+r.total+" | "+(r.interactions||0)+" interactions)")+'</h3>';
+  h+='<input class="f" id="drugq" placeholder="'+(LANG==="fa"?"جستجو...":"Search...")+'" oninput="filterDrugsList(this.value)">';
+  h+='<div id="druglist">';
+  for(var i=0;i<drugs.length;i++){
+    var d=drugs[i];
+    h+='<div class="q" data-search="'+esc(d.fa+" "+d.en+" "+d.category+" "+d.id)+'">';
+    h+='<b>'+esc(LANG==="fa"?d.fa:d.en)+'</b>';
+    h+='<br><small style="color:var(--cy)">'+esc(d.category)+'</small>';
+    if(d.pregnancy)h+='<br><small>Pregnancy: '+esc(d.pregnancy)+'</small>';
+    if(d.half_life)h+=' | Half-life: '+esc(d.half_life);
+    if(d.interactions&&d.interactions.length){
+      h+='<br><small style="color:#ffd60a">Interactions ('+d.interactions.length+"): ";
+      for(var j=0;j<Math.min(3,d.interactions.length);j++){
+        h+=esc(d.interactions[j].other)+"("+d.interactions[j].severity+") ";
+      }
+      if(d.interactions.length>3)h+="...";
+      h+='</small>';
+    }
+    if(d.contra)h+='<br><small style="color:#ff8fab">Contra: '+esc(d.contra)+'</small>';
+    h+='</div>';
+  }
+  h+='</div></div>';
+  el.innerHTML=h;
+}
+function filterDrugsList(q){
+  q=q.toLowerCase();
+  var items=document.querySelectorAll("#druglist .q");
+  for(var i=0;i<items.length;i++){
+    var txt=items[i].getAttribute("data-search")||"";
+    items[i].style.display=txt.indexOf(q)>=0?"":"none";
+  }
+}
+
 /* ================= boot ================= */
 window._QS={phq9:[],gad7:[]};
 document.addEventListener("keydown",function(e){
