@@ -52,12 +52,21 @@ main{display:grid;grid-template-rows:1fr auto;min-width:0}
 #send{background:linear-gradient(135deg,#00b8d4,#0077b6);border:none;color:#021018;font-weight:800;border-radius:12px;padding:11px 22px;font-size:14px;box-shadow:0 0 16px #00f0ff33}
 #send:hover{box-shadow:0 0 24px #00f0ff66}
 #send:disabled{opacity:.45;cursor:wait}
+#settingsFAB{position:fixed;top:14px;inset-inline-end:16px;z-index:100;width:42px;height:42px;
+border-radius:50%;background:linear-gradient(135deg,#00b8d4,#0077b6);border:2px solid #00f0ff;
+display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:20px;color:#021018;
+box-shadow:0 0 18px #00f0ff44;transition:.2s}
+#settingsFAB:hover{box-shadow:0 0 28px #00f0ff88;transform:scale(1.1)}
 footer{grid-column:1/3;text-align:center;font-size:10.5px;color:#41527a;padding:4px;border-top:1px solid var(--bd);background:#070d18}
 #panel{position:fixed;top:56px;bottom:26px;inset-inline-end:0;width:min(560px,94vw);background:var(--panel2);border-inline-start:1px solid var(--bd);transform:translateX(0);margin-inline-end:-104%;transition:.28s;z-index:20;display:flex;flex-direction:column;box-shadow:-14px 0 40px #0009}
 [dir=rtl] #panel{box-shadow:14px 0 40px #0009}
 #panel.open{margin-inline-end:0}
 #panel .ph{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--bd);font-weight:800;color:var(--cy)}
-#panel .pb{flex:1;overflow-y:auto;overflow-x:auto;padding:16px 18px;line-height:2;font-size:13px;scroll-behavior:smooth}
+#panel .pb::-webkit-scrollbar{width:10px}
+#panel .pb::-webkit-scrollbar-track{background:#0a1424}
+#panel .pb::-webkit-scrollbar-thumb{background:#1c3a5e;border-radius:5px}
+#panel .pb::-webkit-scrollbar-thumb:hover{background:#00b8d4}
+#panel .pb{flex:1;overflow-y:auto;overflow-x:hidden;padding:16px 18px;line-height:2;font-size:13px;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 #chat{scroll-behavior:smooth}
 #panel{overscroll-behavior:contain}
 .x{margin-inline-start:auto;background:none;border:none;color:var(--dim);font-size:18px}
@@ -90,6 +99,8 @@ textarea.f{min-height:60px;resize:vertical;line-height:1.9;overflow-y:auto}
 [dir=rtl] .spin{margin:0 0 0 7px}
 @keyframes sp{to{transform:rotate(360deg)}}
 .hide{display:none}
+.q-list{max-height:none;overflow:visible}
+#symlist,#dislist,#druglist{scroll-behavior:smooth}
 kbd{background:#101c36;border:1px solid var(--bd);border-radius:5px;padding:1px 7px;font-size:11px;color:var(--cy)}
 @media(max-width:860px){#app{grid-template-columns:64px 1fr}.nbtn span.t{display:none}.nsep{display:none}.nbtn{justify-content:center}.msg{max-width:92%}}
 </style>
@@ -125,6 +136,7 @@ kbd{background:#101c36;border:1px solid var(--bd);border-radius:5px;padding:1px 
 <footer id="foot"></footer>
 </div>
 
+<div id="settingsFAB" onclick="openPanel('settings')" title="Settings">&#9881;</div>
 <aside id="panel">
   <div class="ph"><span id="ptitle"></span><button class="x" onclick="closePanel()">x</button></div>
   <div class="pb" id="pbody"></div>
