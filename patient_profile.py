@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-patient_profile.py — پروفایل بیمار: نام، سن، جنسیت، وزن، قد، بیماری زمینه‌ای، حساسیت‌ها.
-ذخیره در patient_profile.json (داده‌ی شخصی — هرگز داخل ZIP/Setup قرار نمی‌گیرد).
+Patient profile: name, age, sex, weight, height, conditions, allergies.
+Stored in patient_profile.json (personal data - never goes into ZIP/Setup).
 """
 from __future__ import annotations
 

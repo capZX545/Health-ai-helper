@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-ml_classifier.py — طبقه‌بند Scikit-Learn آموزش‌دیده روی دیتاست مصنوعی
-(medical_ml_test_dataset.csv). دیتاست فقط برای تست ML است، نه کاربرد بالینی.
+Scikit-learn classifier trained on the synthetic dataset
+(medical_ml_test_dataset.csv). That dataset is for ML testing only,
+never for clinical use.
 """
 from __future__ import annotations
 
@@ -76,7 +77,9 @@ def is_ready() -> bool:
 
 
 def build_features(detected: dict, profile: dict, vitals: dict | None = None) -> list[float]:
-    """ساخت بردار ویژگی از متن کاربر (detect_symptoms) + پروفایل."""
+    """
+    Feature vector from the user's text (detect_symptoms) + profile.
+    """
     p = profile or {}
     present = detected.get("present", {})
     gender = 1.0 if str(p.get("gender", "")).strip() in ("مرد", "male", "m", "1") else 0.0
@@ -103,7 +106,9 @@ def build_features(detected: dict, profile: dict, vitals: dict | None = None) ->
 
 
 def predict(detected: dict, profile: dict, vitals: dict | None = None, top_k: int = 3) -> list[dict[str, Any]] | None:
-    """پیش‌بینی لیبل از دیتاست مصنوعی؛ None یعنی مدل در دسترس نیست."""
+    """
+    Predict a label; None means the model isn't available.
+    """
     if not is_ready():
         return None
     if not any(not i.get("denied") for i in detected.get("present", {}).values()):
@@ -120,7 +125,9 @@ def predict(detected: dict, profile: dict, vitals: dict | None = None, top_k: in
 
 
 def retrain() -> bool:
-    """آموزش مجدد (بعد از تغییر دیتاست)."""
+    """
+    Retrain (after the dataset changes).
+    """
     with _lock:
         _state["ready"] = False
     return _train(force=True)

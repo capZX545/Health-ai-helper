@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-free_ai.py — لیست مدل‌های رایگان/پیشنهادی OpenRouter و انتخاب پشتیبان.
+List of free/suggested OpenRouter models plus fallback picking.
 """
 from __future__ import annotations
 
@@ -35,7 +35,9 @@ def is_vision_model(model: str) -> bool:
 
 
 def free_chat(messages: list[dict], **kw) -> dict[str, Any]:
-    """گفتگو با مدل پیش‌فرض و در صورت خطا، مدل پشتیبان (هر دو رایگان)."""
+    """
+    Chat with the default model; on error retry with the backup (both free).
+    """
     from ai_api_manager import get_api_key
     from ai_client import chat
     if not get_api_key("openrouter"):

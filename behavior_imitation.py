@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-behavior_imitation.py — یادگیری «سبک» پاسخ‌دهی AI خارجی و تقلید فقط لحن/ساختار
-(نه محتوای پزشکی!). خروجی ai_behavior_profile.json
+Learns the external AI's answer 'style' and imitates tone/structure only
+(never the medical content). Writes ai_behavior_profile.json
 """
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ DEFAULT_STYLE: dict[str, Any] = {
     "avg_questions": 2,
 }
 
-# تشخیص نوع بخش از روی کلیدواژه‌های عنوان فارسی و انگلیسی (بدون وابستگی به ایموجی)
+# detect section type from heading keywords, fa and en, no emoji dependency
 HEADER_HINTS: list[tuple[str, tuple[str, ...]]] = [
     ("warning", ("هشدار", "خطر", "قرمز", "اورژانس", "warning", "danger", "red flag", "emergency")),
     ("probables", ("احتمال", "تشخیص", "افتراقی", "possib", "likehood", "likely", "differential", "could be")),
@@ -54,8 +54,10 @@ def _classify_header(header: str) -> str:
 
 
 def _split_sections(text: str) -> list[dict[str, str]]:
-    """تفکیک پاسخ به بخش‌ها بر اساس خطوط عنوان کوتاه (خطی که با «:» تمام می‌شود
-    یا کاملاً بولد است و سوال نیست)."""
+    """
+    Split an answer into sections on short heading lines
+    (a line ending with ':' or fully bold, and not a question).
+    """
     secs: list[dict[str, str]] = []
     current = {"header": "", "body": []}
     for line in (text or "").splitlines():
@@ -90,13 +92,15 @@ def _valid_opener(s: str) -> bool:
 
 
 def update_profile(ai_text: str) -> dict[str, Any]:
-    """استخراج سبک از پاسخ AI خارجی و ادغام در پروفایل (میانگین متحرک)."""
+    """
+    Extract style from an external reply and merge into the profile (moving average).
+    """
     prof = load_profile()
     if not ai_text or len(ai_text) < 40:
         return prof
     n = prof.get("samples", 0) + 1
     secs = _split_sections(ai_text)
-    # مقدمه‌ی پاسخ به‌عنوان opener ذخیره می‌شود، نه به‌عنوان یک «بخش»
+    # the intro is stored as the opener, not as a section
     opener = ""
     if secs and not secs[0]["header"]:
         body = " ".join(secs[0]["body"]).strip()
@@ -146,7 +150,7 @@ def load_profile() -> dict[str, Any]:
         return copy.deepcopy(DEFAULT_STYLE)
     merged = dict(DEFAULT_STYLE)
     merged.update(data)
-    # پاک‌سازی هنگام خواندن: فایل‌های مسمومِ قدیمی خودشان شفا یابند
+    # sanitize on load so old poisoned files heal themselves
     merged["openers"] = [o for o in merged.get("openers", []) if _valid_opener(o)]
     merged["closers"] = [c for c in merged.get("closers", []) if _valid_opener(c)]
     merged["sections"] = [s for s in merged.get("sections", [])
@@ -161,9 +165,11 @@ def load_profile() -> dict[str, Any]:
 
 
 def apply_style(sections: dict[str, list[str] | str], opener: str | None = None) -> str:
-    """رندر پاسخ مغز داخلی با سبک آموخته‌شده. فقط قالب/لحن تغییر می‌کند، نه محتوا.
+    """
+    Render the offline brain's answer with the learned style. Layout/tone only,
+    the content doesn't change.
 
-    sections کلیدهای مجاز: empathy, findings, probables, advice, followup, warning, doctor, note
+    allowed section keys: empathy, findings, probables, advice, followup, warning, doctor, note
     """
     from i18n import tt
     prof = load_profile()
@@ -176,7 +182,7 @@ def apply_style(sections: dict[str, list[str] | str], opener: str | None = None)
         op = opener or tt("I hear you. Let's work through this step by step.",
                           "درکت می‌کنم؛ بذار مرحله‌به‌مرحله بررسی کنیم.")
     parts_out: list[str] = []
-    # جلوگیری از تکرار: اگر بخش empathy همان جمله‌ی شروع باشد، فقط یک‌بار بیاید
+    # avoid repetition: if the empathy section equals the opener keep just one
     emp = sections.get("empathy")
     if isinstance(emp, str) and normalize(emp) == normalize(op):
         sections = dict(sections)
@@ -184,7 +190,7 @@ def apply_style(sections: dict[str, list[str] | str], opener: str | None = None)
     op_norm = normalize(op)
     for s in order:
         if normalize(s.get("header") or "") == op_norm:
-            continue  # سرتیتری که همان جمله‌ی شروع است تکرار نشود
+            continue  # don't repeat a heading that is just the opening line
         key = s.get("key") or "note"
         if key in seen or key not in sections or not sections[key]:
             continue
@@ -201,7 +207,7 @@ def apply_style(sections: dict[str, list[str] | str], opener: str | None = None)
             blocks.append(f"{header_text}:\n{body}".strip())
         else:
             blocks.append(body.strip())
-    for k in sections:  # کلیدهای خارج از قالب آموخته‌شده
+    for k in sections:  # keys outside the learned template
         if k not in seen and sections[k]:
             content = sections[k]
             body = content if isinstance(content, str) else "\n".join(f"• {c}" for c in content)

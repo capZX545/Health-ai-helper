@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-run_2077.py — نقطه‌ی ورود NexusMed 2077.
-اجرا:
-  python run_2077.py          → رابط دسکتاپ (Tkinter)
-  python run_2077.py --web    → نسخه‌ی وب محلی (http://localhost:2077)
+Entry point of NexusMed 2077.
+Run:
+  python run_2077.py          -> desktop UI (tkinter)
+  python run_2077.py --web    -> local web version (http://localhost:2077)
 """
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ def main() -> int:
             sys.argv.append("--no-browser")
         return web_main()
 
-    # بررسی Tkinter — اگر نبود، فقط خطا بده (بدون fallback)
+    # tkinter check - if missing just error out, no fallback
     try:
         import tkinter
         root_test = tkinter.Tk()

@@ -638,7 +638,7 @@ def detect_symptoms(text: str) -> dict[str, Any]:
     """Returns {present: {sid: {count, severity, denied}}, duration_days, temp_c}.
     Negation is checked inside the same clause so 'no fever' does not leak
     onto earlier symptoms."""
-    # «ولی/اما/but» مرز نفی است: «تب ندارم ولی عطسه می‌کنم»
+    # 'but/however' marks the negation boundary: "no fever but I do sneeze": «
     _txt = (text or "")
     _txt = re.sub(r"\s(ولی|اما)\s", "، ", _txt)
     _txt = re.sub(r"\s(but|however|though)\s", ", ", _txt, flags=re.IGNORECASE)
@@ -674,7 +674,7 @@ def detect_symptoms(text: str) -> dict[str, Any]:
                 entry["severity"] = "mild"
             break
     t = " ".join(clauses)
-    # ارقام و ممیز حفظ شوند: normalize نقطه‌ی اعشار را حذف می‌کند («39.5» → «39 5»)
+    # keep digits and the decimal point; normalize() would eat the dot (39.5 -> 39 5): normalize
     t_digits = (text or "").translate(str.maketrans("۰۱۲۳۴۵۶۷۸۹٫", "0123456789.")).lower()
     duration_days = None
     for m in DURATION_RE.finditer(t_digits):
@@ -726,7 +726,7 @@ def check_red_flags(text: str, detected: dict | None = None) -> dict[str, Any]:
     if "chest_pain" in s and any(k in t for k in ("عرق", "بازوی چپ", "دست چپ", "فک", "تهوع", "sweat", "left arm", "jaw", "nausea", "clammy")):
         reasons.append("علائم مطرح برای حمله‌ی قلبی" if is_fa() else "signs suggesting a heart attack")
         hits.append("heart_attack")
-    # خوشه‌ی مننژیت: سفتی گردن + تب یا سردرد
+    # meningitis cluster: stiff neck + fever or headache
     if detected:
         pres = {s for s, i in detected.get("present", {}).items() if not i.get("denied")}
         if "stiff_neck" in pres and ({"fever", "headache", "photophobia", "confusion"} & pres):

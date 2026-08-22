@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-auto_learning.py — یادگیری خودکار از هر پاسخ AI خارجی (حتی وقتی مغز داخلی خاموش است).
-خروجی: learned_knowledge.json + به‌روزرسانی ai_behavior_profile.json + پاک‌کردن کش RAG.
+Learns from every external AI reply, even while the offline brain is off.
+Writes learned_knowledge.json, updates ai_behavior_profile.json, clears the RAG cache.
 """
 from __future__ import annotations
 
@@ -61,7 +61,9 @@ def _dedupe_signature(user_text: str, ai_text: str) -> str:
 
 def learn_from_exchange(user_text: str, ai_text: str, provider: str = "", model: str = "",
                         red_flag: bool = False, meta: dict | None = None) -> dict[str, Any] | None:
-    """ثبت یک تبادل چت با AI خارجی در حافظه‌ی یادگیری. همیشه اجرا می‌شود."""
+    """
+    Record one chat exchange with the external AI. Always runs.
+    """
     if not ai_text or len(ai_text.strip()) < 20:
         return None
     with _lock:
@@ -91,14 +93,14 @@ def learn_from_exchange(user_text: str, ai_text: str, provider: str = "", model:
             data["entries"] = data["entries"][-MAX_ENTRIES:]
         data["updated_at"] = now_iso()
         write_json(LEARNED_PATH, data)
-    # تقلید سبک (فقط لحن/ساختار) — حتی در پاسخ‌های اورژانسی سبک بازنویسی نمی‌شود
+    # style imitation (tone/structure only) - never applied to emergency answers
     try:
         if not red_flag:
             from behavior_imitation import update_profile
             update_profile(ai_text)
     except Exception:
         pass
-    # کش RAG پاک شود تا دانش جدید بلافاصله قابل استفاده باشد
+    # clear the RAG cache so new knowledge is usable right away
     try:
         from semantic_rag import invalidate
         invalidate()

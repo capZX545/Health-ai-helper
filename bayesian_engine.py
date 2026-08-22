@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-bayesian_engine.py — استدلال بیزین ساده برای رتبه‌بندی احتمال بیماری‌ها.
-خروجی‌ها همیشه «احتمالی» هستند و جایگزین معاینه پزشک نیستند.
+Simple Bayesian reasoning to rank disease likelihoods.
+Everything it outputs is a 'possible', never a replacement for an exam.
 """
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from typing import Any
 from medical_engine import DISEASES, sym_name
 
 SMOOTH = 1e-6
-_RARE: set = set()  # lazy — در اولین rank پر می‌شود
+_RARE: set = set()  # lazy, filled on the first rank() call
 _RARE_COUNTS: dict = {}
 
 
@@ -28,7 +28,9 @@ def _rare_counts() -> dict:
 
 
 def _age_sex_factor(d: dict, profile: dict) -> float:
-    """تعدیل جزئی احتمال پیشین بر اساس سن/جنسیت (فقط برای بیماری‌های وابسته)."""
+    """
+    Slight prior adjustment by age/sex, only for the diseases where it matters.
+    """
     f = 1.0
     try:
         age = int(profile.get("age") or 0)
@@ -59,7 +61,7 @@ def score_disease(d: dict, detected: dict, profile: dict) -> float:
         if sid in present:
             boost = 1.25 if present[sid]["severity"] == "severe" else 1.0
             logp += math.log(min(p * boost, 0.98))
-            # علامتِ کمیابِ پراحتمال (شبیه pathognomonic) بر علامت عمومی مثل تب غلبه می‌کند
+            # a rare high-probability symptom beats generic ones like fever
             if p >= 0.9 and rare_counts.get(sid, 9) == 1:
                 logp += math.log(3.5)
             elif p >= 0.8 and sid in rare:
@@ -67,13 +69,13 @@ def score_disease(d: dict, detected: dict, profile: dict) -> float:
         elif sid in denied:
             logp += math.log(max(1.0 - p, SMOOTH))
         elif p >= 0.8:
-            # علامت کلیدی که اصلاً ذکر نشده، احتمال را به‌نرمی کم می‌کند
+            # a key symptom that wasn't mentioned softly lowers the score
             logp += math.log(1.0 - p * 0.5)
-    # جریمه‌ی پوشش: علامتِ حاضرِ بیمار که این بیماری اصلاً توضیحش نمی‌دهد
+    # coverage penalty: the patient has it but this disease never explains it
     for sid in present:
         if sid not in d["symptoms"]:
             logp += math.log(0.7)
-    # مدت بیماری: سرماخوردگی/آنفلوآنزا ۳ هفته طول نمی‌کشد؛ سل/COPD ماه‌ها است
+    # duration: a cold doesn't last 3 weeks; TB/COPD run for months
     dur = detected.get("duration_days")
     if dur is not None:
         if dur >= 21 and d["id"] in ("common_cold", "influenza", "gastroenteritis"):
@@ -88,7 +90,10 @@ def score_disease(d: dict, detected: dict, profile: dict) -> float:
 
 
 def _rare_symptoms() -> set[str]:
-    """علائمی که فقط در ۱-۲ بیماری با احتمال بالا می‌آیند (مثل درد گوش در عفونت گوش)."""
+    """
+    Symptoms that appear with high probability in only 1-2 diseases
+    (ear pain in an ear infection, for example).
+    """
     counts: dict[str, int] = {}
     for d in DISEASES:
         for sid, p in d["symptoms"].items():
@@ -101,7 +106,7 @@ def rank_diseases(detected: dict, profile: dict, top_n: int = 5) -> list[dict[st
     global _RARE
     if not _RARE:
         _RARE = _rare_symptoms()
-    # اورژانس‌ها همیشه صدر بمانند حتی اگر احتمال عددی کمتری بگیرند
+    # emergencies stay on top even with a lower numeric score
     present_now = {s for s, i in detected.get("present", {}).items() if not i.get("denied")}
     """رتبه‌بندی با نرمال‌سازی softmax تقریبی؛ درصد = احتمال نسبی در بین کاندیدها."""
     if not any(not i.get("denied") for i in detected.get("present", {}).values()):
@@ -116,7 +121,7 @@ def rank_diseases(detected: dict, profile: dict, top_n: int = 5) -> list[dict[st
         return []
     scored.sort(key=lambda x: x[0], reverse=True)
     top = scored[:max(top_n, 8)]
-    # کاندیدهای اورژانسی که علامت کمیاب اختصاصی‌شان حاضر است را به صدر بیاور
+    # push emergency candidates with their specific rare symptom present to the top
     emergency_boost = []
     rest = []
     for s, d, ov in top:

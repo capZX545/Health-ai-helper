@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-تست دود دسکتاپ: با یک شبیه‌ساز tkinter، App و همه‌ی پنل‌ها را اجرا می‌کند
-تا خطاهای پایتونی (نه گرافیکی) پیدا شوند. فقط برای تست — در ZIP نیست.
+Desktop smoke test.
+Runs the App and every panel with a fake tkinter display to catch
+plain python errors (not graphical ones). Test-only, not shipped in the ZIP.
 """
 from __future__ import annotations
 
@@ -164,7 +165,7 @@ def main():
             failures.append((name, repr(e)[:150]))
             print("FAIL ", name, "->", repr(e)[:150])
 
-    # چت: ارسال پیام متنی (نخ sync اجرا می‌شود؛ برای تست مستقیم خود تابع داخلی)
+    # chat: sending a text message spawns a thread; test the inner function directly instead
     try:
         app._user("test")
         app._bot("test", "bot", "meta")
@@ -174,7 +175,7 @@ def main():
         failures.append(("chat helpers", repr(e)))
         print("FAIL  chat helpers ->", repr(e)[:120])
 
-    # launch_web فقط thread می‌سازد؛ در تست صرف‌نظر می‌کنیم
+    # launch_web only creates a thread, skip it here
     try:
         app.set_lang("fa")
         app.set_lang("en")

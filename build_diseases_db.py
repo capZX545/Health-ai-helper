@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-build_diseases_db.py — ساخت دیتابیس آفلاین SQLite (diseases_offline.db)
-از روی پایه‌ی دانش داخلی + diseases_extra.json
-اجرا: python build_diseases_db.py
+Builds the offline SQLite database (diseases_offline.db)
+from the internal knowledge base + diseases_extra.json.
+Run: python build_diseases_db.py
 """
 from __future__ import annotations
 

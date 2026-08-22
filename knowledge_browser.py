@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-knowledge_browser.py — ماژول مرور دانش‌نامه:
-- علائم: همه‌ی علائم قابل جستجو با انتخاب
-- بیماری‌ها: همه‌ی بیماری‌ها با علائم و مشخصات
-- داروها: همه‌ی داروها با خواص و عوارض
+Knowledge browser module:
+- symptoms: everything searchable
+- diseases: full list with symptoms and details
+- drugs: full list with properties and side effects
 """
 from __future__ import annotations
 
@@ -13,14 +13,16 @@ from common_2077 import normalize
 from i18n import is_fa
 
 
-# ============================ علائم ============================
+# ============================ symptoms ============================
 
 def get_all_symptoms() -> list[dict]:
-    """همه‌ی علائم با نام فارسی/انگلیسی و کلیدواژه‌ها."""
+    """
+    All symptoms with fa/en names and keywords.
+    """
     from medical_engine import SYMPTOM_KEYWORDS, SYMPTOM_NAMES_FA, SYMPTOM_NAMES_EN, DISEASES
     out = []
     for sid in sorted(SYMPTOM_KEYWORDS.keys()):
-        # کدام بیماری‌ها این علامت را دارند
+        # which diseases carry this symptom
         related = []
         for d in DISEASES:
             if sid in d.get("symptoms", {}):
@@ -39,7 +41,9 @@ def get_all_symptoms() -> list[dict]:
 
 
 def search_symptoms(query: str) -> list[dict]:
-    """جستجوی علائم بر اساس نام یا کلیدواژه."""
+    """
+    Search symptoms by name or keyword.
+    """
     if not query or not query.strip():
         return get_all_symptoms()
     nq = normalize(query)
@@ -47,10 +51,12 @@ def search_symptoms(query: str) -> list[dict]:
     return [s for s in all_syms if nq in normalize(s["fa"]) or nq in normalize(s["en"]) or nq in s["id"]]
 
 
-# ============================ بیماری‌ها ============================
+# ============================ diseases ============================
 
 def get_all_diseases() -> list[dict]:
-    """همه‌ی بیماری‌های موتور تشخیص با علائم و مشخصات."""
+    """
+    All engine diseases with symptoms and details.
+    """
     from medical_engine import DISEASES, SYMPTOM_NAMES_FA, SYMPTOM_NAMES_EN
     fa = is_fa()
     out = []
@@ -85,7 +91,7 @@ def search_diseases(query: str) -> list[dict]:
     return [d for d in get_all_diseases() if nq in normalize(d["fa"]) or nq in normalize(d["en"]) or nq in d["id"]]
 
 
-# پل فارسی → انگلیسی برای کاتالوگ ICD-10 (که انگلیسی است)
+# fa -> en bridge for the ICD-10 catalog (which is english-only)
 _FA_EN_MED = {
     "دیابت": "diabetes", "قند": "hyperglycemia", "سرطان": "cancer", "تومور": "tumor",
     "فشار خون": "hypertension", "پرفشاری": "hypertension", "کم‌خونی": "anemia",
@@ -119,9 +125,11 @@ _FA_EN_MED = {
 
 
 def get_catalog_diseases(query: str = "", limit: int = 50) -> dict:
-    """جستجو در کاتالوگ ICD-10-CM (۲۷,۰۰۰+ بیماری).
-    پل فارسی→انگلیسی: اگر جستجو فارسی باشد، معادل انگلیسی از بیماری‌های موتور
-    و دیکشنری پزشکی پیدا شده و در کاتالوگ هم جستجو می‌شود. کد ICD (مثل E11) هم کار می‌کند."""
+    """
+    Search the ICD-10 catalog.
+    The catalog is english-only, so a persian query first gets translated through
+    our own disease names plus a small medical dictionary. ICD codes (E11) work too.
+    """
     import re as _re
     from medical_catalog import search_conditions, stats, get_chapter_fa, search_by_code_prefix
     st = stats()
@@ -130,7 +138,7 @@ def get_catalog_diseases(query: str = "", limit: int = 50) -> dict:
     q = query.strip()
     results = search_conditions(q, limit)
 
-    # جستجو با پیشوند کد ICD (مثل E11 یا J45.9)
+    # ICD code prefix search (E11, J45.9, ...)
     if _re.match(r"^[A-TV-Za-tv-z]\d{2}", q):
         seen = {r.get("icd10") for r in results}
         for r in search_by_code_prefix(q, limit):
@@ -138,7 +146,7 @@ def get_catalog_diseases(query: str = "", limit: int = 50) -> dict:
                 seen.add(r.get("icd10"))
                 results.append(r)
 
-    # پل فارسی → انگلیسی
+# fa -> en bridge
     nq = normalize(q)
     en_terms: list[str] = []
     has_fa = any("\u0600" <= ch <= "\u06FF" for ch in q)
@@ -174,10 +182,12 @@ def get_catalog_diseases(query: str = "", limit: int = 50) -> dict:
     }
 
 
-# ============================ داروها ============================
+# ============================ drugs ============================
 
 def get_all_drugs() -> list[dict]:
-    """همه‌ی داروها با نام، دسته، خواص و تداخل‌ها."""
+    """
+    All drugs with name, category, properties and interactions.
+    """
     from drug_interaction import DRUGS, INTERACTIONS, SEV_FA
     from drugbank_connector import DRUG_DATABASE
     fa = is_fa()
@@ -185,7 +195,7 @@ def get_all_drugs() -> list[dict]:
     out = []
     for d in DRUGS:
         did = d["id"]
-        # تداخل‌های این دارو
+        # interactions of this drug
         interactions = []
         for it in INTERACTIONS:
             if did in (it["a"], it["b"]):
@@ -195,9 +205,9 @@ def get_all_drugs() -> list[dict]:
                     "other": other["fa"] if other and fa else (other["en"][0] if other else other_id),
                     "severity": it["sev"],
                     "severity_fa": SEV_FA()[it["sev"]],
-                    "detail": it["fa"] if fa else it["fa"],  # فعلا فقط فارسی
+                    "detail": it["fa"] if fa else it["fa"],  # persian only for now
                 })
-        # اطلاعات DrugBank
+        # drugbank record
         db_info = drug_db_map.get(did, {})
         out.append({
             "id": did,
@@ -242,13 +252,15 @@ def get_interaction_count() -> int:
     return len(INTERACTIONS)
 
 
-# ============================ بانک کامل FDA ============================
+# ============================ full FDA bank ============================
 
 _FDA_CACHE: dict | None = None
 
 
 def _load_fda() -> list[dict]:
-    """بارگذاری یک‌باره‌ی drugs_fda.json (۱۹ هزار+ داروی FDA)."""
+    """
+    Loads drugs_fda.json once and keeps it in memory.
+    """
     global _FDA_CACHE
     if _FDA_CACHE is None:
         import json
@@ -260,7 +272,7 @@ def _load_fda() -> list[dict]:
         except Exception as e:
             print(f"[knowledge_browser] بانک FDA بارگذاری نشد: {e}")
             _FDA_CACHE = []
-        # ایندکس جستجو
+        # search index
         for i, d in enumerate(_FDA_CACHE):
             hay = " ".join([d.get("g", "")] + (d.get("brands") or []) + (d.get("ing") or [])).lower()
             d["_i"], d["_hay"] = i, hay
@@ -272,7 +284,9 @@ def get_fda_drug_count() -> int:
 
 
 def search_fda_drugs(query: str, limit: int = 40) -> list[dict]:
-    """جستجو در بانک کامل FDA (نام ژنریک/برند/ماده‌ی فعال)."""
+    """
+    Search the FDA bank (generic/brand/ingredient).
+    """
     q = normalize(query)
     if not q:
         return []
@@ -286,7 +300,9 @@ def search_fda_drugs(query: str, limit: int = 40) -> list[dict]:
 
 
 def get_fda_drug(generic_name: str) -> dict | None:
-    """دریافت کامل‌ترین ورودی برای یک نام ژنریک (برای جزئیات)."""
+    """
+    Best-matching entry for a generic name (for the detail view).
+    """
     key = normalize(generic_name)
     best = None
     for d in _load_fda():
@@ -296,14 +312,16 @@ def get_fda_drug(generic_name: str) -> dict | None:
     return best
 
 
-# ============================ لیبل رسمی FDA + نام‌های فارسی ============================
+# ============================ FDA labels + persian names ============================
 
 _LABELS_CACHE: dict | None = None
 _FA_NAMES_CACHE: dict | None = None
 
 
 def _load_labels() -> dict:
-    """بارگذاری drug_labels.json.gz — بخش‌های لیبل رسمی FDA برای هر دارو."""
+    """
+    Loads the gzipped FDA label sections, once.
+    """
     global _LABELS_CACHE
     if _LABELS_CACHE is None:
         import gzip
@@ -320,7 +338,9 @@ def _load_labels() -> dict:
 
 
 def get_drug_label(generic_name: str) -> dict | None:
-    """بخش‌های لیبل رسمی FDA برای یک نام ژنریک: ind/warn/adv/box."""
+    """
+    FDA label sections for a generic name: ind/warn/adv/box.
+    """
     if not generic_name:
         return None
     return _load_labels().get(generic_name.strip().lower()) or None
@@ -342,20 +362,24 @@ def _load_fa_names() -> dict:
 
 
 def fa_drug_name(en_name: str) -> str:
-    """نام فارسی دارو از Wikidata (اگر موجود نبود رشته‌ی خالی)."""
+    """
+    Persian drug name from Wikidata, empty string if unknown.
+    """
     if not en_name:
         return ""
     return _load_fa_names().get("drug_en_fa", {}).get(en_name.strip().lower(), "")
 
 
 def fa_disease_name(icd: str = "", en: str = "") -> str:
-    """نام فارسی بیماری با کد ICD-10 یا نام انگلیسی (از Wikidata)."""
+    """
+    Persian disease name, by ICD-10 code or english name.
+    """
     m = _load_fa_names()
     if icd:
         code = icd.strip().upper()
         v = m.get("icd_fa", {}).get(code, "")
         if not v and len(code) >= 4:
-            # پیشوند دسته (مثل E11.9 → E11)
+            # category prefix (E11.9 -> E11)
             v = m.get("icd_fa", {}).get(code[:3], "")
         if v:
             return v

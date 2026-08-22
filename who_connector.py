@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-who_connector.py — اتصال به WHO Global Health Observatory (GHO) API.
-داده‌های شاخص‌های سلامتی ۱۹۴ کشور: آمار بیماری‌ها، مرگ‌ومیر، بار بیماری‌ها.
+Connector for the WHO Global Health Observatory (GHO) API.
+Health indicators for 194 countries: disease stats, mortality, burden.
 API: https://ghoapi.azureedge.net/api/
 """
 from __future__ import annotations
@@ -17,7 +17,7 @@ try:
 except ImportError:
     requests = None
 
-# شاخص‌های پرکاربرد
+# the handy indicators
 INDICATORS = {
     "life_expectancy": "WHS4_100",
     "under5_mortality": "MDG_0000000001",
@@ -48,7 +48,9 @@ def _get(path: str, params: dict | None = None, timeout: int = 15) -> dict[str, 
 
 
 def get_indicator(indicator_code: str, country: str = "IRN", latest: bool = True) -> dict[str, Any]:
-    """گرفتن یک شاخص برای یک کشور."""
+    """
+    Fetch one indicator for one country.
+    """
     data = _get(f"Indicator/{indicator_code}", {"SpatialDim": country} if latest else {})
     if not data or not data.get("value"):
         return {"ok": False, "message_fa": tt("No data available.", "داده‌ای در دسترس نیست.")}
@@ -69,7 +71,9 @@ def get_indicator(indicator_code: str, country: str = "IRN", latest: bool = True
 
 
 def get_country_profile(country_code: str = "IRN") -> dict[str, Any]:
-    """پروفایل سلامتی خلاصه‌ی یک کشور از مهم‌ترین شاخص‌ها."""
+    """
+    A country's short health profile from the key indicators.
+    """
     out = {"ok": True, "country": country_code, "indicators": {}, "source": "WHO GHO"}
     names_fa = {
         "life_expectancy": ("امید به زندگی", "سال"),
@@ -100,7 +104,9 @@ def is_available() -> bool:
 
 
 def learn_who_data(country_code: str = "IRN") -> dict[str, Any]:
-    """یادگیری داده‌های WHO و ثبت در مغز داخلی."""
+    """
+    Feed WHO data into the offline brain.
+    """
     profile = get_country_profile(country_code)
     if not profile.get("ok") or not profile.get("indicators"):
         return {"ok": False, "learned": False}

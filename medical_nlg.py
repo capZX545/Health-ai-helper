@@ -51,8 +51,8 @@ def compose_offline_answer(analysis: dict[str, Any], dialogue_summary: dict[str,
     p = profile or {}
     name = str(p.get("name") or "").strip()
     greet = (f"{name} عزیز، " if name else "") if fa else (f"{name}, " if name else "")
-    # اپنیر توسط سبک (apply_style) در ابتدای پاسخ می‌آید؛ بخش empathy جدا لازم نیست
-    # تا جمله‌ی شروع تکرار نشود.
+    # the opener comes from apply_style already; a separate empathy section would (apply_style)
+    # just duplicate the opening line.
 
     findings: list[str] = []
     syms = analysis.get("symptoms", [])
@@ -110,8 +110,8 @@ def compose_offline_answer(analysis: dict[str, Any], dialogue_summary: dict[str,
     if not advice:
         advice = ["استراحت کافی و آب فراوان", "ثبت تغییر علائم (شدت/مدت) برای ارائه به پزشک"] if fa else \
                  ["Rest and stay hydrated", "Track how symptoms change (severity/duration) for the doctor"]
-    # یادداشت حافظه‌ی آموخته‌شده عمداً از پاسخ حذف شد: نویز می‌ساخت.
-    # RAG همچنان در پرامپت AI خارجی استفاده می‌شود.
+    # dropped the learned-memory note on purpose, it was noise
+    # RAG still feeds the external AI prompt.
     advice.append("داروی خاصی را بدون تجویز پزشک شروع یا قطع نکن." if fa
                   else "Do not start or stop any medication without a prescription.")
     sections["advice"] = advice

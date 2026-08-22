@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-build_drug_labels.py — ساخت بانک «لیبل رسمی داروها» از openFDA Drug Labels.
-هر ۱۴ بخش دانلود، استخراج‌شده (موارد مصرف/هشدارها/عوارض/هشدار جعبه) و سپس حذف می‌شود.
+Pulls the official drug labels from openFDA and keeps only the useful
+sections: indications, warnings, adverse reactions and the boxed warning.
 
-خروجی: drug_labels.json.gz  (در پوشه‌ی برنامه — با gzip باز می‌شود)
-اجرا:  python build_drug_labels.py
+The full export is around 2 GB, so parts are downloaded and processed one by
+one and deleted right after to save disk. Section text is also truncated in
+place because full labels are huge.
+
+Output: drug_labels.json.gz next to the other data files.
 """
 from __future__ import annotations
 
@@ -71,7 +74,7 @@ def download(part: int) -> str | None:
     name = f"part{part:02d}.zip"
     path = os.path.join(TMP, name)
     if os.path.exists(path) and os.path.getsize(path) > 10_000_000:
-        return path  # قبلاً دانلود شده
+        return path  # already downloaded
     url = f"https://download.open.fda.gov/drug/label/drug-label-{part:04d}-of-{N_PARTS:04d}.json.zip"
     for attempt in range(4):
         try:
@@ -103,7 +106,7 @@ def main() -> None:
             pass
         print(f"part{part:02d}: {n} لیبل پردازش شد (مجموع {len(acc)} دارو)")
         time.sleep(12)
-    # فقط داروهایی که حداقل یک بخش دارند نگه می‌مانند
+    # keep only drugs that got at least one section
     acc = {k: v for k, v in acc.items() if v["ind"] or v["warn"] or v["adv"] or v["box"]}
     save_acc(acc)
     print(f"پایان: {len(acc)} دارو با لیبل کامل")

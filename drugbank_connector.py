@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-drugbank_connector.py — ساختار داده‌ی جامع دارویی بر اساس مدل DrugBank.
-شامل: دسته‌بندی ATC، مسیر مصرف، نیمه‌عمر، متابولیسم، منع مصرف، هشدار بارداری.
-این ماژول داده‌های دارویی را برای ماژول‌های دیگر (تداخل/اسکن نسخه) فراهم می‌کند.
+DrugBank-style drug records: ATC class, route, half-life, metabolism,
+contraindications, pregnancy warnings. Other modules (interactions, prescription
+scan) read from here.
 """
 from __future__ import annotations
 
 from typing import Any
 
-# دسته‌بندی ATC (Anatomical Therapeutic Chemical)
+# ATC codes (Anatomical Therapeutic Chemical) (Anatomical Therapeutic Chemical)
 ATC_CATEGORIES = {
     "A": ("گوارش و سوخت‌وساز", "Alimentary tract and metabolism"),
     "B": ("خون و اعضای خون‌ساز", "Blood and blood forming organs"),
@@ -26,7 +26,7 @@ ATC_CATEGORIES = {
     "V": ("متفرقه", "Various"),
 }
 
-# داده‌های دارویی جامع (بر اساس ساختار DrugBank)
+# the full drug records (DrugBank-style)
 DRUG_DATABASE: dict[str, dict[str, Any]] = {
     "metformin": {
         "atc": "A10BA02", "class_fa": "ضد دیابت - بی‌گوانید", "half_life": "6h",
@@ -214,17 +214,23 @@ DRUG_DATABASE: dict[str, dict[str, Any]] = {
 
 
 def get_drug_info(drug_id: str) -> dict[str, Any] | None:
-    """اطلاعات جامع دارو از دیتابیس DrugBank-style."""
+    """
+    Full drug record from the DrugBank-style database.
+    """
     return DRUG_DATABASE.get(drug_id)
 
 
 def search_by_atc(letter: str) -> list[dict]:
-    """همه‌ی داروهای یک دسته‌ی ATC."""
+    """
+    All drugs under one ATC group.
+    """
     return [{"id": k, **v} for k, v in DRUG_DATABASE.items() if v["atc"].startswith(letter)]
 
 
 def search_by_class(query: str) -> list[dict]:
-    """جستجو بر اساس کلاس دارویی."""
+    """
+    Search by drug class.
+    """
     from common_2077 import normalize
     nq = normalize(query)
     return [{"id": k, **v} for k, v in DRUG_DATABASE.items() if nq in normalize(v["class_fa"])]

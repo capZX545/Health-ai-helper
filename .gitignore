@@ -1,4 +1,4 @@
-# رازها و اطلاعات شخصی — هرگز کامیت نشوند
+# secrets and personal data - never commit these
 .env
 .env.*
 *.env
@@ -15,8 +15,7 @@ openrouter.key
 *.token
 .credentials*
 
-
-# داده‌های شخصی کاربر (خروجی خود برنامه)
+# user's personal data (program output)
 patient_profile.json
 vitals_history.json
 learned_knowledge.json
@@ -30,7 +29,7 @@ conversation_history.json
 diseases_offline.db.tmp
 *.log
 
-# خروجی ساخت و بسته‌بندی
+# build output and packaging
 __pycache__/
 *.pyc
 build/
@@ -42,7 +41,7 @@ drug-ndc.json.zip
 Setup-*.exe
 *.apk
 
-# محیط‌های توسعه
+# dev environments
 .venv/
 venv/
 env/
@@ -51,7 +50,7 @@ env/
 .ruff_cache/
 node_modules/
 
-# فایل‌های سیستمی
+# OS junk
 .DS_Store
 Thumbs.db
 desktop.ini

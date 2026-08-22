@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-lab_tests.py — تجزیه‌ی متن/خطوط آزمایش، مقایسه با محدوده‌ی مرجع و تفسیر فارسی.
-مثال ورودی: «FBS 132» یا «هموگلوبین ۱۰.۵» یا «TSH 6.2 mIU/L»
+Parses lab text/lines, compares against reference ranges, explains in Persian.
+Example input: "FBS 132" or "hemoglobin 10.5" or "TSH 6.2 mIU/L"
 """
 from __future__ import annotations
 
@@ -55,7 +55,7 @@ def parse_lines(text: str) -> list[dict[str, Any]]:
         line = raw.strip()
         if not line:
             continue
-        # ابتدا نام آزمایش را جدا از عدد تطبیق می‌دهیم (مثل «K 6.9» یا «هموگلوبین ۱۰.۵»)
+        # first match the test name apart from the number ("K 6.9", "hemoglobin 10.5")
         line_en = line.translate(str.maketrans("۰۱۲۳۴۵۶۷۸۹٫", "0123456789."))
         name_only = NUM_ONLY.sub("", line_en).strip(":=-–")
         t = find_test(name_only) or find_test(line_en)

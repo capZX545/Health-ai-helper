@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-semantic_rag.py — RAG داخلی با TF-IDF (حروف n-gram؛ مناسب فارسی بدون توکنایزر).
-منابع: پایه‌ی دانش داخلی + diseases_extra.json + diseases_offline.db + learned_knowledge.json
-بعد از یادگیری جدید، کش باید پاک شود (تابع invalidate).
+Homegrown RAG with TF-IDF (character n-grams, works fine for Persian
+without a tokenizer).
+Sources: internal knowledge base + diseases_extra.json + diseases_offline.db +
+learned_knowledge.json. The cache must be invalidated after new learning.
 """
 from __future__ import annotations
 
@@ -91,7 +92,9 @@ def _ensure_index():
 
 
 def search(query: str, k: int = 4) -> list[dict[str, Any]]:
-    """جست‌وجوی معنایی؛ خروجی: اسناد مرتبط با امتیاز."""
+    """
+    Semantic search; returns scored documents.
+    """
     if not query or not query.strip():
         return []
     if not _ensure_index():
@@ -113,7 +116,9 @@ def search(query: str, k: int = 4) -> list[dict[str, Any]]:
 
 
 def _fallback_search(query: str, k: int = 4) -> list[dict[str, Any]]:
-    """جست‌وجوی کلیدواژه‌ای ساده در نبود sklearn."""
+    """
+    Dumb keyword search for when sklearn is missing.
+    """
     nq = set(normalize(query).split())
     scored = []
     for d in _collect_docs():
@@ -126,7 +131,9 @@ def _fallback_search(query: str, k: int = 4) -> list[dict[str, Any]]:
 
 
 def invalidate():
-    """پاک‌کردن کش RAG بعد از یادگیری جدید."""
+    """
+    Clear the RAG cache after new learning.
+    """
     with _lock:
         _cache.update(docs=[], vec=None, matrix=None, sig=None)
 

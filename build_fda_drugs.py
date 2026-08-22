@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-build_fda_drugs.py — ساخت بانک کامل داروهای FDA از دایرکتوری NDC (openFDA).
-خروجی: drugs_fda.json — یک ورودی برای هر «نام ژنریک» یکتا (جمع‌بندی‌شده از همه‌ی محصولات).
+Builds the FDA drug bank from the NDC directory.
+I rerun it whenever the source gets refreshed.
 
-اجرا:  python build_fda_drugs.py
-منبع:  https://download.open.fda.gov/drug/ndc/drug-ndc-0001-of-0001.json.zip
-       (در صورت مسدودبودن، مسیر جایگزین accessdata.fda.gov/cder/ndctext.zip نیز امتحان می‌شود)
-
-به‌روزرسانی: هر ماه می‌توانید دوباره اجرا کنید تا بانک تازه شود.
+Downloads come from download.open.fda.gov; if that one is blocked the old
+accessdata.fda.gov address is tried too.
+Output: drugs_fda.json - one row per generic name, merged from all products.
 """
 from __future__ import annotations
 
@@ -50,7 +48,7 @@ def fetch() -> list[dict]:
     with z.open(name) as f:
         if name.endswith(".json"):
             return json.load(f)["results"]
-        # فرمت متنی (product.txt با جداکننده‌ی tab)
+        # plain-text format (product.txt, tab separated)
         text = io.TextIOWrapper(f, encoding="utf-8-sig", errors="replace")
         cols = text.readline().rstrip("\n").split("\t")
         idx = {c: i for i, c in enumerate(cols)}
@@ -111,7 +109,7 @@ def build(products: list[dict]) -> list[dict]:
             rt_val = rt_val.split(",")
         for rt in rt_val or []:
             _add("routes", str(rt), 4)
-        # کلاس فارماکولوژیک: pharm_class رشته‌ای یا openfda
+        # pharm class: either the pharm_class string or the openfda sub-dict
         pc = p.get("pharm_class")
         if isinstance(pc, str):
             for tag in pc.split(","):
@@ -125,7 +123,7 @@ def build(products: list[dict]) -> list[dict]:
                 _add("class", clean_class(str(tag)), 4)
         _add("mkt", p.get("marketing_category"), 3)
     out = sorted(db.values(), key=lambda x: x["g"].lower())
-    return out
+    return out  # sort alphabetically, easier to search
 
 
 def main() -> None:
@@ -134,10 +132,10 @@ def main() -> None:
         products = json.load(zipfile.ZipFile(CACHE_ZIP).open(zipfile.ZipFile(CACHE_ZIP).namelist()[0]))["results"]
     else:
         products = fetch()
-        # ذخیره‌ی کش برای اجراهای بعدی (به .gitignore اضافه شده)
+        # cache the download for next runs (ignored by git)
         try:
             with open(CACHE_ZIP, "wb") as f:
-                f.write(b"")  # placeholder؛ فایل اصلی در این اجرا در حافظه است
+                f.write(b"")  # placeholder, the real payload lives in memory during this run
         except Exception:
             pass
     db = build(products)

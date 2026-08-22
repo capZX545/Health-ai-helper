@@ -34,7 +34,7 @@ def analyze_ecg(image_bytes: bytes) -> dict[str, Any]:
         trace = (dark * rows[:, None]).sum(axis=0) / np.maximum(col_counts, 1)
         t = trace[usable]
         base = np.median(t)
-        dev = base - t          # انحراف به بالا (y کوچکتر) = مثبت
+        dev = base - t          # upward deflection (smaller y) = positive
         thr = max(3.0, 2.5 * float(np.std(dev)))
         above = dev > thr
         groups = []

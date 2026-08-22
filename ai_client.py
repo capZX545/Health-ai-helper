@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-ai_client.py — کلاینت HTTP برای OpenRouter / OpenAI / DeepSeek.
-پشتیبانی اختیاری از reasoning_details (بخش ۸ پرامپت): ذخیره و بازگرداندن بدون تغییر
-در پیام بعدی همان مدل؛ هرگز به کاربر نمایش داده نمی‌شود.
+HTTP client for OpenRouter / OpenAI / DeepSeek.
+Optional reasoning_details support (prompt part 8): stored and sent back verbatim
+with the next request of the same model; never shown to the user.
 """
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from typing import Any
 
 try:
     import requests
-except ImportError:  # برنامه بدون requests هم بالاست؛ فقط اتصال خارجی غیرفعال می‌شود
+except ImportError:  # app still runs without requests, external calls are just disabled
     requests = None
 
 from common_2077 import DATA_DIR, env_get, read_json, write_json
@@ -23,7 +23,9 @@ from common_2077 import env_get
 
 
 def _endpoints() -> dict[str, str]:
-    """آدرس‌های پیش‌فرض؛ با متغیر محیطی/‎.env قابل بازنویسی‌اند (برای تست محلی)."""
+    """
+    Default endpoints; override via env/.env (handy for local testing).
+    """
     return {
         "openrouter": env_get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").rstrip("/") + "/chat/completions",
         "openai": env_get("OPENAI_BASE_URL", "https://api.openai.com/v1").rstrip("/") + "/chat/completions",
@@ -54,7 +56,7 @@ def _model_for(provider: str, model: str | None) -> str:
     return model or ""
 
 
-# ------------------------------------------------- reasoning_details (بخش ۸)
+# ------------------------------------------------- reasoning_details (part 8)
 
 def _load_reasoning_state() -> dict:
     return read_json(REASONING_STATE_PATH, default={}) or {}
@@ -73,7 +75,7 @@ def save_reasoning(model: str, details: Any) -> None:
     with _reasoning_lock:
         st = _load_reasoning_state()
         st[model] = details
-        # فقط آخرین ۵ مدل نگه داشته شود
+        # keep only the last 5 models
         if len(st) > 5:
             for k in list(st.keys())[:-5]:
                 st.pop(k, None)
@@ -97,7 +99,7 @@ def chat(provider: str, messages: list[dict], model: str | None = None,
          image_b64: str | None = None, image_mime: str = "image/jpeg",
          reasoning_enabled: bool = False, timeout: int = 90) -> dict[str, Any]:
     """
-    خروجی: {ok, text, provider, model, reasoning_details, error, error_code, error_fa}
+    Returns {ok, text, provider, model, reasoning_details, error, error_code, error_fa}
     """
     from ai_api_manager import get_api_key
     if requests is None:
@@ -115,7 +117,7 @@ def chat(provider: str, messages: list[dict], model: str | None = None,
         return {"ok": False, "error": "unknown_provider", "error_fa": tt("Unknown provider.", "سرویس ناشناخته است.")}
     mdl = _model_for(provider, model)
 
-    # ساخت پیام آخر + تصویر (vision)
+    # build the last message + image (vision)
     msgs = [dict(m) for m in messages]
     if image_b64 and msgs:
         last = msgs[-1]
@@ -123,7 +125,7 @@ def chat(provider: str, messages: list[dict], model: str | None = None,
                    {"type": "image_url", "image_url": {"url": f"data:{image_mime};base64,{image_b64}"}}]
         msgs[-1] = {"role": "user", "content": content}
 
-    # بازگرداندن reasoning_details ذخیره‌شده‌ی همان مدل (بدون تغییر)
+    # return the reasoning_details saved for this model, untouched
     saved = get_saved_reasoning(mdl) if reasoning_enabled else None
     if saved and msgs and msgs[-1].get("role") == "user":
         msgs.append({"role": "assistant", "content": "", "reasoning_details": saved})
@@ -184,7 +186,9 @@ def chat(provider: str, messages: list[dict], model: str | None = None,
 
 def chat_with_fallbacks(messages: list[dict], models: list[dict[str, str]] | None = None,
                         **kw) -> dict[str, Any]:
-    """امتحان ترتیبی چند سرویس/مدل تا اولین موفقیت."""
+    """
+    Try several services/models in order, stop at the first success.
+    """
     from ai_api_manager import get_api_key, get_settings
     s = get_settings()
     order = [p for p in s["provider_order"] if p != "local" and get_api_key(p)]

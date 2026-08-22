@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-medical_catalog.py — کاتالوگ جامع بیماری‌ها (از NIH/NLM) و داروها (از FDA).
-داده‌ها از APIهای رسمی و رایگان دولت آمریکا دریافت شده‌اند:
-- Conditions: NLM Clinical Tables API (2,177 شرایط پزشکی با کد ICD-10)
-- Drugs: openFDA Drug Labels API (201 دارو با نام ژنریک)
+Catalog of conditions (NIH/NLM) and drugs (FDA), built from free official
+US government APIs:
+- conditions: NLM Clinical Tables API (2,177 entries with ICD-10 codes)
+- drugs: openFDA drug labels API (201 generics)
 
-این ماژول یک لایه‌ی جستجو و ارجاع روی کاتالوگ فراهم می‌کند.
+This module is just a search/lookup layer on top of that data.
 """
 from __future__ import annotations
 
@@ -46,19 +46,21 @@ def _load():
 
 
 def search_conditions(query: str, limit: int = 20) -> list[dict]:
-    """جستجوی شرایط پزشکی بر اساس نام یا کد ICD-10."""
+    """
+    Search conditions by name or ICD-10 code.
+    """
     _load()
     nq = normalize(query)
     if not nq:
         return []
     results = []
-    # جستجوی دقیق
+    # exact match
     if nq in _DATA["conditions_by_name"]:
         results.append(_DATA["conditions_by_name"][nq])
-    # جستجوی ICD
+    # ICD lookup
     if query.upper() in _DATA["conditions_by_icd"]:
         results.append(_DATA["conditions_by_icd"][query.upper()])
-    # جستجوی فازی
+    # substring match
     for c in _DATA["conditions"]:
         if len(results) >= limit:
             break
@@ -69,7 +71,9 @@ def search_conditions(query: str, limit: int = 20) -> list[dict]:
 
 
 def search_drugs(query: str, limit: int = 20) -> list[str]:
-    """جستجوی داروها بر اساس نام."""
+    """
+    Search drugs by name.
+    """
     _load()
     nq = normalize(query)
     if not nq:
@@ -83,7 +87,9 @@ def get_by_icd(code: str) -> dict | None:
 
 
 def get_condition_categories() -> dict[str, int]:
-    """آمار شرایط بر اساس حرف اول کد ICD-10."""
+    """
+    Condition counts grouped by the first ICD-10 letter.
+    """
     _load()
     cats: dict[str, int] = {}
     for c in _DATA["conditions"]:
@@ -99,7 +105,7 @@ def stats() -> dict:
     return {"conditions": len(_DATA["conditions"]), "drugs": len(_DATA["drugs"])}
 
 
-# نگاشت حرف ICD-10 به دسته‌ی فارسی
+# ICD-10 letter -> persian chapter label
 ICD10_CHAPTERS = {
     "A": "عفونی و انگلی",
     "B": "عفونی و انگلی",
@@ -131,7 +137,9 @@ ICD10_CHAPTERS = {
 
 
 def get_chapter_fa(icd_code: str) -> str:
-    """دسته‌ی فصل ICD-10 به فارسی."""
+    """
+    ICD-10 chapter label in Persian.
+    """
     if not icd_code:
         return "نامشخص"
     letter = icd_code[0].upper()
@@ -139,7 +147,9 @@ def get_chapter_fa(icd_code: str) -> str:
 
 
 def search_by_code_prefix(prefix: str, limit: int = 30) -> list[dict]:
-    """جستجوی بیماری با پیشوند کد ICD-10 (مثلاً E11 → همه‌ی E11.*)."""
+    """
+    Search diseases by ICD-10 prefix (E11 -> every E11.*).
+    """
     _load()
     p = prefix.strip().upper()
     if not p:

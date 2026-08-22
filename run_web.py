@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-run_web.py — نسخه‌ی وب محلی NexusMed 2077.
-آدرس پیش‌فرض: http://localhost:2077 — اگر اشغال بود، پورت‌های ۲۰۷۸ تا ۲۰۸۷ امتحان می‌شوند.
-اجرا:  python run_web.py  [--host 127.0.0.1] [--port 2077] [--no-browser]
+Local web version of NexusMed 2077.
+Default address: http://localhost:2077 - if taken, ports 2078..2087 are tried.
+Run:  python run_web.py  [--host 127.0.0.1] [--port 2077] [--no-browser]
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from urllib.parse import urlparse
 from common_2077 import APP_NAME, APP_VERSION, DATA_DIR
 
 HTML_FILE = os.path.join(DATA_DIR, "clinic_2077.html")
-MAX_BODY = 15 * 1024 * 1024  # حداکثر ۱۵ مگابایت (برای تصاویر)
+MAX_BODY = 15 * 1024 * 1024  # 15 MB max (images)
 
 _engine = None
 _engine_lock = threading.Lock()
@@ -81,7 +81,7 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             return {}
 
-    def log_message(self, fmt, *args):  # لاگ کم‌حجم
+    def log_message(self, fmt, *args):  # keep logs small
         sys.stderr.write("•")
 
     def do_OPTIONS(self):
@@ -150,7 +150,7 @@ class Handler(BaseHTTPRequestHandler):
                     "brain_on": st.get("settings", {}).get("brain_enabled", True),
                     "learning_active": True})
             if path == "/api/settings/full":
-                # همین کد در do_POST هم هست ولی GET لازم است برای UI
+                # same code lives in do_POST but the UI needs GET
                 from ai_api_manager import get_settings, masked_keys, has_any_external
                 from local_llm import get_config as llm_config
                 from auto_learning import stats as learn_stats
@@ -197,7 +197,9 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"ok": False, "message_fa": "خطای سرور: "+ str(e)[:120]}, 500)
 
     def _api_knowledge(self, path: str) -> bool:
-        """مسیرهای فقط-خواندنی مرور دانش (GET). اگر مسیر مطابقت نداشت False برمی‌گرداند."""
+        """
+        Read-only knowledge routes (GET). Returns False when the path doesn't match.
+        """
         from urllib.parse import parse_qs
         qs = parse_qs(urlparse(self.path).query)
         q = (qs.get("q", [""])[0] or "").strip()
@@ -234,7 +236,7 @@ class Handler(BaseHTTPRequestHandler):
             return True
         return False
 
-    # ------------------------------------------------------- اتصال‌های زنده
+    # ------------------------------------------------------- live connectors
     def _http_json(self, url: str, timeout: int = 15):
         import requests
         r = requests.get(url, timeout=timeout,
@@ -489,7 +491,7 @@ class Handler(BaseHTTPRequestHandler):
                     rag = [h.get("title") for h in search(text, k=3) if h.get("title")]
                 except Exception:
                     pass
-                # سطح تریاژ بر اساس فوریت برترین کاندیدها
+                # triage level from the urgency of the top candidates
                 urgencies = [c.get("urgency") for c in a["candidates"][:3]]
                 from i18n import is_fa
                 if "emergency" in urgencies:
@@ -511,7 +513,7 @@ class Handler(BaseHTTPRequestHandler):
                                    "candidates": a["candidates"], "ml": ml, "rag": rag,
                                    "triage": triage})
             if path == "/api/doctor_mode":
-                # حالت «بشین دکتر بشه»: پرامپت تخصصی + پاسخ AI خارجی یا مغز داخلی
+                # doctor mode: special prompt + external AI or the offline brain
                 text = str(data.get("text") or "").strip()
                 if not text:
                     from i18n import tt
@@ -520,7 +522,7 @@ class Handler(BaseHTTPRequestHandler):
                 from common_2077 import now_iso
                 from patient_profile import load_profile
                 s = get_settings()
-                # ساخت پرامپت تخصصی «پزشک جواب می‌دهد»
+                # build the 'a doctor answers' prompt «
                 dlg = get_engine().dialogue.summary()
                 prof = load_profile()
                 scenario_prompt = f"""You are now in DOCTOR MODE. The user describes a patient scenario and you respond as an experienced physician explaining the differential diagnosis to a colleague. Be clinical, structured and specific. Use medical terminology but explain each term briefly in Farsi.
@@ -539,7 +541,7 @@ Structure your answer as:
 6. Red flags to watch for (علائم خطر)
 
 Answer in Farsi. Be specific about medications (name them) but always note prescription requirement."""
-                # تلاش برای AI خارجی
+                # try the external AI
                 ext_res = None
                 for p in [x for x in s["provider_order"] if x != "local" and get_api_key(x)]:
                     from ai_client import chat as ext_chat
@@ -551,7 +553,7 @@ Answer in Farsi. Be specific about medications (name them) but always note presc
                         ext_res = r
                         break
                 if ext_res:
-                    # یادگیری خودکار
+                    # auto-learning
                     try:
                         from auto_learning import learn_from_exchange
                         learn_from_exchange(f"[doctor-mode] {text[:200]}", ext_res["text"],
@@ -560,7 +562,7 @@ Answer in Farsi. Be specific about medications (name them) but always note presc
                     except Exception:
                         pass
                     return self._json({"ok": True, "text": ext_res["text"], "source": f"doctor:{ext_res.get('provider','?')}", "learned": True})
-                # fallback: مغز داخلی
+                # fallback: offline brain
                 from medical_engine import analyze
                 a = analyze(text, load_profile())
                 if a["red_flag"]:
@@ -669,7 +671,7 @@ Answer in Farsi. Be specific about medications (name them) but always note presc
                     if v and str(v).strip() and len(str(v).strip()) >= 10:
                         set_api_key(provider, str(v).strip())
                         changed.append(provider)
-                # تنظیمات عمومی
+                # general settings
                 updates = {}
                 for key in ("language","brain_enabled","openrouter_model","reasoning_enabled"):
                     if key in data:
@@ -764,7 +766,7 @@ Answer in Farsi. Be specific about medications (name them) but always note presc
                     "brain_on": st.get("settings", {}).get("brain_enabled", True),
                     "learning_active": True})
             if path == "/api/settings/full":
-                # همین کد در do_POST هم هست ولی GET لازم است برای UI
+# same code lives in do_POST but the UI needs GET
                 from ai_api_manager import get_settings, masked_keys, has_any_external
                 from local_llm import get_config as llm_config
                 from auto_learning import stats as learn_stats
@@ -802,7 +804,7 @@ Answer in Farsi. Be specific about medications (name them) but always note presc
                 hist_path = _os.path.join(DATA_DIR, "conversation_history.json")
                 hist = read_json(hist_path, default=[]) or []
                 if self.command == "POST":
-                    # ذخیره‌ی گفتگوی فعلی هنگام شروع گفتگوی جدید
+                    # save the current conversation before starting a new one
                     eng = get_engine()
                     dlg = eng.dialogue.summary()
                     if dlg.get("turns", 0) > 0 and (eng.memory or []):
@@ -813,9 +815,9 @@ Answer in Farsi. Be specific about medications (name them) but always note presc
                             "messages": [{"role": m["role"], "content": m["content"][:500]} for m in eng.memory[-20:]],
                         }
                         hist.insert(0, conv)
-                        hist = hist[:50]  # آخرین ۵۰ گفتگو
+                        hist = hist[:50]  # last 50 conversations
                         write_json(hist_path, hist)
-                    # ریست گفتگو
+                    # conversation reset
                     eng.dialogue.reset()
                     eng.memory = []
                     from auto_learning import stats as learn_stats
@@ -842,7 +844,7 @@ def main() -> int:
     httpd = ThreadingHTTPServer((args.host, port), Handler)
 
     def _warmup():
-        # پیش‌بارگیری مدل ML و ایندکس RAG تا اولین چت کاربر سریع باشد
+        # warm up the ML model and RAG index so the first chat feels fast
         try:
             from ml_classifier import is_ready
             is_ready()

@@ -103,7 +103,9 @@ Raise possibilities cautiously and point to the right care path.""",
 
 
 def lesion_summary_for_ai(image_bytes: bytes | None, tkey: str) -> str:
-    """اندازه‌گیری‌های عینی برای مدل تصویری — تحلیل خود عکس، نه فقط نوع آن."""
+    """
+    Objective measurements for the vision model - about the photo itself, not just its type.
+    """
     if not image_bytes or tkey not in ("skin_photo", "wound_photo", "eye_photo"):
         return ""
     try:
@@ -364,7 +366,7 @@ def offline_analysis(type_info: dict, note: str, image_bytes: bytes | None = Non
     q = [head + _type_header(type_info, fa)]
     if type_info.get("quality"):
         q.append(("کیفیت عکس: " if fa else "Photo quality: ") + ("، ".join(type_info["quality"]) if fa else ", ".join(type_info["quality"])))
-    # تحلیل آفلاین موج نوار قلب: شمارش ضربان‌ها و نظم — بدون تفسیر بالینی
+# offline ECG trace analysis: rate + rhythm counting, no clinical interpretation
     if tkey == "ecg_strip" and image_bytes:
         try:
             from ecg_analyzer import analyze_ecg
@@ -374,7 +376,7 @@ def offline_analysis(type_info: dict, note: str, image_bytes: bytes | None = Non
                 q.append(("بررسی آفلاین ریتم: " if fa else "Offline trace check: ") + note_txt)
         except Exception:
             pass
-    # تحلیل عینیِ محتوای عکس (اندازه‌گیری؛ نه تشخیص)
+    # objective photo measurements, not diagnosis
     if image_bytes and tkey in ("skin_photo", "wound_photo", "eye_photo"):
         try:
             from lesion_analyzer import analyze_lesion
@@ -398,7 +400,7 @@ def offline_analysis(type_info: dict, note: str, image_bytes: bytes | None = Non
         if red is not None:
             q.append(("شاخص قرمزی تصویر: " if fa else "Image redness index: ") + f"{red:.2f}")
     q.append(body)
-    # ارزیابی احتمالاتی از متنِ یادداشت (نه از خود تصویر — از عکس حدس بالینی نمی‌زنیم)
+    # likelihood read from the note text only, never guessed from the image itself
     if tkey in ("skin_photo", "wound_photo", "eye_photo", "other_photo") and note:
         try:
             from bayesian_engine import rank_diseases

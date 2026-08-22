@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-ui_2077.py — رابط دسکتاپ NexusMed 2077 (Tkinter) با تم سایبرپانک ۲۰۷۷.
-کاملاً فارسی، ساده برای کاربر غیر برنامه‌نویس؛ تنظیمات API از داخل خود برنامه.
+Desktop UI for NexusMed 2077 (tkinter), cyberpunk 2077 theme.
+Persian-first and friendly for non-programmers; API settings live inside the app.
 """
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from tkinter import filedialog, messagebox, scrolledtext, ttk
 
 from common_2077 import APP_NAME, APP_VERSION, DATA_DIR, MEDICAL_DISCLAIMER
 
-# ---------------------------------------------------------------- تم
+# ---------------------------------------------------------------- theme
 C = {
     "bg": "#04060c", "panel": "#0b1220", "panel2": "#0e1730", "bd": "#16213e",
     "cy": "#00f0ff", "mg": "#ff2a6d", "yl": "#ffd60a", "gr": "#3bff9e",
@@ -71,7 +71,7 @@ class App:
         self._refresh_status()
         self._hello()
 
-    # --------------------------------------------------------------- ساخت
+    # --------------------------------------------------------------- build
     def _build(self):
         F, FB = pick_font(11), pick_font(11, True)
         F_SMALL, F_TITLE = pick_font(9), pick_font(15, True)
@@ -100,8 +100,8 @@ class App:
         nav = tk.Frame(body, bg=C["panel"], width=230)
         nav.pack(side="right", fill="y")
         nav.pack_propagate(False)
-        # ستون ماژول‌ها قابل‌اسکرول است (مثل overflow-y:auto در نسخه‌ی وب)
-        # تا در پنجره‌های کوتاه همه‌ی ماژول‌ها در دسترس بمانند
+        # the sidebar scrolls (like overflow-y:auto in the web version)
+        # so every module stays reachable on short windows
         from tkinter import ttk as _ttk
         nav_canvas = tk.Canvas(nav, bg=C["panel"], highlightthickness=0)
         nav_vsb = _ttk.Scrollbar(nav, orient="vertical", command=nav_canvas.yview)
@@ -128,7 +128,7 @@ class App:
             return False
         def _nav_wheel(event):
             if not _nav_in_nav():
-                return  # ماوس روی ستون نیست؛ ویجت دیگری (چت) خودش هندل کند
+                return  # pointer not on the sidebar; let another widget (the chat) handle it
             nav_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
             return "break"
         def _nav_wheel_linux(event, direction):
@@ -216,7 +216,9 @@ class App:
                  font=pick_font(8), pady=4).pack(fill="x", side="bottom")
 
     def _ui(self, fn):
-        """اجرای ایمن یک تابع در ترد اصلی — از هر تردی قابل فراخوانی است."""
+        """
+        Run a function on the main thread. Safe to call from any thread.
+        """
         self._uiq.put(fn)
 
     def _poll_uiq(self):
@@ -234,7 +236,7 @@ class App:
         except tk.TclError:
             pass
 
-    # -------------------------------------------------------------- موتور
+    # -------------------------------------------------------------- engine
     def _engine(self):
         if self.engine is None:
             from hybrid_engine import HybridEngine
@@ -277,7 +279,9 @@ class App:
             self.attach_lbl.config(text=""+ os.path.basename(p))
 
     def _new_conversation(self):
-        """گفتگوی جدید: قبلی را در تاریخچه ذخیره می‌کند."""
+        """
+        New conversation: archives the previous one into history.
+        """
         eng = self._engine()
         dlg = eng.dialogue.summary()
         if dlg.get("turns", 0) > 0 and (eng.memory or []):
@@ -322,7 +326,9 @@ class App:
                      font=pick_font(11), anchor="e").pack(fill="x", padx=16, pady=3)
 
     def _panel_doctor(self):
-        """حالت دکتر: سناریوی بیمار → تشخیص افتراقی"""
+        """
+        Doctor mode: patient scenario -> differential diagnosis
+        """
         from i18n import is_fa
         w = self._win(self.L("Doctor Mode — Clinical Analysis", "حالت دکتر — تحلیل بالینی"))
         tk.Label(w, text=("Describe a patient scenario and get a clinical differential diagnosis." if not is_fa()
@@ -340,7 +346,7 @@ class App:
                              json={"text": txt.get("1.0", "end").strip()}, timeout=120)
                 d = r.json()
             except Exception:
-                # fallback: مغز داخلی مستقیم
+                # fallback: straight to the offline brain
                 from medical_engine import analyze
                 a = analyze(txt.get("1.0", "end").strip())
                 lines = ["[offline] تشخیص افتراقی مغز داخلی:"]
@@ -387,7 +393,7 @@ class App:
                 payload = ("خطا: "+ str(e)[:200], "emg", "")
 
             def apply():
-                # آپدیت UI فقط در ترد اصلی (Tkinter thread-safe نیست)
+                # UI updates on the main thread only (tkinter isn't thread-safe) (Tkinter thread-safe
                 self._bot(*payload)
                 self.send_btn.config(state="normal", text=self.L("Send", "ارسال"))
                 self._refresh_status()
@@ -395,7 +401,7 @@ class App:
 
         threading.Thread(target=work, daemon=True).start()
 
-    # ------------------------------------------------------------- وضعیت
+    # ------------------------------------------------------------- status
     def _refresh_status(self):
         def work():
             try:
@@ -416,12 +422,12 @@ class App:
         threading.Thread(target=work, daemon=True).start()
 
 
-    # ============================================================= پنل‌ها
+    # ============================================================= panels
     def _win(self, title: str):
         w = tk.Toplevel(self.root)
         w.title(title)
         w.configure(bg=C["panel2"])
-        # ارتفاع پنجره هرگز از صفحه بزرگ‌تر نشود (لپ‌تاپ‌های کوچک)
+        # window height never exceeds the screen (small laptops)
         try:
             scr_h = w.winfo_screenheight()
         except Exception:
@@ -431,7 +437,7 @@ class App:
         w.minsize(500, min(400, win_h))
         w.transient(self.root)
         w.protocol("WM_DELETE_WINDOW", w.destroy)
-        # اسکرول‌بار برای محتوا
+        # scrollbar for the content
         canvas = tk.Canvas(w, bg=C["panel2"], highlightthickness=0)
         vsb = ttk.Scrollbar(w, orient="vertical", command=canvas.yview)
         canvas.configure(yscrollcommand=vsb.set)
@@ -443,18 +449,20 @@ class App:
             canvas.configure(scrollregion=canvas.bbox("all"))
             canvas.itemconfig(canvas_window, width=canvas.winfo_width())
         frame.bind("<Configure>", _configure)
-        # هنگام تغییر اندازه‌ی پنجره هم عرض فرم داخلی با کانواس همگام شود
+        # keep the inner frame width in sync on window resize
         def _canvas_resize(event):
             canvas.itemconfig(canvas_window, width=canvas.winfo_width())
         canvas.bind("<Configure>", _canvas_resize)
         self._wheel_bind(w, canvas)
         w._scroll_frame = frame
         w._canvas = canvas
-        # فریم قابل‌اسکرول را برمی‌گردانیم تا همه‌ی ویجت‌ها داخل آن قرار بگیرند
+        # hand back the scrollable frame so panels can fill it
         return frame
 
     def _wheel_bind(self, w, canvas):
-        """چرخ ماوس روی «همه‌ی» ویجت‌های پنجره‌ی w → اسکرول کانواس (با محافظ ماوس)."""
+        """
+        Mouse wheel over any widget of window w scrolls the canvas (pointer-guarded).
+        """
         def _in_this_window() -> bool:
             try:
                 wid = w.winfo_containing(w.winfo_pointerx(), w.winfo_pointery())
@@ -463,7 +471,7 @@ class App:
             return bool(wid) and (wid is w or bool(wid.winfo_toplevel() is w))
         def _on_mousewheel(event):
             if not _in_this_window():
-                return  # بگذار ویجت دیگری (مثل چت اصلی) خودش هندل کند
+                return  # let another widget (the main chat) handle the wheel
             canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
             return "break"
         def _on_scroll_linux(event, direction):
@@ -490,8 +498,10 @@ class App:
         w.bind("<Destroy>", _unbind_all)
 
     def _win_list(self, title: str):
-        """پنجره با نوار بالا ثابت + لیست قابل‌اسکرول + نوار پایین ثابت.
-        خروجی: (پنجره، فریم بالای ثابت، فریم داخلیِ لیست، فریم پایین ثابت)"""
+        """
+        Window with a fixed top bar + scrollable middle + fixed bottom bar.
+        Returns (window, top frame, inner list frame, bottom frame)
+        """
         w = tk.Toplevel(self.root)
         w.title(title)
         w.configure(bg=C["panel2"])
@@ -738,7 +748,7 @@ class App:
                         lines.append("   -> " + c["doctor_when"])
             else:
                 lines.append("اطلاعات کافی نیست." if fa_mode else "Not enough information yet.")
-            # پیشنهاد تریاژ
+            # triage suggestion
             if a["candidates"]:
                 urg = [c["urgency"] for c in a["candidates"][:3]]
                 level = "emergency" if "emergency" in urg else ("urgent" if "urgent" in urg else "routine")
@@ -895,12 +905,14 @@ class App:
             box.delete("1.0", "end")
             box.insert("1.0", "\n".join(lines))
         show("cpr")
-        win = w.winfo_toplevel()  # w فقط فریم داخلی است؛ پنجره‌ی واقعی را می‌گیریم
+        win = w.winfo_toplevel()  # w is only the inner frame; grab the real toplevel
         win.protocol("WM_DELETE_WINDOW", lambda: (toggle() if cpr["on"] else None, win.destroy()))
 
-    # ------------------------------------------------ بانک علائم/بیماری/دارو
+    # ------------------------------------------------ symptom/disease/drug browsers
     def _panel_symptoms(self):
-        """ماژول علائم: همه‌ی علائم با تیک + تحلیل احتمال بیماری‌ها."""
+        """
+        Symptoms module: tick symptoms, get a likelihood ranking.
+        """
         from knowledge_browser import get_all_symptoms
         syms = get_all_symptoms()
         w, top, inner, bottom = self._win_list(self.L("Symptoms — check & analyze", "علائم — تیک بزن و تحلیل بگیر"))
@@ -991,7 +1003,9 @@ class App:
         box.pack(fill="both", expand=True, padx=16, pady=(4, 8))
 
     def _panel_diseases(self):
-        """بانک بیماری‌ها: تعداد، علائم با احتمال، فوریت، توصیه."""
+        """
+        Disease database: counts, symptoms with probabilities, urgency, advice.
+        """
         from knowledge_browser import get_all_diseases
         dis = get_all_diseases()
         w, top, inner, bottom = self._win_list(self.L("Diseases database", "بانک بیماری‌ها"))
@@ -1053,7 +1067,7 @@ class App:
             for row, txt in rows:
                 row.pack() if q in txt else row.pack_forget()
             schedule_catalog()
-        # ----- جستجوی کاتالوگ کامل ICD-10 (با تاخیر ۳۰۰ms بعد از تایپ) -----
+        # ----- full ICD-10 catalog search (300ms after typing stops)
         cat_rows: list[tk.Widget] = []
         _deb = {"job": None}
         def show_catalog_detail(name, code, chapter, fa_n=""):
@@ -1091,7 +1105,7 @@ class App:
                 b.pack(side="right", fill="x", expand=True)
                 row.pack(fill="x", padx=10, pady=1)
                 cat_rows.append(row)
-            # زیر لیست اسکرول کن تا نتایج دیده شود
+            # scroll the list down so the results show up
             w._canvas.yview_moveto(1.0)
         def schedule_catalog(*_):
             if _deb["job"]:
@@ -1106,7 +1120,9 @@ class App:
             show_detail(dis[0])
 
     def _panel_drugs(self):
-        """بانک داروها: خاصیت، دسته، عوارض/تداخل‌ها، بارداری و..."""
+        """
+        Drug database: category, class, side effects/interactions, pregnancy and more.
+        """
         from knowledge_browser import get_all_drugs
         drugs = get_all_drugs()
         w, top, inner, bottom = self._win_list(self.L("Drugs database", "بانک داروها"))
@@ -1185,7 +1201,7 @@ class App:
             for row, txt in rows:
                 row.pack() if q in txt else row.pack_forget()
             schedule_fda()
-        # ----- جستجوی بانک کامل FDA (با تاخیر ۳۰۰ms بعد از تایپ) -----
+        # ----- full FDA bank search (300ms after typing stops)
         fda_rows: list[tk.Widget] = []
         _deb = {"job": None}
         def show_fda_detail(d):
@@ -1264,7 +1280,9 @@ class App:
             show_detail(drugs[0])
 
     def _panel_research(self):
-        """پژوهش و مقالات: جستجوی زنده در PubMed، کارآزمایی‌ها و عوارض FAERS."""
+        """
+        Research: live PubMed, clinical trials and FAERS side-effect search.
+        """
         w, top, inner, bottom = self._win_list(self.L("Research & articles (live)", "پژوهش و مقالات (آنلاین)"))
         import requests as _rq
         UA = {"User-Agent": "NexusMed2077/2.0 (github.com/capZX545)"}
@@ -1301,7 +1319,7 @@ class App:
             threading.Thread(target=job, daemon=True).start()
 
         def do_pubmed(_e=None):
-            q = e1.get().strip()   # خواندن ویجت فقط در ترد اصلی
+            q = e1.get().strip()   # read widgets on the main thread only
             self._ui(lambda: l1.config(text="در حال جستجو…", fg=C["yl"]))
             def work():
                 import urllib.parse as up
@@ -1475,7 +1493,7 @@ class App:
         tk.Button(bar, text="بررسی و تست", command=test, bg="#0d1930", fg=C["tx"],
                   relief="flat", font=pick_font(11)).pack(side="right", padx=8)
 
-    # ------------------------------------------------------ تنظیمات API
+    # ------------------------------------------------------ API settings
     def _panel_settings(self):
         from ai_api_manager import get_settings, set_api_key, test_connection
         from free_ai import OPENROUTER_FREE_MODELS

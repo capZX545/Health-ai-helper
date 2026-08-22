@@ -57,7 +57,7 @@ def analyze_lesion(image_bytes: bytes) -> dict[str, Any]:
         arr = _load(image_bytes)
         h, w, _ = arr.shape
         r, g, b = arr[..., 0], arr[..., 1], arr[..., 2]
-        # رنگ پایه‌ی پوست: حاشیه‌ی دور تصویر (اگر معتبر باشد)
+        # base skin tone: image border (when valid)
         ring = np.concatenate([r[:max(2, h // 10), :].ravel(), r[-max(2, h // 10):, :].ravel()])
         ring_g = np.concatenate([g[:max(2, h // 10), :].ravel(), g[-max(2, h // 10):, :].ravel()])
         ring_b = np.concatenate([b[:max(2, h // 10), :].ravel(), b[-max(2, h // 10):, :].ravel()])
@@ -81,7 +81,7 @@ def analyze_lesion(image_bytes: bytes) -> dict[str, Any]:
         yellow = float(((lr > 150) & (lg > 120) & (lb < 120) & (lr - lb > 40)).mean())
         _lum = lesion.mean(axis=1)
         color_var = float((np.percentile(_lum, 98) - np.percentile(_lum, 2)) / 255.0)
-        # تقارن: مقایسه‌ی دو نیمِ بزرگ‌ترین مؤلفه
+        # symmetry: compare the two halves of the largest blob
         small = mask[::2, ::2]
         comps = _components(small)
         asym = 0.0
@@ -111,7 +111,7 @@ def analyze_lesion(image_bytes: bytes) -> dict[str, Any]:
             "border_irregularity": round(border_irr, 2),
             "lesion_patches": n_comp,
         })
-        # ---------- ترجمه‌ی محتاطانه‌ی اندازه‌ها به یافته ----------
+        # ---------- careful translation of measurements into findings ----------
         F = out["findings"]
         if redness > 0.15 and area_pct >= 2:
             F.append({

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-build_exe.py — ساخت فایل اجرایی ویندوز با PyInstaller (روی ویندوز اجرا شود).
-خروجی: dist/NexusMed2077/NexusMed2077.exe  (+ پوشه‌ی داده‌ها)
-سپس Create_Setup_Installer.bat با Inno Setup فایل Setup می‌سازد.
+Builds the Windows executable with PyInstaller (run this on Windows).
+Output: dist/NexusMed2077/NexusMed2077.exe (+ the data folder)
+Afterwards Create_Setup_Installer.bat makes the setup with Inno Setup.
 """
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ import sys
 BASE = os.path.dirname(os.path.abspath(__file__))
 APP_NAME = "NexusMed2077"
 
-# فایل‌های داده‌ای که باید کنار EXE کپی شوند
+# data files that must sit next to the EXE
 DATA_FILES = [
     "clinic_2077.html",
     "diseases_extra.json",
@@ -52,7 +52,7 @@ def main() -> int:
         print("ساخت EXE ناموفق بود.")
         return code
 
-    # کپی داده‌ها کنار EXE
+    # copy the data next to the EXE
     import shutil
     dest = os.path.join(BASE, "dist", APP_NAME)
     for f in DATA_FILES:

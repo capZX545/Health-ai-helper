@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-ai_api_manager.py — مدیریت کلیدها و تنظیمات API. کلیدها فقط از .env یا متغیر محیطی
-خوانده می‌شوند و هرگز داخل کد یا ZIP قرار نمی‌گیرند. بعد از ذخیره، بدون ری‌استارت اعمال می‌شوند.
+Key and settings handling for the AI providers.
+Keys are only read from .env or the environment, never stored in code or the ZIP.
+Saved settings apply without a restart.
 """
 from __future__ import annotations
 
@@ -49,11 +50,11 @@ def get_settings() -> dict[str, Any]:
     if isinstance(stored, dict):
         s.update({k: v for k, v in stored.items() if k in DEFAULT_SETTINGS})
     else:
-        # اگر تنظیماتی ذخیره نشده، مدلِ فایل .env معتبر است
+        # no saved settings yet -> fall back to the model from .env
         env_model = env_get("OPENROUTER_MODEL", "")
         if env_model:
             s["openrouter_model"] = env_model
-    # reasoning از .env هم خوانده می‌شود (پیش‌فرض خاموش)
+    # reasoning flag can also come from .env (off by default)
     if env_get("OPENROUTER_REASONING_ENABLED", "0") in ("1", "true", "True"):
         s["reasoning_enabled"] = True
     _settings_cache = {"mtime": mt, "gen": _SETTINGS_GEN, "data": s}
@@ -78,7 +79,9 @@ def get_api_key(provider: str) -> str:
 
 
 def set_api_key(provider: str, key: str) -> bool:
-    """ذخیره‌ی کلید در .env (نه در کد، نه در تنظیمات JSON)."""
+    """
+    Write a key into .env (not into code, not into the JSON settings).
+    """
     field = KEY_FIELDS.get(provider)
     if not field:
         return False
@@ -94,7 +97,9 @@ def has_any_external() -> bool:
 
 
 def test_connection(provider: str) -> dict[str, Any]:
-    """تست اتصال با پیام فارسی واضح؛ بدون نیاز به ری‌استارت."""
+    """
+    Connection test with a clear Persian message; no restart needed afterwards.
+    """
     from i18n import tt
     key = get_api_key(provider)
     if not key:

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-common_2077.py — ابزارهای مشترک پروژه NexusMed 2077
-وابستگی صفر به کتابخانه خارجی دارد (فقط stdlib).
+Shared helpers for NexusMed 2077.
+Zero external dependencies, stdlib only.
 """
 from __future__ import annotations
 
@@ -39,23 +39,27 @@ EMERGENCY_NUMBERS = {
 
 _ENGINES_LOCK = threading.RLock()
 
-# ---------------------------------------------------------------- تاریخ/زمان
+# ---------------------------------------------------------------- date/time
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
 
 def fa_digits(text) -> str:
-    """تبدیل ارقام لاتین به فارسی برای نمایش."""
+    """
+    Latin digits to Persian digits for display.
+    """
     s = str(text)
     return s.translate(str.maketrans("0123456789.", "۰۱۲۳۴۵۶۷۸۹٫"))
 
-# ---------------------------------------------------------- نرمال‌سازی فارسی
+# ---------------------------------------------------------- farsi normalization
 
 _AR_TO_FA = str.maketrans({"ي": "ی", "ك": "ک", "ۀ": "ه", "ة": "ه", "أ": "ا", "إ": "ا", "آ": "ا", "\u200c": ""})
 _FA_DIGIT_TO_EN = str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789")
 
 def normalize(text: str) -> str:
-    """نرمال‌سازی متن فارسی برای مقایسه و جست‌وجو."""
+    """
+    Normalize Persian text so compare/search works.
+    """
     if not text:
         return ""
     t = str(text).translate(_AR_TO_FA)
@@ -93,8 +97,10 @@ def write_json(path: str, data) -> bool:
 # -------------------------------------------------------------------- .env
 
 def load_env(path: str | None = None) -> dict:
-    """بارگذاری ساده‌ی فایل .env بدون وابستگی خارجی.
-    اگر .env نباشد ولی .env.example باشد، خودکار کپی می‌شود."""
+    """
+    Tiny .env loader without external deps.
+    If .env is missing but .env.example exists, it copies it automatically.
+    """
     path = path or os.path.join(_BASE, ".env")
     if not os.path.exists(path):
         example = os.path.join(_BASE, ".env.example")
@@ -127,7 +133,9 @@ def env_get(key: str, default: str = "") -> str:
     return load_env().get(key, default)
 
 def env_set(key: str, value: str, path: str | None = None) -> bool:
-    """نوشتن/به‌روزرسانی یک کلید در .env (بدون لو دادن بقیه‌ی کلیدها)."""
+    """
+    Write/update one key in .env without touching the other secrets.
+    """
     path = path or os.path.join(_BASE, ".env")
     lines = []
     if os.path.exists(path):
@@ -160,7 +168,7 @@ def mask_secret(key: str) -> str:
         return key[:3] + "••••"
     return key[:6] + "••••••••"+ key[-4:]
 
-# ----------------------------------------------------------------- متن‌ها
+# ----------------------------------------------------------------- text
 
 def first_sentences(text: str, n: int = 2, max_chars: int = 320) -> str:
     parts = re.split(r"(?<=[.!؟?])\s+", (text or "").strip())

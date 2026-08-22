@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-openfda_connector.py — اتصال به OpenFDA (رایگان، بدون کلید) برای:
-- عوارض جانبی داروها (adverse events)
-- برچسب رسمی داروها (drug labels)
-- یادگیری خودکار از داده‌های واقعی
+Talks to openFDA (free, no key) for:
+- reported adverse drug events
+- official drug labels
+- auto-learning from real-world data
 
 API: https://api.fda.gov/drug/
-محدودیت: 240 درخواست در دقیقه (بدون کلید)
+Limit: 240 requests/min without a key
 """
 from __future__ import annotations
 
@@ -24,7 +24,9 @@ except ImportError:
 
 
 def _get(path: str, params: dict | None = None, timeout: int = 15) -> dict[str, Any] | None:
-    """درخواست GET به OpenFDA."""
+    """
+    GET request to openFDA.
+    """
     if requests is None:
         return None
     try:
@@ -37,7 +39,9 @@ def _get(path: str, params: dict | None = None, timeout: int = 15) -> dict[str, 
 
 
 def search_adverse_events(drug_name: str, limit: int = 10) -> dict[str, Any]:
-    """جست‌وجوی عوارض جانبی گزارش‌شده برای یک دارو (از FAERS)."""
+    """
+    Reported adverse events for one drug (FAERS).
+    """
     if not drug_name:
         return {"ok": False, "message_fa": tt("Enter a drug name.", "نام دارو را وارد کنید.")}
     q = f'patient.drug.medicinalproduct:"{drug_name}"'
@@ -65,7 +69,9 @@ def search_adverse_events(drug_name: str, limit: int = 10) -> dict[str, Any]:
 
 
 def search_drug_label(drug_name: str, limit: int = 3) -> dict[str, Any]:
-    """جست‌وجوی برچسب رسمی دارو (نحوه‌ی مصرف، هشدارها، عوارض)."""
+    """
+    Official label lookup (usage, warnings, side effects).
+    """
     if not drug_name:
         return {"ok": False, "message_fa": tt("Enter a drug name.", "نام دارو را وارد کنید.")}
     q = f'openfda.brand_name:"{drug_name}" OR openfda.generic_name:"{drug_name}"'
@@ -85,7 +91,9 @@ def search_drug_label(drug_name: str, limit: int = 3) -> dict[str, Any]:
 
 
 def learn_from_fda(drug_name: str) -> dict[str, Any]:
-    """یادگیری خودکار از داده‌های OpenFDA و ثبت در مغز داخلی."""
+    """
+    Learn from openFDA data into the offline brain.
+    """
     ae = search_adverse_events(drug_name, 5)
     if ae.get("ok") and ae.get("top_reactions"):
         summary = f"OpenFDA adverse events for {drug_name} ({ae['total_reports']} reports): " + \
@@ -102,5 +110,7 @@ def learn_from_fda(drug_name: str) -> dict[str, Any]:
 
 
 def is_available() -> bool:
-    """بررسی دسترسی به سرویس OpenFDA."""
+    """
+    Check whether openFDA is reachable.
+    """
     return _get("event.json", {"limit": 1}) is not None

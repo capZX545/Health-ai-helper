@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-clinical_trials_connector.py — جست‌وجوی کارآزمایی‌های بالینی از ClinicalTrials.gov.
+Clinical trial search against ClinicalTrials.gov.
 API: https://clinicaltrials.gov/api/v2/studies
-رایگان و بدون کلید.
+Free, no key needed.
 """
 from __future__ import annotations
 
@@ -20,7 +20,9 @@ except ImportError:
 
 def search_trials(condition: str = "", intervention: str = "", status: str = "RECRUITING",
                   limit: int = 5) -> dict[str, Any]:
-    """جست‌وجوی کارآزمایی‌های بالینی بر اساس بیماری یا دارو."""
+    """
+    Search clinical trials by disease or drug.
+    """
     if requests is None:
         return {"ok": False, "message_fa": tt("The requests library is not installed.", "کتابخانه‌ی requests نصب نیست.")}
     params: dict[str, Any] = {"pageSize": limit, "format": "json"}

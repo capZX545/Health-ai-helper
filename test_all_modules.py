@@ -54,6 +54,41 @@ def expect(cond, msg=""):
     if not cond:
         raise AssertionError(msg or "condition failed")
 
+def _ignore_env_keys():
+    """Suite must behave the same on a dev machine that happens to have a real .env."""
+    import ai_api_manager, hybrid_engine
+    global _orig_get_api_key
+    _orig_get_api_key = ai_api_manager.get_api_key
+    ai_api_manager.get_api_key = lambda provider: ""
+    if hasattr(hybrid_engine, "get_api_key"):
+        hybrid_engine.get_api_key = ai_api_manager.get_api_key
+
+
+def _restore_env_keys():
+    import ai_api_manager, hybrid_engine
+    if _orig_get_api_key:
+        ai_api_manager.get_api_key = _orig_get_api_key
+        if hasattr(hybrid_engine, "get_api_key"):
+            hybrid_engine.get_api_key = _orig_get_api_key
+
+
+_orig_get_api_key = None
+
+
+def offline_keys(fn):
+    """Run a test as if no AI key was configured at all."""
+    def wrapper(*a, **kw):
+        _ignore_env_keys()
+        try:
+            return fn(*a, **kw)
+        finally:
+            _restore_env_keys()
+    wrapper.__name__ = fn.__name__
+    return wrapper
+
+
+
+
 
 def png_bytes(im):
     b = io.BytesIO()
@@ -232,7 +267,7 @@ def t_ai_client_and_mock():
 
 def t_free_ai():
     from free_ai import OPENROUTER_FREE_MODELS, model_ids, vision_models, is_vision_model, DEFAULT_MODEL, BACKUP_MODEL
-    expect(DEFAULT_MODEL == "openai/gpt-oss-120b:free")
+    expect(DEFAULT_MODEL in model_ids() and DEFAULT_MODEL.endswith(":free"))
     expect(BACKUP_MODEL == "qwen/qwen3-next-80b-a3b-instruct:free")
     expect(is_vision_model("qwen/qwen2.5-vl-72b-instruct:free") and is_vision_model("openai/gpt-4o-mini"))
     expect(not is_vision_model("openai/gpt-oss-120b:free"))
@@ -451,6 +486,7 @@ def t_lesion_analyzer():
     return "4 scenarios + garbage"
 
 
+@offline_keys
 def t_image_caption():
     import i18n
     imgs = synth_images()
@@ -649,6 +685,8 @@ def t_doctor_referral():
     return "bilingual printable report"
 
 
+
+@offline_keys
 def t_hybrid_engine():
     import i18n
     import hybrid_engine

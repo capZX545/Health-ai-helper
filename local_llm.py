@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-local_llm.py — اتصال به Ollama (هوش مصنوعی محلی/GPU).
-پیش‌فرض: http://localhost:11434 و مدل qwen2.5:7b-instruct
-تنظیمات در local_llm_config.json ذخیره می‌شود.
+Ollama connector (local AI on your own GPU/CPU).
+Defaults: http://localhost:11434 with qwen2.5:7b-instruct
+Settings live in local_llm_config.json.
 """
 from __future__ import annotations
 
@@ -68,7 +68,9 @@ def list_models(base_url: str | None = None) -> list[str]:
 
 
 def chat(messages: list[dict], model: str | None = None, **kw) -> dict[str, Any]:
-    """گفتگو با مدل محلی. خروجی هم‌شکل ai_client.chat"""
+    """
+    Chat with the local model. Same output shape as ai_client.chat
+    """
     cfg = get_config()
     if requests is None:
         from i18n import tt
@@ -94,7 +96,9 @@ def chat(messages: list[dict], model: str | None = None, **kw) -> dict[str, Any]
 
 
 def test_setup() -> dict[str, Any]:
-    """بررسی کامل: روشن بودن، وجود مدل، تست پاسخ."""
+    """
+    Full check: is it up, does the model exist, does it answer.
+    """
     cfg = get_config()
     up = is_up(cfg["base_url"])
     out: dict[str, Any] = {"up": up, "base_url": cfg["base_url"], "model": cfg["model"], "models": [], "test_ok": False}

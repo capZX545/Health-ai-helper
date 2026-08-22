@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-lab_visualizer.py — نمایش تصویری نتایج آزمایش: نمودار میله‌ای HTML (فارسی/RTL)
-و خروجی متنی — بدون وابستگی خارجی.
+Visual lab results: an RTL-friendly HTML bar chart plus text output,
+no external dependencies.
 """
 from __future__ import annotations
 

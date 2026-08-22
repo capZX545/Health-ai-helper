@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-diagnose.py — عیب‌یابی کامل برنامه NexusMed 2077
-اجرا: python diagnose.py
+Full troubleshooting pass for NexusMed 2077.
+Run: python diagnose.py
 """
 import sys
 import os
@@ -13,7 +13,7 @@ print("  NexusMed 2077 - DIAGNOSTIC")
 print("=" * 60)
 print()
 
-# ۱) نسخه پایتون
+# 1) python version
 py_ver = sys.version_info
 print(f"1) Python: {py_ver.major}.{py_ver.minor}.{py_ver.micro}")
 if py_ver < (3, 10):
@@ -23,7 +23,7 @@ elif py_ver >= (3, 14):
 else:
     print("   OK")
 
-# ۲) کتابخانه‌ها
+# 2) libraries
 print(f"\n2) Libraries:")
 missing = []
 for lib_name, import_name in [
@@ -44,7 +44,7 @@ if missing:
 else:
     print("   All OK (but program works without them too)")
 
-# ۳) فایل‌های ضروری
+# 3) required files
 print(f"\n3) Files:")
 for f in ("run_web.py", "run_2077.py", "clinic_2077.html", "medical_engine.py", "common_2077.py"):
     if os.path.exists(f):
@@ -52,7 +52,7 @@ for f in ("run_web.py", "run_2077.py", "clinic_2077.html", "medical_engine.py", 
     else:
         print(f"   {f}: MISSING!")
 
-# ۴) تست سرور وب
+# 4) web server check
 print(f"\n4) Web Server Test:")
 try:
     from run_web import find_free_port
@@ -64,7 +64,7 @@ try:
 except Exception as e:
     print(f"   ERROR: {e}")
 
-# ۵) تست موتور تشخیص
+# 5) engine check
 print(f"\n5) Brain Test:")
 try:
     from medical_engine import analyze
@@ -77,7 +77,7 @@ try:
 except Exception as e:
     print(f"   ERROR: {e}")
 
-# ۶) تست چت کامل
+# 6) full chat check
 print(f"\n6) Full Chat Test:")
 try:
     from hybrid_engine import HybridEngine
@@ -92,7 +92,7 @@ try:
 except Exception as e:
     print(f"   ERROR: {e}")
 
-# ۷) تست سرور HTTP
+# 7) http server check
 print(f"\n7) HTTP Server Test:")
 try:
     from http.server import ThreadingHTTPServer
@@ -115,7 +115,7 @@ try:
 except Exception as e:
     print(f"   ERROR: {e}")
 
-# ۸) Tkinter
+# 8) tkinter
 print(f"\n8) Desktop GUI (Tkinter):")
 try:
     import tkinter
