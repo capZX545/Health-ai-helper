@@ -97,6 +97,46 @@ class App:
         nav = tk.Frame(body, bg=C["panel"], width=230)
         nav.pack(side="right", fill="y")
         nav.pack_propagate(False)
+        # ستون ماژول‌ها قابل‌اسکرول است (مثل overflow-y:auto در نسخه‌ی وب)
+        # تا در پنجره‌های کوتاه همه‌ی ماژول‌ها در دسترس بمانند
+        from tkinter import ttk as _ttk
+        nav_canvas = tk.Canvas(nav, bg=C["panel"], highlightthickness=0)
+        nav_vsb = _ttk.Scrollbar(nav, orient="vertical", command=nav_canvas.yview)
+        nav_canvas.configure(yscrollcommand=nav_vsb.set)
+        nav_vsb.pack(side="left", fill="y")
+        nav_canvas.pack(side="right", fill="both", expand=True)
+        navf = tk.Frame(nav_canvas, bg=C["panel"])
+        nav_item = nav_canvas.create_window((0, 0), window=navf, anchor="nw")
+        def _nav_conf(_event):
+            nav_canvas.configure(scrollregion=nav_canvas.bbox("all"))
+            nav_canvas.itemconfig(nav_item, width=nav_canvas.winfo_width())
+        navf.bind("<Configure>", _nav_conf)
+        def _nav_in_nav() -> bool:
+            try:
+                wid = nav.winfo_containing(nav.winfo_pointerx(), nav.winfo_pointery())
+            except tk.TclError:
+                return False
+            return bool(wid) and (wid is nav or nav is wid.master or _inside(wid, nav))
+        def _inside(wid, ancestor):
+            while wid:
+                if wid is ancestor:
+                    return True
+                wid = wid.master
+            return False
+        def _nav_wheel(event):
+            if not _nav_in_nav():
+                return  # ماوس روی ستون نیست؛ ویجت دیگری (چت) خودش هندل کند
+            nav_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+            return "break"
+        def _nav_wheel_linux(event, direction):
+            if not _nav_in_nav():
+                return
+            nav_canvas.yview_scroll(direction, "units")
+            return "break"
+        nav.bind_all("<MouseWheel>", _nav_wheel, add="+")
+        nav.bind_all("<Button-4>", lambda e: _nav_wheel_linux(e, -1), add="+")
+        nav.bind_all("<Button-5>", lambda e: _nav_wheel_linux(e, 1), add="+")
+        self._nav_canvas = nav_canvas
         items = [
             (("Chat (return)", "گفتگو (بازگشت)"), lambda: None),
             (("Patient profile", "پروفایل بیمار"), self._panel_profile),
@@ -115,10 +155,10 @@ class App:
             (("Doctor Mode", "حالت دکتر"), self._panel_doctor),
             (("Local AI (GPU/Ollama)", "هوش محلی (GPU/Ollama)"), self._panel_gpu),
         ]
-        tk.Label(nav, text=self.L("- modules -", "ـ ماژول‌ها ـ"), bg=C["panel"], fg=C["dim"], font=F_SMALL).pack(pady=8)
+        tk.Label(navf, text=self.L("- modules -", "ـ ماژول‌ها ـ"), bg=C["panel"], fg=C["dim"], font=F_SMALL).pack(pady=8)
         for pair, cmd in items:
             txt = self.L(pair[0], pair[1])
-            b = tk.Button(nav, text=txt, anchor="e", bg=C["panel"], fg=C["tx"], relief="flat",
+            b = tk.Button(navf, text=txt, anchor="e", bg=C["panel"], fg=C["tx"], relief="flat",
                           font=F, activebackground="#101c36", activeforeground=C["cy"],
                           cursor="hand2", command=cmd)
             b.pack(fill="x", padx=8, pady=1)
@@ -316,12 +356,19 @@ class App:
                     meta += " | " + res["image_type"]["label"]
                 if res.get("learned"):
                     meta += "•  یادگیری ثبت شد"
-                self._bot(res.get("text", ""), tag, meta)
+                payload = (res.get("text", ""), tag, meta)
             except Exception as e:
-                self._bot("خطا: "+ str(e)[:200], "emg")
-            finally:
+                payload = ("خطا: "+ str(e)[:200], "emg", "")
+
+            def apply():
+                # آپدیت UI فقط در ترد اصلی (Tkinter thread-safe نیست)
+                self._bot(*payload)
                 self.send_btn.config(state="normal", text=self.L("Send", "ارسال"))
                 self._refresh_status()
+            try:
+                self.root.after(0, apply)
+            except tk.TclError:
+                pass
 
         threading.Thread(target=work, daemon=True).start()
 
@@ -336,7 +383,16 @@ class App:
                 msg = f"{ext} | {brain} |  حافظه: {learned} مورد"
             except Exception as e:
                 msg = "وضعیت: خطا — "+ str(e)[:80]
-            self.status_lbl.config(text=msg)
+
+            def apply():
+                try:
+                    self.status_lbl.config(text=msg)
+                except tk.TclError:
+                    pass
+            try:
+                self.root.after(0, apply)
+            except tk.TclError:
+                pass
         threading.Thread(target=work, daemon=True).start()
 
 
@@ -345,8 +401,14 @@ class App:
         w = tk.Toplevel(self.root)
         w.title(title)
         w.configure(bg=C["panel2"])
-        w.geometry("660x640")
-        w.minsize(500, 400)
+        # ارتفاع پنجره هرگز از صفحه بزرگ‌تر نشود (لپ‌تاپ‌های کوچک)
+        try:
+            scr_h = w.winfo_screenheight()
+        except Exception:
+            scr_h = 800
+        win_h = max(400, min(640, scr_h - 140))
+        w.geometry(f"660x{win_h}")
+        w.minsize(500, min(400, win_h))
         w.transient(self.root)
         w.protocol("WM_DELETE_WINDOW", w.destroy)
         # اسکرول‌بار برای محتوا
@@ -775,7 +837,8 @@ class App:
             box.delete("1.0", "end")
             box.insert("1.0", "\n".join(lines))
         show("cpr")
-        w.protocol("WM_DELETE_WINDOW", lambda: (toggle() if cpr["on"] else None, w.destroy()))
+        win = w.winfo_toplevel()  # w فقط فریم داخلی است؛ پنجره‌ی واقعی را می‌گیریم
+        win.protocol("WM_DELETE_WINDOW", lambda: (toggle() if cpr["on"] else None, win.destroy()))
 
     def _panel_referral(self):
         from doctor_referral import generate
@@ -843,8 +906,15 @@ class App:
             box.insert("1.0", "… در حال بررسی Ollama")
             def work():
                 r = test_setup()
-                box.delete("1.0", "end")
-                box.insert("1.0", r.get("message_fa", "") + "\nمدل‌ها: "+ ("، ".join(r.get("models", [])) or "—"))
+                out = r.get("message_fa", "") + "\nمدل‌ها: "+ ("، ".join(r.get("models", [])) or "—")
+                def apply():
+                    if box.winfo_exists():
+                        box.delete("1.0", "end")
+                        box.insert("1.0", out)
+                try:
+                    box.after(0, apply)
+                except tk.TclError:
+                    pass
             threading.Thread(target=work, daemon=True).start()
         bar = tk.Frame(w, bg=C["panel2"])
         bar.pack(pady=8)
@@ -905,8 +975,15 @@ class App:
 
             def work():
                 r = test_connection(provider)
-                box.delete("1.0", "end")
-                box.insert("1.0", r.get("message", ""))
+                out = r.get("message", "")
+                def apply():
+                    if box.winfo_exists():
+                        box.delete("1.0", "end")
+                        box.insert("1.0", out)
+                try:
+                    box.after(0, apply)
+                except tk.TclError:
+                    pass
             threading.Thread(target=work, daemon=True).start()
         bar = tk.Frame(w, bg=C["panel2"])
         bar.pack(pady=8)
