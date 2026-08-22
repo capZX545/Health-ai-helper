@@ -1,10 +1,20 @@
 # رازها و اطلاعات شخصی — هرگز کامیت نشوند
 .env
 .env.*
+*.env
+.env.local
+.env.*.local
 !.env.example
 .reasoning_state.json
 *.pem
 *.key
+*.secret
+secrets*.json
+*_api_key*.txt
+openrouter.key
+*.token
+.credentials*
+
 
 # داده‌های شخصی کاربر (خروجی خود برنامه)
 patient_profile.json
