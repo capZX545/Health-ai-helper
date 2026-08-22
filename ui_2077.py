@@ -361,12 +361,45 @@ class App:
             canvas.configure(scrollregion=canvas.bbox("all"))
             canvas.itemconfig(canvas_window, width=canvas.winfo_width())
         frame.bind("<Configure>", _configure)
-        # ماوس-اسکرول
-        def _mouse_scroll(event):
+        # هنگام تغییر اندازه‌ی پنجره هم عرض فرم داخلی با کانواس همگام شود
+        def _canvas_resize(event):
+            canvas.itemconfig(canvas_window, width=canvas.winfo_width())
+        canvas.bind("<Configure>", _canvas_resize)
+        # ماوس-اسکرول روی «همه‌ی» ویجت‌ها (نه فقط کانواس خالی)
+        # ترفند bind_all + محافظ: فقط وقتی ماوس داخل همین پنجره است اسکرول شود
+        def _in_this_window() -> bool:
+            try:
+                wid = w.winfo_containing(w.winfo_pointerx(), w.winfo_pointery())
+            except tk.TclError:
+                return False
+            return bool(wid) and (wid is w or bool(wid.winfo_toplevel() is w))
+        def _on_mousewheel(event):
+            if not _in_this_window():
+                return  # بگذار ویجت دیگری (مثل چت اصلی) خودش هندل کند
             canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
-        canvas.bind("<MouseWheel>", _mouse_scroll)
-        canvas.bind("<Button-4>", lambda e: canvas.yview_scroll(-1, "units"))
-        canvas.bind("<Button-5>", lambda e: canvas.yview_scroll(1, "units"))
+            return "break"
+        def _on_scroll_linux(event, direction):
+            if not _in_this_window():
+                return
+            canvas.yview_scroll(direction, "units")
+            return "break"
+        _wheel_ids = [
+            w.bind_all("<MouseWheel>", _on_mousewheel, add="+"),
+            w.bind_all("<Button-4>", lambda e: _on_scroll_linux(e, -1), add="+"),
+            w.bind_all("<Button-5>", lambda e: _on_scroll_linux(e, 1), add="+"),
+        ]
+        def _unbind_all(_event=None):
+            for seq, fid in zip(("<MouseWheel>", "<Button-4>", "<Button-5>"), _wheel_ids):
+                if not fid:
+                    continue
+                try:
+                    w.unbind_all(seq, funcid=fid)
+                except (tk.TclError, TypeError):
+                    try:
+                        w.unbind_all(seq)
+                    except tk.TclError:
+                        pass
+        w.bind("<Destroy>", _unbind_all)
         w._scroll_frame = frame
         w._canvas = canvas
         # فریم قابل‌اسکرول را برمی‌گردانیم تا همه‌ی ویجت‌ها داخل آن قرار بگیرند
