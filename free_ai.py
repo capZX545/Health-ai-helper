@@ -7,18 +7,17 @@ from __future__ import annotations
 from typing import Any
 
 OPENROUTER_FREE_MODELS: list[dict[str, str]] = [
-    {"id": "openai/gpt-oss-120b:free", "fa": "GPT-OSS 120B (رایگان) — پیش‌فرض", "vision": False},
-    {"id": "qwen/qwen3-next-80b-a3b-instruct:free", "fa": "Qwen3 Next 80B (رایگان) — پشتیبان", "vision": False},
-    {"id": "meta-llama/llama-3.3-70b-instruct:free", "fa": "Llama 3.3 70B (رایگان)", "vision": False},
-    {"id": "deepseek/deepseek-chat-v3-0324:free", "fa": "DeepSeek V3 (رایگان)", "vision": False},
-    {"id": "google/gemini-2.0-flash-exp:free", "fa": "Gemini 2.0 Flash (رایگان)", "vision": True},
-    {"id": "mistralai/mistral-small-3.1-24b-instruct:free", "fa": "Mistral Small 3.1 (رایگان)", "vision": True},
-    {"id": "qwen/qwen2.5-vl-72b-instruct:free", "fa": "Qwen2.5 VL 72B (رایگان، تصویری)", "vision": True},
+    {"id": "z-ai/glm-5.2:free", "fa": "GLM 5.2 (رایگان) — پشتیبان", "vision": False},
+    {"id": "nvidia/nemotron-3-super-120b-a12b:free", "fa": "Nemotron 3 Super 120B (رایگان) — پیش‌فرض", "vision": False},
+    {"id": "google/gemma-4-31b-it:free", "fa": "Gemma 4 31B (رایگان)", "vision": False},
+    {"id": "nvidia/nemotron-3-nano-30b-a3b:free", "fa": "Nemotron 3 Nano 30B (رایگان، سریع)", "vision": False},
+    {"id": "thinkingmachines/inkling-small:free", "fa": "Inkling Small (رایگان)", "vision": False},
+    {"id": "nvidia/nemotron-nano-12b-v2-vl:free", "fa": "Nemotron Nano 12B VL (رایگان، تصویری)", "vision": True},
+    {"id": "openrouter/free", "fa": "OpenRouter Auto Free (رایگان)", "vision": False},
     {"id": "openai/gpt-4o-mini", "fa": "GPT-4o Mini (پولی، سریع)", "vision": True},
-    {"id": "anthropic/claude-3.5-haiku", "fa": "Claude 3.5 Haiku (پولی)", "vision": True},
 ]
 
-DEFAULT_MODEL = "openai/gpt-oss-120b:free"
+DEFAULT_MODEL = "nvidia/nemotron-3-super-120b-a12b:free"
 BACKUP_MODEL = "qwen/qwen3-next-80b-a3b-instruct:free"
 
 

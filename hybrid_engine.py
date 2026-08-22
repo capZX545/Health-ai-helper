@@ -132,9 +132,10 @@ class HybridEngine:
             self._remember("assistant", text)
             # ۳) یادگیری خودکار — فقط از پاسخ واقعاً خارجی (نه متن آفلاین خودمان)
             learned = False
-            is_truly_external = bool(external.get("provider")) and str(external.get("source", "")).startswith("external")
+            ext_source = str(external.get("source") or f"external:{external.get('provider', '?')}")
+            is_truly_external = bool(external.get("provider")) and ext_source.startswith("external")
             if not is_truly_external:
-                return {"ok": True, "text": text, "source": external.get("source", "internal-image"),
+                return {"ok": True, "text": text, "source": ext_source,
                         "red_flag": False, "learned": False, "image_type": external.get("image_type")}
             try:
                 from auto_learning import learn_from_exchange

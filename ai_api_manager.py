@@ -22,7 +22,7 @@ KEY_FIELDS = {
 
 DEFAULT_SETTINGS: dict[str, Any] = {
     "provider_order": ["openrouter", "openai", "deepseek", "local"],
-    "openrouter_model": "openai/gpt-oss-120b:free",
+    "openrouter_model": "nvidia/nemotron-3-super-120b-a12b:free",
     "reasoning_enabled": False,
     "brain_enabled": True,
     "language": "en",
@@ -48,6 +48,11 @@ def get_settings() -> dict[str, Any]:
     stored = read_json(SETTINGS_PATH, default=None)
     if isinstance(stored, dict):
         s.update({k: v for k, v in stored.items() if k in DEFAULT_SETTINGS})
+    else:
+        # اگر تنظیماتی ذخیره نشده، مدلِ فایل .env معتبر است
+        env_model = env_get("OPENROUTER_MODEL", "")
+        if env_model:
+            s["openrouter_model"] = env_model
     # reasoning از .env هم خوانده می‌شود (پیش‌فرض خاموش)
     if env_get("OPENROUTER_REASONING_ENABLED", "0") in ("1", "true", "True"):
         s["reasoning_enabled"] = True
