@@ -155,7 +155,7 @@ T.en = {
   nav:[["chat","Talk to Nexus"],["image","Medical image analysis"],["profile","Patient profile"],
        ["vitals","Vitals"],["labs","Lab analysis"],["rx","Prescription scan"],["drugs","Drugs & interactions"],
        ["mental","Mental health"],["sleep","Sleep analysis"],["checkup","Checkup calendar"],
-       ["aid","First aid / CPR"],["referral","Doctor referral report"],["symptoms_browser","Symptoms"],["diseases_browser","Diseases"],["drugs_browser","Drugs"],["brain","Brain & learning"],
+       ["aid","First aid / CPR"],["referral","Doctor referral report"],["symptoms_browser","Symptoms"],["diseases_browser","Diseases"],["drugs_browser","Drugs"],["research","Research & articles"],["brain","Brain & learning"],
        ["gpu","Local AI (Ollama)"],["settings","API settings"]],
   ph:"Describe your symptoms... (Enter = send, Shift+Enter = new line)", send:"Send",
   attach:"Attach a medical image", rmimg:"remove",
@@ -165,7 +165,7 @@ T.en = {
   foot:"NexusMed 2077 is an informational assistant; it does not replace a doctor and gives no definitive diagnosis. Emergency: Iran 115 | Europe/Finland 112",
   p_titles:{settings:"API settings",profile:"Patient profile",vitals:"Vitals",labs:"Lab analysis",rx:"Prescription & lab terms",
     drugs:"Drugs & interactions",mental:"Mental health",sleep:"Sleep analysis",checkup:"Checkup & vaccines",aid:"First aid",
-    referral:"Printable referral report", symptoms_browser:"Symptoms Browser", diseases_browser:"Diseases Database", drugs_browser:"Drugs Database",brain:"Internal brain & learning",gpu:"Local AI (Ollama)",image:"Medical image + text",assess:"Disease likelihood assessment"},
+    referral:"Printable referral report", symptoms_browser:"Symptoms Browser", diseases_browser:"Diseases Database", drugs_browser:"Drugs Database", research:"Research & articles (PubMed + ClinicalTrials)",brain:"Internal brain & learning",gpu:"Local AI (Ollama)",image:"Medical image + text",assess:"Disease likelihood assessment"},
   keys:"API keys", keys_note:"Keys are stored only in a local .env file on your machine. They never enter the code, the ZIP or the installer.",
   getkey:"Get a free key", testconn:"Test connection", savekeys:"Save keys (no restart)", savemodel:"Save model",
   model:"OpenRouter model", model_list:"pick from the free/suggested list", model_manual:"or type a model id manually",
@@ -217,7 +217,7 @@ T.fa = {
   nav:[["chat","گفتگو با نکسوس"],["image","تحلیل تصویر پزشکی"],["profile","پروفایل بیمار"],
        ["vitals","علائم حیاتی"],["labs","تحلیل آزمایش"],["rx","اسکن نسخه"],["drugs","دارو و تداخلات"],
        ["mental","سلامت روان"],["sleep","تحلیل خواب"],["checkup","تقویم چکاپ"],
-       ["aid","کمک‌های اولیه / CPR"],["referral","گزارش ارجاع به پزشک"],["symptoms_browser","علائم"],["diseases_browser","بیماری‌ها"],["drugs_browser","داروها"],["brain","مغز داخلی / یادگیری"],
+       ["aid","کمک‌های اولیه / CPR"],["referral","گزارش ارجاع به پزشک"],["symptoms_browser","علائم"],["diseases_browser","بیماری‌ها"],["drugs_browser","داروها"],["research","پژوهش و مقالات"],["brain","مغز داخلی / یادگیری"],
        ["gpu","هوش محلی (Ollama)"],["settings","تنظیمات API"]],
   ph:"علائمت را بنویس... (Enter=ارسال، Shift+Enter=خط جدید)", send:"ارسال",
   attach:"ضمیمه عکس پزشکی", rmimg:"حذف",
@@ -227,7 +227,7 @@ T.fa = {
   foot:"NexusMed 2077 یک دستیار اطلاعاتی است؛ جایگزین پزشک نیست و تشخیص قطعی نمی‌دهد — اورژانس: ایران ۱۱۵ | اروپا/فنلاند ۱۱۲",
   p_titles:{settings:"تنظیمات API",profile:"پروفایل بیمار",vitals:"علائم حیاتی",labs:"تحلیل آزمایش",rx:"اسکن نسخه و اصطلاحات",
     drugs:"دارو و تداخلات دارویی",mental:"سلامت روان",sleep:"تحلیل خواب",checkup:"تقویم چکاپ و واکسن",aid:"کمک‌های اولیه",
-    referral:"گزارش ارجاع قابل چاپ", symptoms_browser:"مرور علائم", diseases_browser:"بانک بیماری‌ها", drugs_browser:"بانک داروها",brain:"مغز داخلی و یادگیری",gpu:"هوش مصنوعی محلی (Ollama)",image:"تحلیل تصویر پزشکی",assess:"ارزیابی احتمال بیماری‌ها"},
+    referral:"گزارش ارجاع قابل چاپ", symptoms_browser:"مرور علائم", diseases_browser:"بانک بیماری‌ها", drugs_browser:"بانک داروها", research:"پژوهش و مقالات (PubMed + کارآزمایی‌ها)",brain:"مغز داخلی و یادگیری",gpu:"هوش مصنوعی محلی (Ollama)",image:"تحلیل تصویر پزشکی",assess:"ارزیابی احتمال بیماری‌ها"},
   keys:"کلیدهای API", keys_note:"کلیدها فقط در فایل .env روی سیستم خودتان ذخیره می‌شوند و هرگز داخل کد، ZIP یا بسته‌ی نصبی قرار نمی‌گیرند.",
   getkey:"گرفتن کلید رایگان", testconn:"تست اتصال", savekeys:"ذخیره‌ی کلیدها (بدون ری‌استارت)", savemodel:"ذخیره‌ی مدل",
   model:"مدل OpenRouter", model_list:"انتخاب از لیست مدل‌های رایگان/پیشنهادی", model_manual:"یا نوشتن دستی model id",
@@ -388,7 +388,7 @@ var currentPanel="chat";
 function openPanel(k){
   currentPanel=k;if(k==="chat"){closePanel();return}
   $("panel").classList.add("open");$("ptitle").textContent=t("p_titles")[k]||k;
-  var P={settings:uiSettings,profile:uiProfile,vitals:uiVitals,labs:uiLabs,rx:uiRx,drugs:uiDrugs,symptoms_browser:uiSymptomsBrowser,diseases_browser:uiDiseasesBrowser,drugs_browser:uiDrugsBrowser,
+  var P={settings:uiSettings,profile:uiProfile,vitals:uiVitals,labs:uiLabs,rx:uiRx,drugs:uiDrugs,symptoms_browser:uiSymptomsBrowser,diseases_browser:uiDiseasesBrowser,drugs_browser:uiDrugsBrowser,research:uiResearch,
     mental:uiMental,sleep:uiSleep,checkup:uiCheckup,aid:uiAid,referral:uiReferral,brain:uiBrain,gpu:uiGpu,image:uiImage,assess:uiAssess};
   (P[k]||function(){})();
 }
@@ -777,6 +777,78 @@ async function runAssess(){
   }
   el.innerHTML=h;
 }
+function uiResearch(){
+  $("pbody").innerHTML='<div class="card"><h3>📄 '+(LANG==="fa"?"جستجوی مقالات PubMed (۴۰ میلیون+ منبع)":"PubMed literature search (40M+ citations)")+'</h3>'+
+  '<input class="f" id="pmq" placeholder="'+(LANG==="fa"?"مثلاً: ibuprofen migraine یا diabetes treatment":"e.g. ibuprofen migraine / diabetes treatment")+'" onkeydown="if(event.key===\'Enter\')pubmedSearch()">'+
+  '<button class="btn pri" onclick="pubmedSearch()">'+(LANG==="fa"?"جستجو":"Search")+'</button><div id="pmres" style="margin-top:8px"></div></div>'+
+  '<div class="card"><h3>🧪 '+(LANG==="fa"?"کارآزمایی‌های بالینی ClinicalTrials.gov":"Clinical trials (ClinicalTrials.gov)")+'</h3>'+
+  '<input class="f" id="trq" placeholder="'+(LANG==="fa"?"مثلاً: diabetes یا migraine":"e.g. diabetes / migraine")+'" onkeydown="if(event.key===\'Enter\')trialsSearch()">'+
+  '<button class="btn pri" onclick="trialsSearch()">'+(LANG==="fa"?"جستجو":"Search")+'</button><div id="trres" style="margin-top:8px"></div></div>'+
+  '<div class="card"><h3>⚠️ '+(LANG==="fa"?"عوارض گزارش‌شده‌ی دارو (بانک FAERS FDA)":"Reported side effects (FDA FAERS)")+'</h3>'+
+  '<p style="font-size:11.5px;color:var(--dim)">'+(LANG==="fa"?"گزارش‌های واقعی عوارض دارویی از بیماران و پزشکان به FDA":"Real-world adverse-event reports submitted to the FDA")+'</p>'+
+  '<input class="f" id="faersq" placeholder="'+(LANG==="fa"?"نام دارو (انگلیسی) مثل metformin":"drug name, e.g. metformin")+'" onkeydown="if(event.key===\'Enter\')faersSearch()">'+
+  '<button class="btn pri" onclick="faersSearch()">'+(LANG==="fa"?"بررسی":"Check")+'</button><div id="faersres" style="margin-top:8px"></div></div>';
+}
+async function pubmedSearch(){
+  var q=$("pmq").value.trim(); if(!q)return;
+  $("pmres").innerHTML='<div class="spin"></div>';
+  var r=await api("/api/pubmed",{q:q});
+  if(!r.ok){$("pmres").innerHTML='<p class=bad>'+esc(r.message_fa||"Error")+'</p>';return}
+  var h='<small style="color:var(--dim)">'+fa(r.total)+' '+(LANG==="fa"?"نتیجه":"results")+'</small>';
+  if(!r.articles.length)h+='<p class=warn>'+(LANG==="fa"?"چیزی پیدا نشد.":"Nothing found.")+'</p>';
+  r.articles.forEach(function(a){
+    h+='<div class="q"><b><a href="'+esc(a.url)+'" target="_blank" style="color:var(--cy);text-decoration:none">'+esc(a.title)+'</a></b>'+
+    '<br><small style="color:var(--dim)">'+esc(a.journal)+' · '+esc(a.date)+' · '+esc(a.authors)+' …</small></div>';
+  });
+  $("pmres").innerHTML=h;
+}
+async function trialsSearch(){
+  var q=$("trq").value.trim(); if(!q)return;
+  $("trres").innerHTML='<div class="spin"></div>';
+  var r=await api("/api/trials",{q:q});
+  if(!r.ok){$("trres").innerHTML='<p class=bad>'+esc(r.message_fa||"Error")+'</p>';return}
+  var h='<small style="color:var(--dim)">'+fa(r.total)+' '+(LANG==="fa"?"کارآزمایی":"trials")+'</small>';
+  if(!r.trials.length)h+='<p class=warn>'+(LANG==="fa"?"چیزی پیدا نشد.":"Nothing found.")+'</p>';
+  r.trials.forEach(function(t){
+    var sc=t.status==="RECRUITING"?"#3bff9e":"#ffd60a";
+    h+='<div class="q"><b><a href="'+esc(t.url)+'" target="_blank" style="color:var(--cy);text-decoration:none">'+esc(t.title)+'</a></b> <span class="tag">'+esc(t.nct)+'</span>'+
+    '<br><small style="color:'+sc+'">'+esc(t.status)+(t.phase?" · "+esc(t.phase):"")+'</small>'+
+    '<br><small style="color:var(--dim)">'+esc(t.conditions)+'</small></div>';
+  });
+  $("trres").innerHTML=h;
+}
+async function faersSearch(){
+  var q=$("faersq").value.trim(); if(!q)return;
+  $("faersres").innerHTML='<div class="spin"></div>';
+  var r=await api("/api/fda-events",{drug:q});
+  if(!r.ok){$("faersres").innerHTML='<p class=bad>'+esc(r.message_fa||"Error")+'</p>';return}
+  if(!r.reactions.length){$("faersres").innerHTML='<p class=warn">'+(LANG==="fa"?"گزارشی پیدا نشد — نام دقیق‌تر انگلیسی دارو را امتحان کن.":"No reports found.")+'</p>';return}
+  var maxc=r.reactions[0][1]||1;
+  var h='<small style="color:var(--dim)">'+(LANG==="fa"?"≥ "+fa(r.total_reports_min)+" گزارش در ۱۲ عارضه‌ی پرتکرار":"≥ "+r.total_reports_min+" reports, top reactions")+'</small>';
+  r.reactions.forEach(function(x){
+    var term=x[0],cnt=x[1];
+    h+='<div class="q"><b>'+esc(term.toLowerCase())+'</b> <small style="color:var(--yl)">'+fa(cnt)+'</small>'+
+    '<div class="bar"><i style="width:'+Math.round(100*cnt/maxc)+'%;background:#ff2a6d"></i></div></div>';
+  });
+  h+='<small style="color:var(--dim)">'+(LANG==="fa"?"این گزارش‌ها رابطه‌ی علت-معلولی را ثابت نمی‌کنند — با پزشک مشورت کن.":"Reports do not prove causation — consult your doctor.")+'</small>';
+  $("faersres").innerHTML=h;
+}
+async function showDrugLabel(g){
+  var el=$("lbl-"+g.replace(/[^a-z0-9]/gi,""));
+  if(!el)return;
+  el.innerHTML='<div class="spin"></div>';
+  var r=await api("/api/knowledge/drug-label?g="+encodeURIComponent(g));
+  if(!r.ok||!r.label){el.innerHTML='<p class=warn>'+(LANG==="fa"?"لیبل رسمی برای این نام یافت نشد.":"No official label found.")+'</p>';return}
+  var L=LANG==="fa"?{"ind":"موارد مصرف","warn":"هشدارها","adv":"عوارض","box":"هشدار جعبه (مهم)"}:{"ind":"Indications","warn":"Warnings","adv":"Adverse reactions","box":"Boxed warning"};
+  var h="";
+  if(r.fa)h+='<p style="color:var(--cy)">('+esc(r.fa)+')</p>';
+  ["box","ind","adv","warn"].forEach(function(k){
+    if(r.label[k])h+='<p style="margin:7px 0"><b style="color:'+(k==="box"?"var(--mg)":"var(--cy)")+'">'+L[k]+':</b> '+esc(r.label[k])+'</p>';
+  });
+  h+='<small style="color:var(--dim)">'+(LANG==="fa"?"منبع: لیبل رسمی (openFDA)":"Source: official FDA label (openFDA)")+'</small>';
+  el.innerHTML=h;
+  el.scrollIntoView({behavior:"smooth",block:"nearest"});
+}
 var SYMC={};var _SYMS=[];
 async function uiSymptomsBrowser(){
   var r=await api("/api/knowledge/symptoms");
@@ -902,7 +974,7 @@ async function searchCatalog(){
     h='<small style="color:var(--dim)">'+fa(r.results.length)+' '+(LANG==="fa"?"نتیجه از":"of")+' '+fa(r.total)+'</small>';
     for(var i=0;i<r.results.length;i++){
       var c=r.results[i];
-      h+='<div class="q"><b>'+esc(c.name)+'</b> <span class="tag">'+esc(c.icd10)+'</span> <small style="color:var(--dim)">'+esc(c.chapter||"")+'</small></div>';
+      h+='<div class="q"><b>'+esc(c.name)+'</b>'+(c.fa?' <b style="color:var(--cy)">('+esc(c.fa)+')</b>':'')+' <span class="tag">'+esc(c.icd10)+'</span> <small style="color:var(--dim)">'+esc(c.chapter||"")+'</small></div>';
     }
     if(!r.results.length)h+='<p class=warn>'+(LANG==="fa"?"چیزی پیدا نشد — شاید املای انگلیسی را امتحان کنی.":"Not found — try the English spelling.")+'</p>';
   }
@@ -959,6 +1031,8 @@ async function searchFdaDrugs(){
   for(var i=0;i<r.drugs.length;i++){
     var d=r.drugs[i];
     h+='<div class="q"><b>'+esc(d.g)+'</b>';
+    h+=' <button class="btn" style="padding:2px 10px;font-size:11px" onclick="showDrugLabel(\''+esc(d.g)+'\');var x=document.getElementById(\'lbl-'+esc(d.g).replace(/[^a-zA-Z0-9]/g,"")+'\');if(x&&x.style.display===\'none\'){x.style.display=\'block\'}" >📄 '+(LANG==="fa"?"لیبل FDA":"FDA label")+'</button>';
+    h+='<div id="lbl-'+esc(d.g).replace(/[^a-zA-Z0-9]/g,"")+'" style="display:none;margin-top:6px;border-inline-start:2px solid var(--bd);padding-inline-start:10px"></div>';
     if(d.brands&&d.brands.length)h+=' <small style="color:var(--cy)">'+esc(d.brands.slice(0,4).join("، "))+'</small>';
     if(d.class&&d.class.length)h+='<br><small>'+(LANG==="fa"?"کلاس: ":"Class: ")+esc(d.class.slice(0,2).join("، "))+'</small>';
     if(d.forms&&d.forms.length)h+='<br><small>'+(LANG==="fa"?"فرم: ":"Forms: ")+esc(d.forms.slice(0,3).join("، "))+'</small>';

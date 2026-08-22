@@ -44,6 +44,9 @@ def try_beep(freq: int = 880, dur: int = 140):
 
 class App:
     def __init__(self, root: tk.Tk):
+        import queue as _queue
+        self._uiq = _queue.Queue()
+        root.after(120, self._poll_uiq)
         self.root = root
         root.geometry("1280x800")
         root.minsize(900, 600)
@@ -149,6 +152,7 @@ class App:
             (("Symptoms (check & analyze)", "علائم (تیک و تحلیل)"), self._panel_symptoms),
             (("Diseases database", "بانک بیماری‌ها"), self._panel_diseases),
             (("Drugs database", "بانک داروها"), self._panel_drugs),
+            (("Research & articles", "پژوهش و مقالات"), self._panel_research),
             (("Mental health", "سلامت روان"), self._panel_mental),
             (("Sleep analysis", "تحلیل خواب"), self._panel_sleep),
             (("Checkup calendar", "تقویم چکاپ"), self._panel_checkup),
@@ -210,6 +214,25 @@ class App:
 
         tk.Label(self.root, text=MEDICAL_DISCLAIMER(), bg="#070d18", fg="#41527a",
                  font=pick_font(8), pady=4).pack(fill="x", side="bottom")
+
+    def _ui(self, fn):
+        """اجرای ایمن یک تابع در ترد اصلی — از هر تردی قابل فراخوانی است."""
+        self._uiq.put(fn)
+
+    def _poll_uiq(self):
+        while True:
+            try:
+                fn = self._uiq.get_nowait()
+            except Exception:
+                break
+            try:
+                fn()
+            except tk.TclError:
+                pass
+        try:
+            self.root.after(120, self._poll_uiq)
+        except tk.TclError:
+            pass
 
     # -------------------------------------------------------------- موتور
     def _engine(self):
@@ -368,10 +391,7 @@ class App:
                 self._bot(*payload)
                 self.send_btn.config(state="normal", text=self.L("Send", "ارسال"))
                 self._refresh_status()
-            try:
-                self.root.after(0, apply)
-            except tk.TclError:
-                pass
+            self._ui(apply)
 
         threading.Thread(target=work, daemon=True).start()
 
@@ -392,10 +412,7 @@ class App:
                     self.status_lbl.config(text=msg)
                 except tk.TclError:
                     pass
-            try:
-                self.root.after(0, apply)
-            except tk.TclError:
-                pass
+            self._ui(apply)
         threading.Thread(target=work, daemon=True).start()
 
 
@@ -1039,9 +1056,11 @@ class App:
         # ----- جستجوی کاتالوگ کامل ICD-10 (با تاخیر ۳۰۰ms بعد از تایپ) -----
         cat_rows: list[tk.Widget] = []
         _deb = {"job": None}
-        def show_catalog_detail(name, code, chapter):
+        def show_catalog_detail(name, code, chapter, fa_n=""):
+            from knowledge_browser import fa_disease_name as _fdn
+            fa_n = fa_n or _fdn(icd=code, en=name)
             box.delete("1.0", "end")
-            box.insert("1.0", f"◀ {name}\nکد ICD-10: {code}\nفصل: {chapter}\n\n(این مورد از کاتالوگ کامل ICD-10-CM است — برای تشخیص، از ماژول علائم استفاده کن.)")
+            box.insert("1.0", f"◀ {name}" + (f" ({fa_n})" if fa_n else "") + f"\nکد ICD-10: {code}\nفصل: {chapter}\n\n(این مورد از کاتالوگ کامل ICD-10-CM است — برای تشخیص، از ماژول علائم استفاده کن.)")
             box.tag_add("title", "1.0", "1.0 lineend")
             box.tag_config("title", foreground=C["cy"], font=pick_font(12, True))
         def run_catalog_search():
@@ -1063,8 +1082,10 @@ class App:
             cat_rows.append(sep)
             for c in res:
                 row = tk.Frame(inner, bg=C["panel2"])
-                b = tk.Button(row, text=f"{c['name']}   [{c['icd10']}]",
-                              command=lambda cc=c: show_catalog_detail(cc["name"], cc["icd10"], cc.get("chapter", "")),
+                fa_n = c.get("fa") or ""
+                btn_txt = c["name"] + (("  (" + fa_n + ")") if fa_n else "") + "   [" + c["icd10"] + "]"
+                b = tk.Button(row, text=btn_txt,
+                              command=lambda cc=c: show_catalog_detail(cc["name"], cc["icd10"], cc.get("chapter", ""), cc.get("fa", "")),
                               anchor="e", bg="#101c36", fg=C["tx"], relief="flat", font=pick_font(9),
                               activebackground="#101c36", activeforeground=C["cy"], cursor="hand2")
                 b.pack(side="right", fill="x", expand=True)
@@ -1168,7 +1189,20 @@ class App:
         fda_rows: list[tk.Widget] = []
         _deb = {"job": None}
         def show_fda_detail(d):
+            from knowledge_browser import get_drug_label, fa_drug_name
             lines = [f"◀ {d.get('g','')}"]
+            _fa = fa_drug_name(d.get("g", ""))
+            if _fa:
+                lines.append(f"  ({_fa})")
+            lb = get_drug_label(d.get("g", "")) or {}
+            if lb.get("ind"):
+                lines.append("  ▸ موارد مصرف (لیبل FDA): " + lb["ind"][:280])
+            if lb.get("box"):
+                lines.append("  ▸ هشدار جعبه: " + lb["box"][:220])
+            if lb.get("adv"):
+                lines.append("  ▸ عوارض: " + lb["adv"][:280])
+            if lb.get("warn"):
+                lines.append("  ▸ هشدارها: " + lb["warn"][:220])
             if d.get("brands"):
                 lines.append("  نام‌های تجاری: " + "، ".join(d["brands"][:6]))
             if d.get("class"):
@@ -1228,6 +1262,109 @@ class App:
         box.pack(fill="both", expand=True, padx=16, pady=(4, 8))
         if drugs:
             show_detail(drugs[0])
+
+    def _panel_research(self):
+        """پژوهش و مقالات: جستجوی زنده در PubMed، کارآزمایی‌ها و عوارض FAERS."""
+        w, top, inner, bottom = self._win_list(self.L("Research & articles (live)", "پژوهش و مقالات (آنلاین)"))
+        import requests as _rq
+        UA = {"User-Agent": "NexusMed2077/2.0 (github.com/capZX545)"}
+
+        tk.Label(top, text=self.L("Requires internet — searches PubMed, ClinicalTrials.gov and FDA FAERS live",
+                                  "نیازمند اینترنت — جستجوی زنده در PubMed، ClinicalTrials.gov و بانک FAERS"),
+                 bg=C["panel2"], fg=C["dim"], font=pick_font(8), anchor="e", wraplength=640, justify="right").pack(fill="x", padx=16, pady=(8, 4))
+
+        def mk_section(title_en, title_fa, placeholder_en, placeholder_fa, btn_en, btn_fa):
+            fr = tk.Frame(inner, bg=C["panel2"])
+            tk.Label(fr, text=title_fa if not title_en else title_fa, bg=C["panel2"], fg=C["cy"],
+                     font=pick_font(11, True), anchor="e").pack(fill="x", padx=10, pady=(10, 2))
+            bar = tk.Frame(fr, bg=C["panel2"])
+            bar.pack(fill="x", padx=10)
+            e = tk.Entry(bar, bg="#0a1424", fg=C["tx"], relief="flat", font=pick_font(11),
+                         justify="right", insertbackground=C["cy"])
+            e.pack(side="right", fill="both", expand=True, ipady=4)
+            lbl = tk.Label(fr, text="", bg=C["panel2"], fg=C["dim"], font=pick_font(9), anchor="e", justify="right", wraplength=620)
+            lbl.pack(fill="x", padx=10, pady=(2, 8))
+            fr.pack(fill="x")
+            return fr, e, lbl
+
+        fr1, e1, l1 = mk_section("", "📄 جستجوی مقالات PubMed (۴۰ میلیون+ منبع)", "", "مثلاً: ibuprofen migraine", "", "")
+        fr2, e2, l2 = mk_section("", "🧪 کارآزمایی‌های بالینی (ClinicalTrials.gov)", "", "مثلاً: diabetes", "", "")
+        fr3, e3, l3 = mk_section("", "⚠️ عوارض گزارش‌شده‌ی دارو (FAERS/FDA)", "", "نام دارو مثل: metformin", "", "")
+
+        def fetch(url):
+            r = _rq.get(url, timeout=18, headers=UA)
+            r.raise_for_status()
+            return r.json()
+
+        def run_async(job):
+            threading.Thread(target=job, daemon=True).start()
+
+        def do_pubmed(_e=None):
+            q = e1.get().strip()   # خواندن ویجت فقط در ترد اصلی
+            self._ui(lambda: l1.config(text="در حال جستجو…", fg=C["yl"]))
+            def work():
+                import urllib.parse as up
+                try:
+                    es = fetch("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&retmode=json&retmax=8&term=" + up.quote(q))
+                    ids = es.get("esearchresult", {}).get("idlist", [])
+                    su = fetch("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&retmode=json&id=" + ",".join(ids)) if ids else {}
+                    lines = ["~" + str(es.get("esearchresult", {}).get("count", "0")) + " نتیجه:"]
+                    for pid in ids:
+                        it = su.get("result", {}).get(pid, {})
+                        lines.append("• " + str(it.get("title", "")))
+                        lines.append("   " + str(it.get("source", "")) + " · " + str(it.get("pubdate", "")) + " — pubmed.ncbi.nlm.nih.gov/" + pid + "/")
+                    out = "\n".join(lines) if ids else "چیزی پیدا نشد."
+                except Exception as ex:
+                    out = "خطا در اتصال به PubMed: " + str(ex)[:120]
+                self._ui(lambda: l1.winfo_exists() and l1.config(text=out, fg=C["tx"]))
+            if q:
+                run_async(work)
+
+        def do_trials(_e=None):
+            q = e2.get().strip()
+            self._ui(lambda: l2.config(text="در حال جستجو…", fg=C["yl"]))
+            def work():
+                import urllib.parse as up
+                try:
+                    d = fetch("https://clinicaltrials.gov/api/v2/studies?query.term=" + up.quote(q) + "&pageSize=8&countTotal=true")
+                    lines = ["~" + str(d.get("totalCount", 0)) + " کارآزمایی:"]
+                    for s in d.get("studies", []):
+                        p = s.get("protocolSection", {})
+                        im = p.get("identificationModule", {})
+                        lines.append("• " + str(im.get("briefTitle", "")))
+                        lines.append("   " + str(im.get("nctId", "")) + " · " + str(p.get("statusModule", {}).get("overallStatus", "")) + " · " + str((p.get("designModule", {}).get("phases") or ["—"])[0]))
+                    out = "\n".join(lines) if d.get("studies") else "چیزی پیدا نشد."
+                except Exception as ex:
+                    out = "خطا در اتصال به ClinicalTrials.gov: " + str(ex)[:120]
+                self._ui(lambda: l2.winfo_exists() and l2.config(text=out, fg=C["tx"]))
+            if q:
+                run_async(work)
+
+        def do_faers(_e=None):
+            q = e3.get().strip()
+            self._ui(lambda: l3.config(text="در حال بررسی…", fg=C["yl"]))
+            def work():
+                import urllib.parse as up
+                try:
+                    rx = up.quote('patient.drug.medicinalproduct:"' + q + '"')
+                    cnt = fetch("https://api.fda.gov/drug/event.json?search=" + rx + "&count=patient.reaction.reactionmeddrapt.exact&limit=12")
+                    rs = cnt.get("results", [])
+                    lines = ["≥" + str(sum(r.get("count", 0) for r in rs)) + " گزارش — پرتکرارترین عوارض:"]
+                    for r in rs:
+                        lines.append("• " + str(r.get("term", "")).lower() + ": " + str(r.get("count", 0)))
+                    out = "\n".join(lines) if rs else "گزارشی پیدا نشد — نام دقیق انگلیسی دارو را امتحان کن."
+                    out += "\n(گزارش‌ها علت-معلولی را ثابت نمی‌کنند — با پزشک مشورت کن.)"
+                except Exception as ex:
+                    out = "خطا در اتصال به openFDA: " + str(ex)[:120]
+                self._ui(lambda: l3.winfo_exists() and l3.config(text=out, fg=C["tx"]))
+            if q:
+                run_async(work)
+
+        for ent, fn in ((e1, do_pubmed), (e2, do_trials), (e3, do_faers)):
+            ent.bind("<Return>", fn)
+            bar = ent.master
+            tk.Button(bar, text="جستجو", command=fn, bg="#0077b6", fg="#021018",
+                      font=pick_font(10, True), relief="flat").pack(side="left", padx=(6, 0), ipadx=10)
 
     def _panel_referral(self):
         from doctor_referral import generate
@@ -1300,10 +1437,7 @@ class App:
                     if box.winfo_exists():
                         box.delete("1.0", "end")
                         box.insert("1.0", out)
-                try:
-                    box.after(0, apply)
-                except tk.TclError:
-                    pass
+                self._ui(apply)
             threading.Thread(target=work, daemon=True).start()
         bar = tk.Frame(w, bg=C["panel2"])
         bar.pack(pady=8)
@@ -1369,10 +1503,7 @@ class App:
                     if box.winfo_exists():
                         box.delete("1.0", "end")
                         box.insert("1.0", out)
-                try:
-                    box.after(0, apply)
-                except tk.TclError:
-                    pass
+                self._ui(apply)
             threading.Thread(target=work, daemon=True).start()
         bar = tk.Frame(w, bg=C["panel2"])
         bar.pack(pady=8)

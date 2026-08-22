@@ -222,11 +222,93 @@ class Handler(BaseHTTPRequestHandler):
             results = search_fda_drugs(q, limit) if q else []
             self._json({"ok": True, "total": get_fda_drug_count(), "q": q, "drugs": results})
             return True
+        if path == "/api/knowledge/drug-label":
+            from knowledge_browser import get_drug_label, fa_drug_name
+            g = (qs.get("g", [""])[0] or q or "").strip()
+            lb = get_drug_label(g) if g else None
+            self._json({"ok": bool(lb), "fa": fa_drug_name(g or ""), "label": lb})
+            return True
         if path == "/api/knowledge/catalog":
             from knowledge_browser import get_catalog_diseases
             self._json(get_catalog_diseases(q, 30))
             return True
         return False
+
+    # ------------------------------------------------------- اتصال‌های زنده
+    def _http_json(self, url: str, timeout: int = 15):
+        import requests
+        r = requests.get(url, timeout=timeout,
+                         headers={"User-Agent": "NexusMed2077/2.0 (github.com/capZX545)"})
+        r.raise_for_status()
+        return r.json()
+
+    def _live_pubmed(self, q: str) -> dict:
+        if not q:
+            return {"ok": False, "message_fa": "عبارتی برای جستجو بده."}
+        try:
+            import urllib.parse as up
+            es = self._http_json(
+                "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&retmode=json&retmax=8&term="
+                + up.quote(q), 20)
+            ids = es.get("esearchresult", {}).get("idlist", [])
+            if not ids:
+                return {"ok": True, "total": 0, "articles": []}
+            su = self._http_json(
+                "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&retmode=json&id="
+                + ",".join(ids), 20)
+            arts = []
+            for pid in ids:
+                it = su.get("result", {}).get(pid, {})
+                arts.append({
+                    "pmid": pid,
+                    "title": it.get("title", ""),
+                    "journal": it.get("source", ""),
+                    "date": it.get("pubdate", ""),
+                    "authors": (it.get("authors") or [{}])[0].get("name", ""),
+                    "url": f"https://pubmed.ncbi.nlm.nih.gov/{pid}/",
+                })
+            return {"ok": True, "total": es.get("esearchresult", {}).get("count", "0"), "articles": arts}
+        except Exception as e:
+            return {"ok": False, "message_fa": "خطا در اتصال به PubMed: " + str(e)[:100]}
+
+    def _live_trials(self, q: str) -> dict:
+        if not q:
+            return {"ok": False, "message_fa": "عبارتی برای جستجو بده."}
+        try:
+            import urllib.parse as up
+            d = self._http_json(
+                "https://clinicaltrials.gov/api/v2/studies?query.term=" + up.quote(q)
+                + "&pageSize=8&countTotal=true", 20)
+            out = []
+            for s in d.get("studies", []):
+                p = s.get("protocolSection", {})
+                out.append({
+                    "nct": p.get("identificationModule", {}).get("nctId", ""),
+                    "title": p.get("identificationModule", {}).get("briefTitle", ""),
+                    "status": p.get("statusModule", {}).get("overallStatus", ""),
+                    "phase": (p.get("designModule", {}).get("phases") or [""])[0],
+                    "conditions": ", ".join((p.get("conditionsModule", {}).get("conditions") or [])[:3]),
+                    "url": "https://clinicaltrials.gov/study/" + p.get("identificationModule", {}).get("nctId", ""),
+                })
+            return {"ok": True, "total": d.get("totalCount", len(out)), "trials": out}
+        except Exception as e:
+            return {"ok": False, "message_fa": "خطا در اتصال به ClinicalTrials.gov: " + str(e)[:100]}
+
+    def _live_fda_events(self, drug: str) -> dict:
+        if not drug:
+            return {"ok": False, "message_fa": "نام دارو را بده."}
+        try:
+            import urllib.parse as up
+            base = "https://api.fda.gov/drug/event.json?limit=1"
+            rx = up.quote(f'patient.drug.medicinalproduct:"{drug}"')
+            cnt = self._http_json(
+                f"https://api.fda.gov/drug/event.json?search={rx}&count=patient.reaction.reactionmeddrapt.exact&limit=12", 20)
+            reactions = [(b.get("term", ""), b.get("count", 0)) for b in cnt.get("results", [])]
+            n_reports = sum(c for _, c in reactions)
+            return {"ok": True, "drug": drug, "total_reports_min": n_reports,
+                    "reactions": reactions}
+        except Exception as e:
+            return {"ok": False, "message_fa": "خطا در اتصال به openFDA/FAERS: " + str(e)[:100]}
 
     def _status(self) -> dict:
         eng = get_engine()
@@ -354,6 +436,12 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"ok": False, "message_fa": tt("No image was sent.", "تصویری ارسال نشد.")}, 400)
                 img_bytes = base64.b64decode(b64.split(",")[-1])
                 return self._json(analyze_image_bytes(img_bytes, note, hint=data.get("hint")))
+            if path == "/api/pubmed":
+                return self._json(self._live_pubmed(str(data.get("q") or "").strip()))
+            if path == "/api/trials":
+                return self._json(self._live_trials(str(data.get("q") or "").strip()))
+            if path == "/api/fda-events":
+                return self._json(self._live_fda_events(str(data.get("drug") or "").strip()))
             if path == "/api/assess":
                 from medical_engine import analyze, detect_symptoms, emergency_response
                 from patient_profile import load_profile

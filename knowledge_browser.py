@@ -168,7 +168,8 @@ def get_catalog_diseases(query: str = "", limit: int = 50) -> dict:
     return {
         "ok": True,
         "total": st["conditions"],
-        "results": [{"name": r["name"], "icd10": r["icd10"], "chapter": get_chapter_fa(r["icd10"])} for r in results],
+        "results": [{"name": r["name"], "icd10": r["icd10"], "chapter": get_chapter_fa(r["icd10"]),
+                     "fa": fa_disease_name(icd=r["icd10"], en=r["name"])} for r in results],
         "query": query,
     }
 
@@ -293,3 +294,71 @@ def get_fda_drug(generic_name: str) -> dict | None:
             if best is None or d.get("n", 0) > best.get("n", 0):
                 best = d
     return best
+
+
+# ============================ لیبل رسمی FDA + نام‌های فارسی ============================
+
+_LABELS_CACHE: dict | None = None
+_FA_NAMES_CACHE: dict | None = None
+
+
+def _load_labels() -> dict:
+    """بارگذاری drug_labels.json.gz — بخش‌های لیبل رسمی FDA برای هر دارو."""
+    global _LABELS_CACHE
+    if _LABELS_CACHE is None:
+        import gzip
+        import json as _json
+        import os as _os
+        path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "drug_labels.json.gz")
+        try:
+            with gzip.open(path, "rt", encoding="utf-8") as f:
+                _LABELS_CACHE = _json.load(f)
+        except Exception as e:
+            print(f"[knowledge_browser] لیبل‌های FDA بارگذاری نشد: {e}")
+            _LABELS_CACHE = {}
+    return _LABELS_CACHE
+
+
+def get_drug_label(generic_name: str) -> dict | None:
+    """بخش‌های لیبل رسمی FDA برای یک نام ژنریک: ind/warn/adv/box."""
+    if not generic_name:
+        return None
+    return _load_labels().get(generic_name.strip().lower()) or None
+
+
+def _load_fa_names() -> dict:
+    global _FA_NAMES_CACHE
+    if _FA_NAMES_CACHE is None:
+        import json as _json
+        import os as _os
+        path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "fa_names.json")
+        try:
+            with open(path, encoding="utf-8") as f:
+                _FA_NAMES_CACHE = _json.load(f)
+        except Exception as e:
+            print(f"[knowledge_browser] نام‌های فارسی بارگذاری نشد: {e}")
+            _FA_NAMES_CACHE = {"icd_fa": {}, "disease_en_fa": {}, "drug_en_fa": {}}
+    return _FA_NAMES_CACHE
+
+
+def fa_drug_name(en_name: str) -> str:
+    """نام فارسی دارو از Wikidata (اگر موجود نبود رشته‌ی خالی)."""
+    if not en_name:
+        return ""
+    return _load_fa_names().get("drug_en_fa", {}).get(en_name.strip().lower(), "")
+
+
+def fa_disease_name(icd: str = "", en: str = "") -> str:
+    """نام فارسی بیماری با کد ICD-10 یا نام انگلیسی (از Wikidata)."""
+    m = _load_fa_names()
+    if icd:
+        code = icd.strip().upper()
+        v = m.get("icd_fa", {}).get(code, "")
+        if not v and len(code) >= 4:
+            # پیشوند دسته (مثل E11.9 → E11)
+            v = m.get("icd_fa", {}).get(code[:3], "")
+        if v:
+            return v
+    if en:
+        return m.get("disease_en_fa", {}).get(en.strip().lower(), "")
+    return ""
