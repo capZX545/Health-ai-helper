@@ -1290,6 +1290,7 @@ class App:
         fr1, e1, l1 = mk_section("", "📄 جستجوی مقالات PubMed (۴۰ میلیون+ منبع)", "", "مثلاً: ibuprofen migraine", "", "")
         fr2, e2, l2 = mk_section("", "🧪 کارآزمایی‌های بالینی (ClinicalTrials.gov)", "", "مثلاً: diabetes", "", "")
         fr3, e3, l3 = mk_section("", "⚠️ عوارض گزارش‌شده‌ی دارو (FAERS/FDA)", "", "نام دارو مثل: metformin", "", "")
+        fr4, e4, l4 = mk_section("", "💊 شناسه‌ی استاندارد دارو (RxNorm — NIH)", "", "نام دارو مثل: ibuprofen", "", "")
 
         def fetch(url):
             r = _rq.get(url, timeout=18, headers=UA)
@@ -1360,7 +1361,35 @@ class App:
             if q:
                 run_async(work)
 
-        for ent, fn in ((e1, do_pubmed), (e2, do_trials), (e3, do_faers)):
+        def do_rxnorm(_e=None):
+            q = e4.get().strip()
+            self._ui(lambda: l4.config(text="در حال جستجو…", fg=C["yl"]))
+            def work():
+                import urllib.parse as up
+                try:
+                    qq = up.quote(q)
+                    rid = fetch("https://rxnav.nlm.nih.gov/REST/rxcui.json?name=" + qq)
+                    rxcui = ((rid.get("idGroup", {}).get("rxnormId") or [""])[0])
+                    lines = ["RxCUI: " + (rxcui or "پیدا نشد")]
+                    if rxcui:
+                        d = fetch("https://rxnav.nlm.nih.gov/REST/drugs.json?name=" + qq)
+                        n = 0
+                        for g in d.get("drugGroup", {}).get("conceptGroup", []):
+                            for c in (g.get("conceptProperties") or [])[:3]:
+                                lines.append("• [" + str(c.get("tty", "")) + "] " + str(c.get("name", "")) + "  (" + str(c.get("rxcui", "")) + ")")
+                                n += 1
+                                if n >= 10:
+                                    break
+                            if n >= 10:
+                                break
+                    out = "\n".join(lines)
+                except Exception as ex:
+                    out = "خطا در اتصال به RxNav: " + str(ex)[:120]
+                self._ui(lambda: l4.winfo_exists() and l4.config(text=out, fg=C["tx"]))
+            if q:
+                run_async(work)
+
+        for ent, fn in ((e1, do_pubmed), (e2, do_trials), (e3, do_faers), (e4, do_rxnorm)):
             ent.bind("<Return>", fn)
             bar = ent.master
             tk.Button(bar, text="جستجو", command=fn, bg="#0077b6", fg="#021018",

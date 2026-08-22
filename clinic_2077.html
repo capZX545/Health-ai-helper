@@ -787,7 +787,11 @@ function uiResearch(){
   '<div class="card"><h3>⚠️ '+(LANG==="fa"?"عوارض گزارش‌شده‌ی دارو (بانک FAERS FDA)":"Reported side effects (FDA FAERS)")+'</h3>'+
   '<p style="font-size:11.5px;color:var(--dim)">'+(LANG==="fa"?"گزارش‌های واقعی عوارض دارویی از بیماران و پزشکان به FDA":"Real-world adverse-event reports submitted to the FDA")+'</p>'+
   '<input class="f" id="faersq" placeholder="'+(LANG==="fa"?"نام دارو (انگلیسی) مثل metformin":"drug name, e.g. metformin")+'" onkeydown="if(event.key===\'Enter\')faersSearch()">'+
-  '<button class="btn pri" onclick="faersSearch()">'+(LANG==="fa"?"بررسی":"Check")+'</button><div id="faersres" style="margin-top:8px"></div></div>';
+  '<button class="btn pri" onclick="faersSearch()">'+(LANG==="fa"?"بررسی":"Check")+'</button><div id="faersres" style="margin-top:8px"></div></div>'+
+  '<div class="card"><h3>💊 '+(LANG==="fa"?"شناسه‌ی استاندارد دارو (RxNorm — NIH)":"Standard drug ID (RxNorm — NIH)")+'</h3>'+
+  '<p style="font-size:11.5px;color:var(--dim)">'+(LANG==="fa"?"کد RxCUI استاندارد و فرم‌های دقیق دارویی (قدرت/شکل/برند)":"Canonical RxCUI code and precise drug forms (strength/brand)")+'</p>'+
+  '<input class="f" id="rxq" placeholder="'+(LANG==="fa"?"نام دارو مثل: ibuprofen":"drug name, e.g. ibuprofen")+'" onkeydown="if(event.key===\'Enter\')rxSearch()">'+
+  '<button class="btn pri" onclick="rxSearch()">'+(LANG==="fa"?"جستجو":"Search")+'</button><div id="rxres" style="margin-top:8px"></div></div>';
 }
 async function pubmedSearch(){
   var q=$("pmq").value.trim(); if(!q)return;
@@ -832,6 +836,19 @@ async function faersSearch(){
   });
   h+='<small style="color:var(--dim)">'+(LANG==="fa"?"این گزارش‌ها رابطه‌ی علت-معلولی را ثابت نمی‌کنند — با پزشک مشورت کن.":"Reports do not prove causation — consult your doctor.")+'</small>';
   $("faersres").innerHTML=h;
+}
+async function rxSearch(){
+  var q=$("rxq").value.trim(); if(!q)return;
+  $("rxres").innerHTML='<div class="spin"></div>';
+  var r=await api("/api/rxnorm",{drug:q});
+  if(!r.ok){$("rxres").innerHTML='<p class=warn>'+esc(r.message_fa||"Not found")+'</p>';return}
+  var T={SBD:(LANG==="fa"?"برندی":"brand"),SCD:(LANG==="fa"?"ژنریک":"generic"),BPCK:(LANG==="fa"?"بسته برند":"brand pack"),GPCK:(LANG==="fa"?"بسته ژنریک":"generic pack")};
+  var h='<p style="color:var(--cy)"><b>RxCUI: '+esc(r.rxcui)+'</b></p>';
+  r.concepts.forEach(function(c){
+    h+='<div class="q"><b>'+esc(c.name)+'</b> <span class="tag">'+esc(T[c.tty]||c.tty)+'</span> <small style="color:var(--dim)">'+esc(c.rxcui)+'</small></div>';
+  });
+  h+='<small style="color:var(--dim)">'+(LANG==="fa"?"منبع: RxNav / NIH":"Source: RxNav / NIH")+'</small>';
+  $("rxres").innerHTML=h;
 }
 async function showDrugLabel(g){
   var el=$("lbl-"+g.replace(/[^a-z0-9]/gi,""));

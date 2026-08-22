@@ -294,6 +294,26 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as e:
             return {"ok": False, "message_fa": "خطا در اتصال به ClinicalTrials.gov: " + str(e)[:100]}
 
+    def _live_rxnorm(self, name: str) -> dict:
+        if not name:
+            return {"ok": False, "message_fa": "نام دارو را بده."}
+        try:
+            import urllib.parse as up
+            q = up.quote(name)
+            rid = self._http_json(f"https://rxnav.nlm.nih.gov/REST/rxcui.json?name={q}", 15)
+            rxcui = (rid.get("idGroup", {}).get("rxnormId") or [""])[0]
+            concepts = []
+            if rxcui:
+                d = self._http_json(f"https://rxnav.nlm.nih.gov/REST/drugs.json?name={q}", 15)
+                for g in d.get("drugGroup", {}).get("conceptGroup", []):
+                    for c in (g.get("conceptProperties") or [])[:4]:
+                        concepts.append({"tty": c.get("tty", ""), "name": c.get("name", ""),
+                                         "rxcui": c.get("rxcui", "")})
+            return {"ok": bool(rxcui), "rxcui": rxcui, "concepts": concepts[:10],
+                    "message_fa": "" if rxcui else "در RxNorm پیدا نشد — نام انگلیسی دقیق‌تر امتحان کن."}
+        except Exception as e:
+            return {"ok": False, "message_fa": "خطا در اتصال به RxNav: " + str(e)[:100]}
+
     def _live_fda_events(self, drug: str) -> dict:
         if not drug:
             return {"ok": False, "message_fa": "نام دارو را بده."}
@@ -440,6 +460,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(self._live_pubmed(str(data.get("q") or "").strip()))
             if path == "/api/trials":
                 return self._json(self._live_trials(str(data.get("q") or "").strip()))
+            if path == "/api/rxnorm":
+                return self._json(self._live_rxnorm(str(data.get("drug") or data.get("q") or "").strip()))
             if path == "/api/fda-events":
                 return self._json(self._live_fda_events(str(data.get("drug") or "").strip()))
             if path == "/api/assess":
