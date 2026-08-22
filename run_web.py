@@ -216,6 +216,12 @@ class Handler(BaseHTTPRequestHandler):
             drugs = search_drugs(q) if q else get_all_drugs()
             self._json({"ok": True, "total": get_drug_count(), "interactions": get_interaction_count(), "drugs": drugs})
             return True
+        if path == "/api/knowledge/drugs_fda":
+            from knowledge_browser import search_fda_drugs, get_fda_drug_count
+            limit = int((qs.get("limit", ["40"])[0] or 40))
+            results = search_fda_drugs(q, limit) if q else []
+            self._json({"ok": True, "total": get_fda_drug_count(), "q": q, "drugs": results})
+            return True
         if path == "/api/knowledge/catalog":
             from knowledge_browser import get_catalog_diseases
             self._json(get_catalog_diseases(q, 30))

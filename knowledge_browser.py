@@ -85,13 +85,86 @@ def search_diseases(query: str) -> list[dict]:
     return [d for d in get_all_diseases() if nq in normalize(d["fa"]) or nq in normalize(d["en"]) or nq in d["id"]]
 
 
+# پل فارسی → انگلیسی برای کاتالوگ ICD-10 (که انگلیسی است)
+_FA_EN_MED = {
+    "دیابت": "diabetes", "قند": "hyperglycemia", "سرطان": "cancer", "تومور": "tumor",
+    "فشار خون": "hypertension", "پرفشاری": "hypertension", "کم‌خونی": "anemia",
+    "آسم": "asthma", "آلرژی": "allergy", "حساسیت": "allergy", "تشدید آسم": "asthma",
+    "سکته": "stroke", "قلب": "heart", "عفونت": "infection", "کرونا": "covid",
+    "کووید": "covid", "آنفلوآنزا": "influenza", "سرماخوردگی": "common cold",
+    "سردرد": "headache", "میگرن": "migraine", "صرع": "epilepsy", "مصر": "epilepsy",
+    "کلیه": "kidney", "کبد": "liver", "ریه": "lung",
+    "پنومونی": "pneumonia", "ذات‌الریه": "pneumonia", "سل": "tuberculosis",
+    "آرتریت": "arthritis", "آرتروز": "osteoarthritis", "استخوان": "bone",
+    "پوستی": "skin", "پوست": "skin", "چشم": "eye", "گوش": "ear",
+    "گلو": "throat", "لثه": "gum", "دندان": "tooth", "معدة": "stomach",
+    "معده": "stomach", "روده": "intestine", "اسهال": "diarrhea", "یبوست": "constipation",
+    "زخم": "ulcer", "رفلاکس": "reflux", "استفراغ": "vomiting", "تهوع": "nausea",
+    "تب": "fever", "سرفه": "cough", "تنگی نفس": "dyspnea", "سرگیجه": "dizziness",
+    "افسردگی": "depression", "اضطراب": "anxiety", "بی‌خوابی": "insomnia",
+    "بارداری": "pregnancy", "زایمان": "delivery", "قاعدگی": "menstruation",
+    "تیروئید": "thyroid", "چاقی": "obesity", "لاغری": "weight loss",
+    "التهاب": "inflammation", "سنگ": "calculus", "کیسه": "gallbladder",
+    "خونریزی": "bleeding", "درد": "pain", "شکستگی": "fracture", "سوختگی": "burn",
+    "مسمومیت": "poisoning", "الکلی": "alcohol", "محرک": "stimulant",
+    "ویروسی": "viral", "باکتری": "bacterial", "قارچ": "fungal", "انگل": "parasitic",
+    "کمبود ویتامین": "vitamin deficiency", "ویتامین": "vitamin", "پوکی استخوان": "osteoporosis",
+    "آتیش accesses": "access", "هموروئید": "hemorrhoid", "بواسیر": "hemorrhoid",
+    "سینه": "chest", "پستان": "breast", "پروستات": "prostate", "نازایی": "infertility",
+    "نقرس": "gout", "لوپوس": "lupus", "ام‌اس": "multiple sclerosis",
+    "پارکینسون": "parkinson", "آلزایمر": "alzheimer", "اوتیسم": "autism",
+    "کرون": "crohn", "سلیاک": "celiac", "هپاتیت": "hepatitis", "ایدز": "hiv",
+    "اچ‌آی‌وی": "hiv", "مالاریا": "malaria", "تب دنگ": "dengue",
+}
+
+
 def get_catalog_diseases(query: str = "", limit: int = 50) -> dict:
-    """جستجو در کاتالوگ ICD-10-CM (۲۷,۰۰۰+ بیماری)."""
-    from medical_catalog import search_conditions, stats, get_chapter_fa
+    """جستجو در کاتالوگ ICD-10-CM (۲۷,۰۰۰+ بیماری).
+    پل فارسی→انگلیسی: اگر جستجو فارسی باشد، معادل انگلیسی از بیماری‌های موتور
+    و دیکشنری پزشکی پیدا شده و در کاتالوگ هم جستجو می‌شود. کد ICD (مثل E11) هم کار می‌کند."""
+    import re as _re
+    from medical_catalog import search_conditions, stats, get_chapter_fa, search_by_code_prefix
     st = stats()
     if not query or not query.strip():
         return {"ok": True, "total": st["conditions"], "results": [], "query": ""}
-    results = search_conditions(query, limit)
+    q = query.strip()
+    results = search_conditions(q, limit)
+
+    # جستجو با پیشوند کد ICD (مثل E11 یا J45.9)
+    if _re.match(r"^[A-TV-Za-tv-z]\d{2}", q):
+        seen = {r.get("icd10") for r in results}
+        for r in search_by_code_prefix(q, limit):
+            if r.get("icd10") not in seen:
+                seen.add(r.get("icd10"))
+                results.append(r)
+
+    # پل فارسی → انگلیسی
+    nq = normalize(q)
+    en_terms: list[str] = []
+    has_fa = any("\u0600" <= ch <= "\u06FF" for ch in q)
+    if has_fa:
+        from medical_engine import DISEASES, SYMPTOM_NAMES_FA, SYMPTOM_NAMES_EN
+        for d in DISEASES:
+            if nq in normalize(d.get("fa", "")):
+                en = d.get("en", "").split("(")[0].strip()
+                if en and en not in en_terms:
+                    en_terms.append(en)
+        for sid, fa in SYMPTOM_NAMES_FA.items():
+            if nq in normalize(fa) and sid in SYMPTOM_NAMES_EN:
+                en = SYMPTOM_NAMES_EN[sid]
+                if en and en not in en_terms:
+                    en_terms.append(en)
+        for fa_term, en_term in _FA_EN_MED.items():
+            if nq in normalize(fa_term) or normalize(fa_term) in nq:
+                if en_term not in en_terms:
+                    en_terms.append(en_term)
+        seen = {r.get("icd10") for r in results}
+        for term in en_terms[:5]:
+            for r in search_conditions(term, limit):
+                if r.get("icd10") not in seen:
+                    seen.add(r.get("icd10"))
+                    results.append(r)
+        results = results[:limit]
     return {
         "ok": True,
         "total": st["conditions"],
@@ -166,3 +239,57 @@ def get_drug_count() -> int:
 def get_interaction_count() -> int:
     from drug_interaction import INTERACTIONS
     return len(INTERACTIONS)
+
+
+# ============================ بانک کامل FDA ============================
+
+_FDA_CACHE: dict | None = None
+
+
+def _load_fda() -> list[dict]:
+    """بارگذاری یک‌باره‌ی drugs_fda.json (۱۹ هزار+ داروی FDA)."""
+    global _FDA_CACHE
+    if _FDA_CACHE is None:
+        import json
+        import os
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "drugs_fda.json")
+        try:
+            with open(path, encoding="utf-8") as f:
+                _FDA_CACHE = json.load(f).get("drugs", [])
+        except Exception as e:
+            print(f"[knowledge_browser] بانک FDA بارگذاری نشد: {e}")
+            _FDA_CACHE = []
+        # ایندکس جستجو
+        for i, d in enumerate(_FDA_CACHE):
+            hay = " ".join([d.get("g", "")] + (d.get("brands") or []) + (d.get("ing") or [])).lower()
+            d["_i"], d["_hay"] = i, hay
+    return _FDA_CACHE
+
+
+def get_fda_drug_count() -> int:
+    return len(_load_fda())
+
+
+def search_fda_drugs(query: str, limit: int = 40) -> list[dict]:
+    """جستجو در بانک کامل FDA (نام ژنریک/برند/ماده‌ی فعال)."""
+    q = normalize(query)
+    if not q:
+        return []
+    out = []
+    for d in _load_fda():
+        if q in d["_hay"]:
+            out.append(d)
+            if len(out) >= limit:
+                break
+    return out
+
+
+def get_fda_drug(generic_name: str) -> dict | None:
+    """دریافت کامل‌ترین ورودی برای یک نام ژنریک (برای جزئیات)."""
+    key = normalize(generic_name)
+    best = None
+    for d in _load_fda():
+        if normalize(d["g"]) == key:
+            if best is None or d.get("n", 0) > best.get("n", 0):
+                best = d
+    return best

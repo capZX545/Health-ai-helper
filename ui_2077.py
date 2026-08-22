@@ -980,9 +980,11 @@ class App:
         w, top, inner, bottom = self._win_list(self.L("Diseases database", "بانک بیماری‌ها"))
 
         urg_fa = {"emergency": ("اورژانس", "#ff2a6d"), "urgent": ("فوری", "#ffd60a"), "routine": ("معمولی", "#3bff9e")}
-        tk.Label(top, text=self.L(f"Diseases in program: {len(dis)} — click one for details",
-                                  f"بیماری‌های برنامه: {len(dis)} — برای جزئیات روی هرکدام کلیک کن"),
-                 bg=C["panel2"], fg=C["cy"], font=pick_font(11, True), anchor="e").pack(fill="x", padx=16, pady=(10, 2))
+        from medical_catalog import stats as cat_stats
+        _cat_n = cat_stats().get("conditions", 0)
+        tk.Label(top, text=self.L(f"Diagnostic engine: {len(dis)} diseases  |  Full ICD-10 catalog: {_cat_n:,} — type to search both",
+                                  f"موتور تشخیص: {len(dis)} بیماری  |  کاتالوگ کامل ICD-10: {_cat_n:,} مورد — تایپ کن تا هر دو جستجو شوند"),
+                 bg=C["panel2"], fg=C["cy"], font=pick_font(11, True), anchor="e", wraplength=640, justify="right").pack(fill="x", padx=16, pady=(10, 2))
         sv = tk.StringVar(value="")
         search = tk.Entry(top, textvariable=sv, bg="#0a1424", fg=C["tx"], relief="flat", font=pick_font(11),
                           justify="right", insertbackground=C["cy"])
@@ -1033,6 +1035,50 @@ class App:
             q = sv.get().strip().lower()
             for row, txt in rows:
                 row.pack() if q in txt else row.pack_forget()
+            schedule_catalog()
+        # ----- جستجوی کاتالوگ کامل ICD-10 (با تاخیر ۳۰۰ms بعد از تایپ) -----
+        cat_rows: list[tk.Widget] = []
+        _deb = {"job": None}
+        def show_catalog_detail(name, code, chapter):
+            box.delete("1.0", "end")
+            box.insert("1.0", f"◀ {name}\nکد ICD-10: {code}\nفصل: {chapter}\n\n(این مورد از کاتالوگ کامل ICD-10-CM است — برای تشخیص، از ماژول علائم استفاده کن.)")
+            box.tag_add("title", "1.0", "1.0 lineend")
+            box.tag_config("title", foreground=C["cy"], font=pick_font(12, True))
+        def run_catalog_search():
+            _deb["job"] = None
+            q = sv.get().strip()
+            for r in cat_rows:
+                r.destroy()
+            cat_rows.clear()
+            if len(q) < 2:
+                return
+            from knowledge_browser import get_catalog_diseases
+            res = get_catalog_diseases(q, 20).get("results") or []
+            if not res:
+                return
+            sep = tk.Label(inner, text=self.L(f"— Full ICD-10 catalog matches ({len(res)}) —",
+                                             f"— نتایج کاتالوگ کامل ICD-10 ({len(res)}) —"),
+                           bg="#0e1730", fg=C["yl"], font=pick_font(9, True), anchor="e")
+            sep.pack(fill="x", padx=10, pady=(8, 2))
+            cat_rows.append(sep)
+            for c in res:
+                row = tk.Frame(inner, bg=C["panel2"])
+                b = tk.Button(row, text=f"{c['name']}   [{c['icd10']}]",
+                              command=lambda cc=c: show_catalog_detail(cc["name"], cc["icd10"], cc.get("chapter", "")),
+                              anchor="e", bg="#101c36", fg=C["tx"], relief="flat", font=pick_font(9),
+                              activebackground="#101c36", activeforeground=C["cy"], cursor="hand2")
+                b.pack(side="right", fill="x", expand=True)
+                row.pack(fill="x", padx=10, pady=1)
+                cat_rows.append(row)
+            # زیر لیست اسکرول کن تا نتایج دیده شود
+            w._canvas.yview_moveto(1.0)
+        def schedule_catalog(*_):
+            if _deb["job"]:
+                try:
+                    w.after_cancel(_deb["job"])
+                except Exception:
+                    pass
+            _deb["job"] = w.after(300, run_catalog_search)
         sv.trace_add("write", do_filter)
         box.pack(fill="both", expand=True, padx=16, pady=(4, 8))
         if dis:
@@ -1046,9 +1092,15 @@ class App:
 
         sev_fa = {"major": ("تداخل شدید", "#ff2a6d"), "moderate": ("تداخل متوسط", "#ffd60a"),
                   "minor": ("تداخل خفیف", "#3bff9e")}
-        tk.Label(top, text=self.L(f"Drugs: {len(drugs)} — click for properties & side effects",
-                                  f"داروها: {len(drugs)} — برای خاصیت‌ها و تداخل‌ها کلیک کن"),
-                 bg=C["panel2"], fg=C["cy"], font=pick_font(11, True), anchor="e").pack(fill="x", padx=16, pady=(10, 2))
+        _fda_n = 0
+        try:
+            from knowledge_browser import get_fda_drug_count
+            _fda_n = get_fda_drug_count()
+        except Exception:
+            _fda_n = 0
+        tk.Label(top, text=self.L(f"Curated: {len(drugs)} drugs with interactions  |  Complete FDA bank: {_fda_n:,} — type to search both",
+                                  f"داروهای منتخب: {len(drugs)} با تداخل‌ها  |  بانک کامل FDA: {_fda_n:,} دارو — تایپ کن تا هر دو جستجو شوند"),
+                 bg=C["panel2"], fg=C["cy"], font=pick_font(11, True), anchor="e", wraplength=640, justify="right").pack(fill="x", padx=16, pady=(10, 2))
         sv = tk.StringVar(value="")
         search = tk.Entry(top, textvariable=sv, bg="#0a1424", fg=C["tx"], relief="flat", font=pick_font(11),
                           justify="right", insertbackground=C["cy"])
@@ -1111,6 +1163,67 @@ class App:
             q = sv.get().strip().lower()
             for row, txt in rows:
                 row.pack() if q in txt else row.pack_forget()
+            schedule_fda()
+        # ----- جستجوی بانک کامل FDA (با تاخیر ۳۰۰ms بعد از تایپ) -----
+        fda_rows: list[tk.Widget] = []
+        _deb = {"job": None}
+        def show_fda_detail(d):
+            lines = [f"◀ {d.get('g','')}"]
+            if d.get("brands"):
+                lines.append("  نام‌های تجاری: " + "، ".join(d["brands"][:6]))
+            if d.get("class"):
+                lines.append("  کلاس دارویی: " + "، ".join(d["class"][:4]))
+            if d.get("ing"):
+                lines.append("  ماده‌ی فعال: " + " + ".join(d["ing"]))
+            if d.get("forms"):
+                lines.append("  فرم دارویی: " + "، ".join(d["forms"][:5]))
+            if d.get("routes"):
+                lines.append("  راه مصرف: " + "، ".join(d["routes"][:4]))
+            if d.get("mkt"):
+                lines.append("  دسته‌بندی بازاریابی: " + "، ".join(d["mkt"]))
+            lines.append(f"  تعداد محصولات ثبت‌شده در FDA: {d.get('n', 0)}")
+            lines.append("")
+            lines.append("(این مورد از بانک کامل openFDA/NDC است — برای تداخل‌ها داروی منتخب را هم ببین.)")
+            box.delete("1.0", "end")
+            box.insert("1.0", "\n".join(lines))
+            box.tag_add("title", "1.0", "1.0 lineend")
+            box.tag_config("title", foreground=C["mg"], font=pick_font(12, True))
+        def run_fda_search():
+            _deb["job"] = None
+            q = sv.get().strip()
+            for r in fda_rows:
+                r.destroy()
+            fda_rows.clear()
+            if len(q) < 2 or not _fda_n:
+                return
+            from knowledge_browser import search_fda_drugs
+            res = search_fda_drugs(q, 25)
+            if not res:
+                return
+            sep = tk.Label(inner, text=self.L(f"— FDA database matches ({len(res)}) —",
+                                             f"— نتایج بانک کامل FDA ({len(res)}) —"),
+                           bg="#0e1730", fg=C["yl"], font=pick_font(9, True), anchor="e")
+            sep.pack(fill="x", padx=10, pady=(8, 2))
+            fda_rows.append(sep)
+            for d in res:
+                row = tk.Frame(inner, bg=C["panel2"])
+                brand = (d.get("brands") or [""])[0]
+                title = f"{d['g']}" + (f"  ({brand})" if brand and brand.lower() != d["g"].lower() else "")
+                b = tk.Button(row, text=title, command=lambda dd=d: show_fda_detail(dd),
+                              anchor="e", bg="#101c36", fg=C["tx"], relief="flat", font=pick_font(9),
+                              activebackground="#101c36", activeforeground=C["cy"], cursor="hand2")
+                b.pack(side="right", fill="x", expand=True)
+                tk.Label(row, text=str(d.get("n", "")), bg=C["panel2"], fg=C["dim"], font=pick_font(8)).pack(side="right", padx=(0, 8))
+                row.pack(fill="x", padx=10, pady=1)
+                fda_rows.append(row)
+            w._canvas.yview_moveto(1.0)
+        def schedule_fda(*_):
+            if _deb["job"]:
+                try:
+                    w.after_cancel(_deb["job"])
+                except Exception:
+                    pass
+            _deb["job"] = w.after(300, run_fda_search)
         sv.trace_add("write", do_filter)
         box.pack(fill="both", expand=True, padx=16, pady=(4, 8))
         if drugs:

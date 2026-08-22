@@ -136,3 +136,18 @@ def get_chapter_fa(icd_code: str) -> str:
         return "نامشخص"
     letter = icd_code[0].upper()
     return ICD10_CHAPTERS.get(letter, "نامشخص")
+
+
+def search_by_code_prefix(prefix: str, limit: int = 30) -> list[dict]:
+    """جستجوی بیماری با پیشوند کد ICD-10 (مثلاً E11 → همه‌ی E11.*)."""
+    _load()
+    p = prefix.strip().upper()
+    if not p:
+        return []
+    out = []
+    for c in _DATA["conditions"]:
+        if c.get("icd10", "").startswith(p):
+            out.append(c)
+            if len(out) >= limit:
+                break
+    return out

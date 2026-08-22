@@ -1,22 +1,47 @@
-# رازها و اطلاعات شخصی — هرگز کامیت/ZIP نشوند
+# رازها و اطلاعات شخصی — هرگز کامیت نشوند
 .env
+.env.*
+!.env.example
 .reasoning_state.json
+*.pem
+*.key
 
-# داده‌های شخصی کاربر
+# داده‌های شخصی کاربر (خروجی خود برنامه)
 patient_profile.json
 vitals_history.json
 learned_knowledge.json
 ai_behavior_profile.json
 local_llm_config.json
 referral_report.html
+lab_report.html
 reminders.json
 app_settings.json
-lab_report.html
+conversation_history.json
+diseases_offline.db.tmp
+*.log
 
-# خروجی ساخت
+# خروجی ساخت و بسته‌بندی
 __pycache__/
+*.pyc
 build/
 dist/
 Output/
 *.spec
 medical_ai_assistant.zip
+drug-ndc.json.zip
+Setup-*.exe
+*.apk
+
+# محیط‌های توسعه
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+node_modules/
+
+# فایل‌های سیستمی
+.DS_Store
+Thumbs.db
+desktop.ini

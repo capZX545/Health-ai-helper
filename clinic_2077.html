@@ -878,9 +878,10 @@ async function uiDiseasesBrowser(){
     h+='</div>';
   }
   h+='</div></div>';
-  h+='<div class="card"><h3>ICD-10 Catalog</h3>';
-  h+='<input class="f" id="catq" placeholder="'+(LANG==="fa"?"جستجو در ۲۷هزار بیماری...":"Search 27,000+ conditions...")+'">';
-  h+='<button class="btn pri" onclick="searchCatalog()">'+(LANG==="fa"?"جستجو":"Search")+'</button><div id="catres"></div></div>';
+  h+='<div class="card"><h3>🗂 '+(LANG==="fa"?"کاتالوگ کامل ICD-10-CM (۲۷,۱۶۸ بیماری) — فارسی هم می‌توانی جستجو کنی":"Full ICD-10-CM catalog (27,168 conditions)")+'</h3>';
+  h+='<p style="font-size:11.5px;color:var(--dim)">'+(LANG==="fa"?"کد ICD هم کار می‌کند (مثلاً E11 یا J45). منبع: CMS آمریکا":"ICD codes work too (e.g. E11, J45). Source: US CMS")+'</p>';
+  h+='<input class="f" id="catq" placeholder="'+(LANG==="fa"?"مثلاً: دیابت، میگرن، سرطان ریه یا E11":"e.g. diabetes, migraine, E11")+'" onkeydown="if(event.key===\'Enter\')searchCatalog()">';
+  h+='<button class="btn pri" onclick="searchCatalog()">'+(LANG==="fa"?"جستجو":"Search")+'</button><div id="catres" style="margin-top:8px"></div></div>';
   el.innerHTML=h;
 }
 function filterDiseases(q){
@@ -898,11 +899,12 @@ async function searchCatalog(){
   var r=await api("/api/knowledge/catalog?q="+encodeURIComponent(q));
   var h='';
   if(r.ok&&r.results){
+    h='<small style="color:var(--dim)">'+fa(r.results.length)+' '+(LANG==="fa"?"نتیجه از":"of")+' '+fa(r.total)+'</small>';
     for(var i=0;i<r.results.length;i++){
       var c=r.results[i];
-      h+='<div class="q"><b>'+esc(c.name)+'</b> <span class="tag">'+esc(c.icd10)+'</span> <small>'+esc(c.chapter||"")+'</small></div>';
+      h+='<div class="q"><b>'+esc(c.name)+'</b> <span class="tag">'+esc(c.icd10)+'</span> <small style="color:var(--dim)">'+esc(c.chapter||"")+'</small></div>';
     }
-    if(!r.results.length)h='<p class=warn>Not found</p>';
+    if(!r.results.length)h+='<p class=warn>'+(LANG==="fa"?"چیزی پیدا نشد — شاید املای انگلیسی را امتحان کنی.":"Not found — try the English spelling.")+'</p>';
   }
   $("catres").innerHTML=h||'<p class=warn>'+esc(r.message_fa||"Error")+'</p>';
 }
@@ -912,7 +914,7 @@ async function uiDrugsBrowser(){
   var el=$("pbody");
   if(!r.ok){el.innerHTML="<p class=bad>Error</p>";return}
   var drugs=r.drugs||[];
-  var h='<div class="card"><h3>'+(LANG==="fa"?"داروها ("+fa(r.total)+" مورد | "+fa(r.interactions||0)+" تداخل)":"Drugs ("+r.total+" | "+(r.interactions||0)+" interactions)")+'</h3>';
+  var h='<div class="card"><h3>'+(LANG==="fa"?"داروهای منتخب با تداخل‌ها ("+fa(r.total)+" دارو | "+fa(r.interactions||0)+" تداخل)":"Curated drugs ("+r.total+" | "+(r.interactions||0)+" interactions)")+'</h3>';
   h+='<input class="f" id="drugq" placeholder="'+(LANG==="fa"?"جستجو...":"Search...")+'" oninput="filterDrugsList(this.value)">';
   h+='<div id="druglist">';
   for(var i=0;i<drugs.length;i++){
@@ -930,10 +932,40 @@ async function uiDrugsBrowser(){
       if(d.interactions.length>3)h+="...";
       h+='</small>';
     }
-    if(d.contra)h+='<br><small style="color:#ff8fab">Contra: '+esc(d.contra)+'</small>';
     h+='</div>';
   }
   h+='</div></div>';
+  h+='<div class="card"><h3>💊 '+(LANG==="fa"?"بانک کامل FDA — همه‌ی داروهای آمریکا":"Complete FDA database — all US drugs")+'</h3>';
+  h+='<p style="font-size:11.5px;color:var(--dim)">'+(LANG==="fa"?"جستجوی زنده در دایرکتوری رسمی NDC سازمان غذا و داروی آمریکا (منبع باز openFDA)":"Live search in the official FDA NDC directory (openFDA open data)")+'</p>';
+  h+='<input class="f" id="fdaq" placeholder="'+(LANG==="fa"?"مثلاً: atorvastatin یا Advil یا metformin":"e.g. atorvastatin / Advil / metformin")+'" oninput="fdaSearchDebounced()">';
+  h+='<div id="fdares"></div></div>';
+  el.innerHTML=h;
+}
+var _fdaT=null;
+function fdaSearchDebounced(){
+  clearTimeout(_fdaT);
+  _fdaT=setTimeout(searchFdaDrugs,300);
+}
+async function searchFdaDrugs(){
+  var q=$("fdaq").value.trim();
+  var el=$("fdares");
+  if(!q){el.innerHTML="";return}
+  el.innerHTML='<div class="spin"></div>';
+  var r=await api("/api/knowledge/drugs_fda?q="+encodeURIComponent(q)+"&limit=30");
+  if(!r.ok){el.innerHTML='<p class=bad>'+(LANG==="fa"?"خطا":"Error")+'</p>';return}
+  if(!r.total){el.innerHTML='<p class=warn">'+(LANG==="fa"?"بانک FDA در این نصب موجود نیست — build_fda_drugs.py را اجرا کنید.":"FDA database not present on this install.")+'</p>';return}
+  var h='<small style="color:var(--dim)">'+(LANG==="fa"?("از "+fa(r.total)+" داروی بانک FDA"):(r.total+" drugs in FDA bank"))+'</small>';
+  if(!r.drugs.length){h+='<p class=warn">'+(LANG==="fa"?"چیزی پیدا نشد.":"Nothing found.")+'</p>'}
+  for(var i=0;i<r.drugs.length;i++){
+    var d=r.drugs[i];
+    h+='<div class="q"><b>'+esc(d.g)+'</b>';
+    if(d.brands&&d.brands.length)h+=' <small style="color:var(--cy)">'+esc(d.brands.slice(0,4).join("، "))+'</small>';
+    if(d.class&&d.class.length)h+='<br><small>'+(LANG==="fa"?"کلاس: ":"Class: ")+esc(d.class.slice(0,2).join("، "))+'</small>';
+    if(d.forms&&d.forms.length)h+='<br><small>'+(LANG==="fa"?"فرم: ":"Forms: ")+esc(d.forms.slice(0,3).join("، "))+'</small>';
+    if(d.routes&&d.routes.length)h+=' | '+(LANG==="fa"?"مصرف: ":"Route: ")+esc(d.routes.slice(0,2).join("، "));
+    if(d.ing&&d.ing.length)h+='<br><small style="color:var(--dim)">'+(LANG==="fa"?"ماده‌ی فعال: ":"Ingredients: ")+esc(d.ing.join(" + "))+'</small>';
+    h+=' <small style="color:var(--dim)">('+fa(d.n)+' '+(LANG==="fa"?"محصول":"products")+')</small></div>';
+  }
   el.innerHTML=h;
 }
 function filterDrugsList(q){
