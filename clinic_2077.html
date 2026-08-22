@@ -777,23 +777,77 @@ async function runAssess(){
   }
   el.innerHTML=h;
 }
+var SYMC={};var _SYMS=[];
 async function uiSymptomsBrowser(){
   var r=await api("/api/knowledge/symptoms");
   var el=$("pbody");
   if(!r.ok){el.innerHTML="<p class=bad>Error</p>";return}
-  var syms=r.symptoms||[];
-  var h='<div class="card"><h3>'+(LANG==="fa"?"علائم ("+fa(r.total)+" مورد)":"Symptoms ("+r.total+")")+'</h3>';
-  h+='<input class="f" id="symq" placeholder="'+(LANG==="fa"?"جستجو...":"Search...")+'" oninput="filterSymptoms(this.value)">';
+  var syms=r.symptoms||[];window._SYMS=syms;
+  var h='<div class="card"><h3>'+(LANG==="fa"?"علائم ("+fa(r.total)+" مورد) — تیک بزن و تحلیل کن":"Symptoms ("+r.total+") — check & analyze")+'</h3>';
+  h+='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">';
+  h+='<input class="f" id="symq" placeholder="'+(LANG==="fa"?"جستجو...":"Search...")+'" oninput="filterSymptoms(this.value)" style="flex:1;min-width:120px">';
+  h+='<button class="btn pri" onclick="analyzeSymptoms()">'+(LANG==="fa"?"تحلیل علائم":"Analyze")+'</button>';
+  h+='<button class="btn" onclick="clearSymptoms()">'+(LANG==="fa"?"پاک‌کردن":"Clear")+'</button>';
+  h+='</div>';
+  h+='<div id="symcount" style="font-size:11.5px;color:var(--yl);margin:6px 0"></div>';
   h+='<div id="symlist">';
   for(var i=0;i<syms.length;i++){
     var s=syms[i];
-    h+='<div class="q" data-search="'+esc(s.fa+" "+s.en+" "+s.id)+'">';
-    h+='<b>'+esc(LANG==="fa"?s.fa:s.en)+'</b> <small style="color:var(--cy)">'+esc(s.id)+'</small>';
-    h+='<br><small style="color:var(--dim)">'+(LANG==="fa"?"بیماری‌های مرتبط":"Related")+": "+s.related_diseases.map(function(d){return esc(d.name)}).join(", ")+'</small>';
+    h+='<div class="q" data-search="'+esc(s.fa+" "+s.en+" "+s.id)+'" style="display:flex;gap:9px;align-items:flex-start">';
+    h+='<input type="checkbox" id="ck-'+esc(s.id)+'" onchange="symCk(\''+esc(s.id)+'\')" style="margin-top:5px;accent-color:#00b8d4;cursor:pointer"'+(SYMC[s.id]?' checked':'')+'>';
+    h+='<div style="flex:1"><label for="ck-'+esc(s.id)+'" style="cursor:pointer"><b>'+esc(LANG==="fa"?s.fa:s.en)+'</b> <small style="color:var(--cy)">'+esc(s.id)+'</small></label>';
+    h+='<br><small style="color:var(--dim)">'+(LANG==="fa"?"بیماری‌های مرتبط":"Related")+": "+s.related_diseases.map(function(d){return esc(d.name)}).join(", ")+'</small></div>';
     h+='</div>';
   }
   h+='</div></div>';
   el.innerHTML=h;
+  syncSymCount();
+}
+function symCk(id){var c=$("ck-"+id);SYMC[id]=c?c.checked:false;syncSymCount()}
+function syncSymCount(){
+  var n=0;for(var k in SYMC){if(SYMC[k])n++}
+  var el=$("symcount");if(el){el.textContent=LANG==="fa"?(fa(n)+" علامت انتخاب شده"):(n+" selected")}
+}
+function clearSymptoms(){
+  SYMC={};
+  var items=document.querySelectorAll("#symlist input[type=checkbox]");
+  for(var i=0;i<items.length;i++){items[i].checked=false}
+  syncSymCount();
+}
+async function analyzeSymptoms(){
+  var syms=window._SYMS||[];
+  var names=syms.filter(function(s){return SYMC[s.id]}).map(function(s){return s.fa});
+  var el=$("pbody");
+  if(!names.length){
+    el.insertAdjacentHTML("afterbegin",'<div class="card" style="border-color:#ffd60a">'+(LANG==="fa"?"اول حداقل یک علامت تیک بزن.":"Check at least one symptom first.")+'</div>');
+    return;
+  }
+  el.innerHTML='<div class="card"><h3>'+(LANG==="fa"?"در حال تحلیل علائم…":"Analyzing…")+'</h3><div class="spin"></div></div>';
+  var r=await api("/api/assess",{text:names.join("\n")});
+  if(!r.ok){el.innerHTML='<div class="card"><p class=bad>'+esc(r.message_fa||"Error")+'</p><button class="btn" onclick="uiSymptomsBrowser()">'+(LANG==="fa"?"بازگشت":"Back")+'</button></div>';return}
+  var U=t("assess_urg");
+  var h='<div class="card"><h3>'+(LANG==="fa"?"نتیجه‌ی تحلیل علائم انتخابی":"Symptom analysis result")+'</h3>';
+  h+='<button class="btn" onclick="uiSymptomsBrowser()">↩ '+(LANG==="fa"?"بازگشت به لیست علائم":"Back to symptoms")+'</button></div>';
+  if(r.red_flag){
+    h+='<div class="card" style="border-color:#7a1836"><b style="color:var(--mg)">'+(LANG==="fa"?"نشانه‌ی اورژانسی!":"EMERGENCY!")+'</b><br>'+fmt(r.text||"")+'</div>';
+    $("pbody").innerHTML=h;return;
+  }
+  if(r.triage){
+    var tc=r.triage.level==="emergency"?"#ff2a6d":(r.triage.level==="urgent"?"#ffb020":"#3bff9e");
+    h+='<div class="card" style="border-color:'+tc+'"><b style="color:'+tc+'">'+t("assess_triage")+": "+esc(U[r.triage.level]||r.triage.level)+'</b><br><small>'+esc(r.triage.where)+'</small></div>';
+  }
+  h+='<div class="card"><b>'+t("assess_symptoms")+':</b> '+((r.symptoms||[]).map(function(s){return '<span class="tag">'+esc(s)+'</span>'}).join("")||"—")+'</div>';
+  if((r.candidates||[]).length){
+    h+='<div class="card"><h3>'+t("assess_cands")+'</h3>'+r.candidates.map(function(c){
+      var color=c.urgency==="emergency"?"#ff2a6d":(c.urgency==="urgent"?"#ffb020":"#3bff9e");
+      return '<div class="q"><b>'+esc(LANG==="fa"?(c.fa||c.name):c.name)+'</b> <b style="color:'+color+'">'+fa(c.percent)+(LANG==="fa"?"٪":"%")+'</b>'+
+      ' <small style="color:'+color+'">'+esc(U[c.urgency]||c.urgency)+'</small>'+
+      '<div class="bar"><i style="width:'+Math.min(100,c.percent)+'%;background:'+color+'"></i></div>'+
+      '<small style="color:var(--dim)">'+t("assess_matched")+": "+esc((c.matched_symptoms||[]).join("، "))+'</small></div>';
+    }).join("")+'</div>';
+  }
+  h+='<div class="card"><small style="color:var(--dim)">'+(LANG==="fa"?"این تحلیل تشخیص قطعی نیست — مراجعه به پزشک لازم است.":"Not a definitive diagnosis — see a doctor.")+'</small></div>';
+  $("pbody").innerHTML=h;
 }
 function filterSymptoms(q){
   q=q.toLowerCase();

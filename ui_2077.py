@@ -146,6 +146,9 @@ class App:
             (("Drugs & interactions", "دارو و تداخلات"), self._panel_drugs),
             (("Medical image", "تحلیل تصویر پزشکی"), self._panel_image),
             (("Disease likelihood", "ارزیابی احتمال بیماری"), self._panel_assess),
+            (("Symptoms (check & analyze)", "علائم (تیک و تحلیل)"), self._panel_symptoms),
+            (("Diseases database", "بانک بیماری‌ها"), self._panel_diseases),
+            (("Drugs database", "بانک داروها"), self._panel_drugs),
             (("Mental health", "سلامت روان"), self._panel_mental),
             (("Sleep analysis", "تحلیل خواب"), self._panel_sleep),
             (("Checkup calendar", "تقویم چکاپ"), self._panel_checkup),
@@ -427,8 +430,14 @@ class App:
         def _canvas_resize(event):
             canvas.itemconfig(canvas_window, width=canvas.winfo_width())
         canvas.bind("<Configure>", _canvas_resize)
-        # ماوس-اسکرول روی «همه‌ی» ویجت‌ها (نه فقط کانواس خالی)
-        # ترفند bind_all + محافظ: فقط وقتی ماوس داخل همین پنجره است اسکرول شود
+        self._wheel_bind(w, canvas)
+        w._scroll_frame = frame
+        w._canvas = canvas
+        # فریم قابل‌اسکرول را برمی‌گردانیم تا همه‌ی ویجت‌ها داخل آن قرار بگیرند
+        return frame
+
+    def _wheel_bind(self, w, canvas):
+        """چرخ ماوس روی «همه‌ی» ویجت‌های پنجره‌ی w → اسکرول کانواس (با محافظ ماوس)."""
         def _in_this_window() -> bool:
             try:
                 wid = w.winfo_containing(w.winfo_pointerx(), w.winfo_pointery())
@@ -462,10 +471,42 @@ class App:
                     except tk.TclError:
                         pass
         w.bind("<Destroy>", _unbind_all)
-        w._scroll_frame = frame
+
+    def _win_list(self, title: str):
+        """پنجره با نوار بالا ثابت + لیست قابل‌اسکرول + نوار پایین ثابت.
+        خروجی: (پنجره، فریم بالای ثابت، فریم داخلیِ لیست، فریم پایین ثابت)"""
+        w = tk.Toplevel(self.root)
+        w.title(title)
+        w.configure(bg=C["panel2"])
+        try:
+            scr_h = w.winfo_screenheight()
+        except Exception:
+            scr_h = 800
+        win_h = max(420, min(680, scr_h - 140))
+        w.geometry(f"700x{win_h}")
+        w.minsize(540, min(420, win_h))
+        w.transient(self.root)
+        w.protocol("WM_DELETE_WINDOW", w.destroy)
+        top = tk.Frame(w, bg=C["panel2"])
+        top.pack(side="top", fill="x")
+        bottom = tk.Frame(w, bg=C["panel2"])
+        bottom.pack(side="bottom", fill="x")
+        canvas = tk.Canvas(w, bg=C["panel2"], highlightthickness=0)
+        vsb = ttk.Scrollbar(w, orient="vertical", command=canvas.yview)
+        canvas.configure(yscrollcommand=vsb.set)
+        vsb.pack(side="left", fill="y")
+        canvas.pack(side="left", fill="both", expand=True)
+        inner = tk.Frame(canvas, bg=C["panel2"])
+        cw = canvas.create_window((0, 0), window=inner, anchor="nw")
+        def _conf(_event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+            canvas.itemconfig(cw, width=canvas.winfo_width())
+        inner.bind("<Configure>", _conf)
+        canvas.bind("<Configure>", lambda e: canvas.itemconfig(cw, width=canvas.winfo_width()))
+        self._wheel_bind(w, canvas)
         w._canvas = canvas
-        # فریم قابل‌اسکرول را برمی‌گردانیم تا همه‌ی ویجت‌ها داخل آن قرار بگیرند
-        return frame
+        w._scroll_frame = inner
+        return w, top, inner, bottom
 
     def _form(self, w, fields: list[tuple[str, str, str]]) -> dict[str, tk.Entry]:
         out = {}
@@ -839,6 +880,241 @@ class App:
         show("cpr")
         win = w.winfo_toplevel()  # w فقط فریم داخلی است؛ پنجره‌ی واقعی را می‌گیریم
         win.protocol("WM_DELETE_WINDOW", lambda: (toggle() if cpr["on"] else None, win.destroy()))
+
+    # ------------------------------------------------ بانک علائم/بیماری/دارو
+    def _panel_symptoms(self):
+        """ماژول علائم: همه‌ی علائم با تیک + تحلیل احتمال بیماری‌ها."""
+        from knowledge_browser import get_all_symptoms
+        syms = get_all_symptoms()
+        w, top, inner, bottom = self._win_list(self.L("Symptoms — check & analyze", "علائم — تیک بزن و تحلیل بگیر"))
+
+        tk.Label(top, text=self.L(f"All symptoms ({len(syms)}) — check what you have:",
+                                  f"همه‌ی علائم ({len(syms)}) — هر چی داری تیک بزن:"),
+                 bg=C["panel2"], fg=C["cy"], font=pick_font(11, True), anchor="e").pack(fill="x", padx=16, pady=(10, 2))
+        sv = tk.StringVar(value="")
+        search = tk.Entry(top, textvariable=sv, bg="#0a1424", fg=C["tx"], relief="flat", font=pick_font(11),
+                          justify="right", insertbackground=C["cy"])
+        search.pack(fill="x", padx=16, ipady=4)
+        cnt_lbl = tk.Label(top, text=self.L("selected: 0", "انتخاب‌شده: ۰"), bg=C["panel2"],
+                           fg=C["yl"], font=pick_font(9), anchor="e")
+        cnt_lbl.pack(fill="x", padx=16, pady=(0, 4))
+
+        vars_: dict[str, tk.BooleanVar] = {}
+        rows = []
+
+        def upd_cnt():
+            n = sum(1 for v in vars_.values() if v.get())
+            cnt_lbl.config(text=self.L(f"selected: {n}", f"انتخاب‌شده: {n}"))
+
+        for s in syms:
+            v = tk.BooleanVar(value=False)
+            vars_[s["id"]] = v
+            row = tk.Frame(inner, bg=C["panel2"])
+            cb = tk.Checkbutton(row, text=s["fa"], variable=v, command=upd_cnt,
+                                bg=C["panel2"], fg=C["tx"], selectcolor="#0a1424",
+                                activebackground=C["panel2"], activeforeground=C["cy"],
+                                font=pick_font(11), anchor="e", justify="right", cursor="hand2")
+            cb.pack(side="right", fill="x", expand=True)
+            rel = "، ".join(d["name"] for d in (s.get("related_diseases") or [])[:3]) or "—"
+            tk.Label(row, text=rel[:70], bg=C["panel2"], fg=C["dim"], font=pick_font(8),
+                     anchor="e", wraplength=300, justify="right").pack(side="right", fill="x", expand=True)
+            row.pack(fill="x", padx=10, pady=1)
+            rows.append((row, (s["fa"] + " " + s["en"]).lower()))
+
+        def do_filter(*_):
+            q = sv.get().strip().lower()
+            for row, txt in rows:
+                row.pack() if q in txt else row.pack_forget()
+        sv.trace_add("write", do_filter)
+
+        box = scrolledtext.ScrolledText(bottom, bg="#070d18", fg=C["tx"], font=pick_font(10),
+                                        height=10, relief="flat", wrap="word")
+
+        def analyze_now():
+            names = [s["fa"] for s in syms if vars_[s["id"]].get()]
+            box.delete("1.0", "end")
+            if not names:
+                box.insert("1.0", self.L("Check at least one symptom first.", "اول حداقل یک علامت تیک بزن."))
+                return
+            from medical_engine import analyze
+            r = analyze("\n".join(names))
+            lines = []
+            if r.get("red_flag"):
+                lines.append("‼ " + self.L("EMERGENCY signs — seek urgent care NOW (115/112).",
+                                           "نشانه‌ی اورژانسی — همین حالا به اورژانس مراجعه کن (۱۱۵/۱۱۲)."))
+                for reason in (r.get("red_flag_reasons") or [])[:4]:
+                    lines.append("   • " + str(reason))
+            lines.append(self.L(f"Detected symptoms: {len(r.get('symptoms', []))}",
+                                f"علائم تشخیص داده‌شده: {len(r.get('symptoms', []))}"))
+            lines.append("")
+            for c in (r.get("candidates") or [])[:8]:
+                pct = c.get("percent")
+                pct = f"{pct}٪" if pct not in (None, "") else ""
+                urg = {"emergency": "اورژانس", "urgent": "فوری", "routine": "معمولی"}.get(c.get("urgency"), c.get("urgency", ""))
+                lines.append(f"• {c.get('fa', c.get('name', ''))}  {pct}  [{urg}]")
+                ms = c.get("matched_symptoms") or []
+                if ms:
+                    lines.append("    علائم منطبق: " + "، ".join(str(m) for m in ms[:6]))
+            lines.append("")
+            lines.append(self.L("This is not a definitive diagnosis — a doctor's visit is necessary.",
+                                "این تشخیص قطعی نیست — مراجعه به پزشک لازم است."))
+            box.insert("1.0", "\n".join(lines))
+
+        def clear_all():
+            for v in vars_.values():
+                v.set(False)
+            upd_cnt()
+
+        bar2 = tk.Frame(bottom, bg=C["panel2"])
+        bar2.pack(fill="x", pady=(6, 0))
+        tk.Button(bar2, text=self.L("Analyze", "تحلیل علائم"), command=analyze_now, bg="#0077b6",
+                  fg="#021018", font=pick_font(11, True), relief="flat").pack(side="right", padx=16, ipadx=14, ipady=3)
+        tk.Button(bar2, text=self.L("Clear", "پاک‌کردن"), command=clear_all, bg="#0d1930",
+                  fg=C["tx"], font=pick_font(10), relief="flat").pack(side="right", ipadx=8, ipady=3)
+        box.pack(fill="both", expand=True, padx=16, pady=(4, 8))
+
+    def _panel_diseases(self):
+        """بانک بیماری‌ها: تعداد، علائم با احتمال، فوریت، توصیه."""
+        from knowledge_browser import get_all_diseases
+        dis = get_all_diseases()
+        w, top, inner, bottom = self._win_list(self.L("Diseases database", "بانک بیماری‌ها"))
+
+        urg_fa = {"emergency": ("اورژانس", "#ff2a6d"), "urgent": ("فوری", "#ffd60a"), "routine": ("معمولی", "#3bff9e")}
+        tk.Label(top, text=self.L(f"Diseases in program: {len(dis)} — click one for details",
+                                  f"بیماری‌های برنامه: {len(dis)} — برای جزئیات روی هرکدام کلیک کن"),
+                 bg=C["panel2"], fg=C["cy"], font=pick_font(11, True), anchor="e").pack(fill="x", padx=16, pady=(10, 2))
+        sv = tk.StringVar(value="")
+        search = tk.Entry(top, textvariable=sv, bg="#0a1424", fg=C["tx"], relief="flat", font=pick_font(11),
+                          justify="right", insertbackground=C["cy"])
+        search.pack(fill="x", padx=16, ipady=4, pady=(0, 6))
+
+        box = scrolledtext.ScrolledText(bottom, bg="#070d18", fg=C["tx"], font=pick_font(10),
+                                        height=10, relief="flat", wrap="word")
+
+        def show_detail(d):
+            u_fa, u_col = urg_fa.get(d.get("urgency"), (d.get("urgency"), C["tx"]))
+            lines = [f"◀ {d.get('name', '')}  [{u_fa}]", ""]
+            sy = d.get("symptoms") or []
+            if sy:
+                lines.append("علائم (با احتمال):")
+                for s in sy:
+                    lines.append(f"   • {s.get('name','')} — {int(round((s.get('probability') or 0) * 100))}٪")
+            lines.append("")
+            adv = d.get("advice") or []
+            if adv:
+                lines.append("توصیه:")
+                for a in adv:
+                    lines.append("   • " + str(a))
+            if d.get("doctor_when"):
+                lines.append("")
+                lines.append("⏰ چه زمانی پزشک: " + str(d["doctor_when"]))
+            lines.append("")
+            lines.append(f"(فوریت: {u_fa} | شیوع پایه: {int(round((d.get('prior') or 0) * 1000) / 10)}٪)")
+            box.delete("1.0", "end")
+            box.insert("1.0", "\n".join(lines))
+            box.tag_add("title", "1.0", "1.0 lineend")
+            box.tag_config("title", foreground=u_col, font=pick_font(12, True))
+
+        rows = []
+        for d in dis:
+            u_fa, u_col = urg_fa.get(d.get("urgency"), ("", C["tx"]))
+            n_sym = len(d.get("symptoms") or [])
+            row = tk.Frame(inner, bg=C["panel2"])
+            b = tk.Button(row, text=f"{d.get('name','')}   [{u_fa}]", command=lambda dd=d: show_detail(dd),
+                          anchor="e", bg="#0d1930", fg=u_col, relief="flat", font=pick_font(10, True),
+                          activebackground="#101c36", activeforeground=C["cy"], cursor="hand2")
+            b.pack(side="right", fill="x", expand=True)
+            tk.Label(row, text=self.L(f"{n_sym} symptoms", f"{n_sym} علامت"), bg=C["panel2"],
+                     fg=C["dim"], font=pick_font(8), anchor="e").pack(side="right", padx=(0, 8))
+            row.pack(fill="x", padx=10, pady=1)
+            rows.append((row, (str(d.get("name", "")) + " " + d.get("fa", "") + " " + d.get("en", "") + " " + d.get("id", "")).lower()))
+
+        def do_filter(*_):
+            q = sv.get().strip().lower()
+            for row, txt in rows:
+                row.pack() if q in txt else row.pack_forget()
+        sv.trace_add("write", do_filter)
+        box.pack(fill="both", expand=True, padx=16, pady=(4, 8))
+        if dis:
+            show_detail(dis[0])
+
+    def _panel_drugs(self):
+        """بانک داروها: خاصیت، دسته، عوارض/تداخل‌ها، بارداری و..."""
+        from knowledge_browser import get_all_drugs
+        drugs = get_all_drugs()
+        w, top, inner, bottom = self._win_list(self.L("Drugs database", "بانک داروها"))
+
+        sev_fa = {"major": ("تداخل شدید", "#ff2a6d"), "moderate": ("تداخل متوسط", "#ffd60a"),
+                  "minor": ("تداخل خفیف", "#3bff9e")}
+        tk.Label(top, text=self.L(f"Drugs: {len(drugs)} — click for properties & side effects",
+                                  f"داروها: {len(drugs)} — برای خاصیت‌ها و تداخل‌ها کلیک کن"),
+                 bg=C["panel2"], fg=C["cy"], font=pick_font(11, True), anchor="e").pack(fill="x", padx=16, pady=(10, 2))
+        sv = tk.StringVar(value="")
+        search = tk.Entry(top, textvariable=sv, bg="#0a1424", fg=C["tx"], relief="flat", font=pick_font(11),
+                          justify="right", insertbackground=C["cy"])
+        search.pack(fill="x", padx=16, ipady=4, pady=(0, 6))
+
+        box = scrolledtext.ScrolledText(bottom, bg="#070d18", fg=C["tx"], font=pick_font(10),
+                                        height=10, relief="flat", wrap="word")
+
+        def show_detail(d):
+            def row_fa(label, val):
+                return f"  {label}: {val}" if val not in (None, "", []) else ""
+            lines = [f"◀ {d.get('fa','')} ({d.get('en','')})"]
+            cat = d.get("category")
+            if cat:
+                lines.append(f"  دسته: {cat}")
+            for lbl, key in (("کلاس", "class"), ("کد ATC", "atc"), ("نیمه‌عمر", "half_life"),
+                             ("متابولیسم", "metabolism"), ("راه مصرف", "routes"), ("بارداری", "pregnancy")):
+                r = row_fa(lbl, d.get(key))
+                if r:
+                    lines.append(r)
+            aliases = d.get("aliases_fa") or []
+            if aliases:
+                lines.append("  نام‌های دیگر: " + "، ".join(str(a) for a in aliases[:6]))
+            inter = d.get("interactions") or []
+            if inter:
+                lines.append("")
+                lines.append(f"عوارض/تداخل‌ها ({len(inter)}):")
+                for it in inter:
+                    s_fa, _col = sev_fa.get(it.get("severity"), (it.get("severity", ""), C["tx"]))
+                    lines.append(f"   • با «{it.get('other','')}» — {s_fa}")
+                    if it.get("detail"):
+                        lines.append("      " + str(it["detail"])[:160])
+            notes = d.get("notes")
+            if notes:
+                lines.append("")
+                lines.append("نکته: " + str(notes))
+            contra = d.get("contra")
+            if contra:
+                lines.append("منع مصرف: " + str(contra))
+            box.delete("1.0", "end")
+            box.insert("1.0", "\n".join(x for x in lines if x != ""))
+            box.tag_add("title", "1.0", "1.0 lineend")
+            box.tag_config("title", foreground=C["mg"], font=pick_font(12, True))
+
+        rows = []
+        for d in drugs:
+            row = tk.Frame(inner, bg=C["panel2"])
+            n_inter = len(d.get("interactions") or [])
+            b = tk.Button(row, text=f"{d.get('fa','')}  —  {d.get('category','')}", command=lambda dd=d: show_detail(dd),
+                          anchor="e", bg="#0d1930", fg=C["tx"], relief="flat", font=pick_font(10, True),
+                          activebackground="#101c36", activeforeground=C["cy"], cursor="hand2")
+            b.pack(side="right", fill="x", expand=True)
+            if n_inter:
+                tk.Label(row, text=str(n_inter), bg=C["panel2"], fg=C["yl"], font=pick_font(8)).pack(side="right", padx=(0, 8))
+            row.pack(fill="x", padx=10, pady=1)
+            rows.append((row, (" ".join([str(d.get("fa","")), str(d.get("en","")), str(d.get("category","")), str(d.get("id",""))] +
+                                        [str(a) for a in (d.get("aliases_fa") or []) + (d.get("aliases_en") or [])])).lower()))
+
+        def do_filter(*_):
+            q = sv.get().strip().lower()
+            for row, txt in rows:
+                row.pack() if q in txt else row.pack_forget()
+        sv.trace_add("write", do_filter)
+        box.pack(fill="both", expand=True, padx=16, pady=(4, 8))
+        if drugs:
+            show_detail(drugs[0])
 
     def _panel_referral(self):
         from doctor_referral import generate
