@@ -1248,7 +1248,8 @@ async function searchCatalog(){
     h='<small style="color:var(--dim)">'+fa(r.results.length)+' '+(LANG==="fa"?"نتیجه از":"of")+' '+fa(r.total)+'</small>';
     for(var i=0;i<r.results.length;i++){
       var c=r.results[i];
-      h+='<div class="q"><b>'+esc(c.name)+'</b>'+(c.fa?' <b style="color:var(--cy)">('+esc(c.fa)+')</b>':'')+' <span class="tag">'+esc(c.icd10)+'</span> <small style="color:var(--dim)">'+esc(c.chapter||"")+'</small></div>';
+      h+='<div class="q"><b>'+esc(c.name)+'</b>'+(c.fa?' <b style="color:var(--cy)">('+esc(c.fa)+')</b>':'')+' <span class="tag">'+esc(c.icd10)+'</span> <small style="color:var(--dim)">'+esc(c.chapter||"")+'</small>'+
+      ((c.note_en||c.note_fa)?'<br><small style="color:#ffd60a">'+esc(LANG==="fa"?(c.note_fa||c.note_en):(c.note_en||c.note_fa)).slice(0,220)+'</small><br><small style="color:var(--dim)">ⓘ '+(LANG==="fa"?(c.nsym_fa||c.nsym_en):(c.nsym_en||c.nsym_fa))+'</small>':'')+'</div>';
     }
     if(!r.results.length)h+='<p class=warn>'+(LANG==="fa"?"چیزی پیدا نشد — شاید املای انگلیسی را امتحان کنی.":"Not found — try the English spelling.")+'</p>';
   }

@@ -178,11 +178,18 @@ def get_catalog_diseases(query: str = "", limit: int = 50) -> dict:
                     seen.add(r.get("icd10"))
                     results.append(r)
         results = results[:limit]
+    out_rows = []
+    for r in results:
+        ch_fa = get_chapter_fa(r["icd10"])
+        ex = explain_disease_entry(r["name"], r["icd10"])
+        out_rows.append({"name": r["name"], "icd10": r["icd10"], "chapter": ch_fa,
+                         "fa": fa_disease_name(icd=r["icd10"], en=r["name"]),
+                         "note_en": ex["note_en"], "note_fa": ex["note_fa"],
+                         "nsym_en": ex["sym_en"], "nsym_fa": ex["sym_fa"]})
     return {
         "ok": True,
         "total": st["conditions"],
-        "results": [{"name": r["name"], "icd10": r["icd10"], "chapter": get_chapter_fa(r["icd10"]),
-                     "fa": fa_disease_name(icd=r["icd10"], en=r["name"])} for r in results],
+        "results": out_rows,
         "query": query,
     }
 
@@ -870,8 +877,8 @@ import re as _re
 
 DISEASE_FAMILY_PATTERNS = [
     (_re.compile(r"abnormal cytological finding", _re.I),
-     "This is a LAB RESULT code, not a disease: a smear/sample taken from the digestive organs or abdominal cavity showed abnormal cells under the microscope. By itself it has no symptoms; it means the sample needs a doctor's review, often with repeat sampling, imaging or a biopsy to find the cause (inflammation, infection, benign growth or, less often, a tumor).",
-     "این کد یک «نتیجه‌ی آزمایش» است، نه یک بیماری: در نمونه‌ی گرفته‌شده از اندام‌های گوارشی یا حفره‌ی شکم، سلول‌های غیرطبیعی دیده شده است. خودش علامتی ندارد؛ یعنی نمونه باید توسط پزشک بررسی شود و معمولاً تکرار آزمایش، تصویربرداری یا بیوپسی برای یافتن علت (التهاب، عفونت، توده‌ی خوش‌خیم یا به‌ندرت تومور) لازم می‌شود.",
+     "A LAB RESULT code, not a disease: the cytology smear taken from the named organ/site showed abnormal cells under the microscope. By itself it has no symptoms; the sample needs a doctor's review, often with repeat sampling, imaging or a biopsy to find the cause (inflammation, infection, benign growth or, less often, a tumor).",
+     "کدِ یک «نتیجه‌ی آزمایش» است، نه یک بیماری: در نمونه‌ی سیتولوژی گرفته‌شده از اندام/ناحیه‌ی ذکرشده، سلول‌های غیرطبیعی زیر میکروسکوپ دیده شده است. خودش علامتی ندارد؛ نمونه باید توسط پزشک بررسی شود و معمولاً تکرار آزمایش، تصویربرداری یا بیوپسی برای یافتن علت (التهاب، عفونت، توده‌ی خوش‌خیم یا به‌ندرت تومور) لازم می‌شود.",
      "none by itself — follow-up tests decide", "خودش علامت ندارد — آزمایش‌های تکمیلی مشخص می‌کنند"),
     (_re.compile(r"abnormal (radiological|ultrasound|imaging|mri|ct|x-?ray).*finding|abnormal finding.*(imaging|radiolog)", _re.I),
      "An IMAGING RESULT code: something unusual was seen on a scan (ultrasound/CT/MRI/X-ray). It is a finding, not a diagnosis. Common causes are benign (cysts, calcification, normal variants) but a doctor should compare it with your symptoms and sometimes repeat or further image it.",
