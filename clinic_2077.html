@@ -1031,7 +1031,7 @@ async function browseDis(delta){
     (x.code?' <span class="tag">'+esc(x.code)+'</span>':'')+' <span class="tag" style="color:var(--dim)">'+esc(x.src)+'</span>';
     if(x.drug&&x.drug.length)h+='<br><small style="color:#3bff9e">'+(L?"داروها: ":"drugs: ")+esc(x.drug.join("، ").slice(0,140))+'</small>';
     if(x.labs&&x.labs.length)h+='<br><small style="color:var(--cy)">'+(L?"آزمایش‌های مرتبط: ":"typical labs: ")+esc(x.labs.join("، ").slice(0,140))+'</small>';
-    if(x.ch_fa)h+='<br><small style="color:var(--dim)">'+(L?"فصل: ":"chapter: ")+esc(x.ch_fa)+(x.cat?" · "+esc(x.cat):"")+'</small>';
+    if(x.ch_fa)h+='<br><small style="color:var(--dim)">'+(L?"فصل: ":"chapter: ")+esc(L?x.ch_fa:(x.ch_en||x.ch_fa))+(x.cat?" · "+esc(x.cat):"")+'</small>';
     h+='</div>';
   });
   el.innerHTML=h||'<p class=warn>'+(L?"خالی":"empty")+'</p>';
@@ -1056,7 +1056,7 @@ async function browseFda(delta){
     if(d.brands&&d.brands.length)h+=' <small style="color:var(--cy)">'+esc(d.brands.slice(0,3).join("، "))+'</small>';
     if(d.class&&d.class.length)h+='<br><small>'+esc(d.class.slice(0,2).join("، "))+'</small>';
     if(d.fa)h+='<br><small style="color:var(--cy)">('+esc(d.fa)+')</small>';
-    if(d.cat)h+=' <span class="tag">'+esc(d.cat)+'</span>';
+    if(d.cat)h+=' <span class="tag">'+esc((LANG==="fa"?d.cat:(d.cat_en||d.cat)))+'</span>';
     h+=' <small style="color:var(--dim)">('+fa(d.n)+')</small></div>';
   });
   el.innerHTML=h||'<p class=warn>'+(L?"خالی":"empty")+'</p>';
@@ -1243,7 +1243,7 @@ async function uiDrugsBrowser(){
     var d=drugs[i];
     h+='<div class="q" data-search="'+esc(d.fa+" "+d.en+" "+d.category+" "+d.id)+'">';
     h+='<b>'+esc(LANG==="fa"?d.fa:d.en)+'</b>';
-    h+='<br><small style="color:var(--cy)">'+esc(d.category)+'</small>';
+    h+='<br><small style="color:var(--cy)">'+esc((LANG==="fa"?d.category:(d.category_en||d.category)))+'</small>';
     if(d.pregnancy)h+='<br><small>Pregnancy: '+esc(d.pregnancy)+'</small>';
     if(d.half_life)h+=' | Half-life: '+esc(d.half_life);
     if(d.interactions&&d.interactions.length){

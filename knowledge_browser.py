@@ -219,6 +219,7 @@ def get_all_drugs() -> list[dict]:
             "fa": d["fa"][0] if d["fa"] else did,
             "en": d["en"][0] if d["en"] else did,
             "category": d["cat"],
+            "category_en": cat_en(d["cat"]),
             "aliases_fa": d["fa"],
             "aliases_en": d["en"],
             "interactions": interactions,
@@ -279,14 +280,18 @@ def _load_fda() -> list[dict]:
             _FDA_CACHE = []
         # search index
         from common_2077 import normalize as _n
+        from translit import translit
         _fa_drugs = _load_fa_names().get("drug_en_fa", {})
         for i, d in enumerate(_FDA_CACHE):
             hay = " ".join([d.get("g", "")] + (d.get("brands") or []) + (d.get("ing") or [])).lower()
             d["_i"], d["_hay"] = i, hay
             if "fa" not in d:
-                d["fa"] = _fa_drugs.get(_n(d.get("g", "")), "")
+                human = _fa_drugs.get(_n(d.get("g", "")), "")
+                d["fa"] = human or translit(d.get("g", ""))
             if "cat" not in d:
                 d["cat"] = classify_drug(d.get("class") or [])
+            if "cat_en" not in d:
+                d["cat_en"] = DRUG_CATS_EN.get(d["cat"], d["cat"])
     return _FDA_CACHE
 
 
@@ -509,6 +514,45 @@ DRUG_CATS = [
 ]
 
 
+CAT_KW = [
+    ("گیاه", "herbal medicine"), ("آنتی‌بیوتیک", "antibiotic"), ("مسکن", "painkiller / NSAID"),
+    ("ضدافسردگی", "antidepressant"), ("افسردگی", "antidepressant"), ("بتابلاکر", "beta-blocker"),
+    ("دیابت", "antidiabetic"), ("چربی", "lipid-lowering"), ("اسید معده", "stomach acid reducer"),
+    ("فشار خون", "antihypertensive"), ("روان‌پریشی", "antipsychotic"), ("ایمنی", "immunosuppressant"),
+    ("تشنج", "antiepileptic"), ("آنتی‌هیستامین", "antihistamine"), ("مکمل", "supplement"),
+    ("آنژین", "antianginal"), ("اضطراب", "anxiolytic"), ("استخوان", "bone / osteoporosis"),
+    ("ملین", "laxative"), ("پروستات", "prostate"), ("نعوظ", "erectile dysfunction"),
+    ("ضدپلاکت", "antiplatelet"), ("انعقاد", "anticoagulant"), ("تیروئید", "thyroid"),
+    ("خواب", "sleep"), ("چشم", "eye drop"), ("حساسیت", "allergy"), ("قارچ", "antifungal"),
+    ("ویروس", "antiviral"), ("تب", "antipyretic"), ("سرفه", "cough"), ("هورمون", "hormone"),
+    ("ضد درد", "analgesic"), ("کاهنده", "lowering agent"), ("رقیق", "blood thinner"),
+    ("ضد", "anti-"),
+]
+
+
+def cat_en(fa_cat: str) -> str:
+    if fa_cat in DRUG_CATS_EN:
+        return DRUG_CATS_EN[fa_cat]
+    for k, en in CAT_KW:
+        if k in (fa_cat or ""):
+            base = DRUG_CATS_EN.get(en, en)
+            extra = fa_cat[fa_cat.index(k) + len(k):].strip(" ()‌")
+            return base + ((" (" + extra + ")") if extra and extra.isascii() else "")
+    return fa_cat or "medication"
+
+
+DRUG_CATS_EN = {
+    "درد و تب (مسکن)": "Analgesics & antipyretics", "آنتی‌بیوتیک": "Antibacterials",
+    "ضدویروس": "Antivirals", "ضدقارچ": "Antifungals", "انگل‌کش": "Antiparasitics",
+    "قلب و فشار خون": "Cardiovascular", "لختگی خون": "Anticoagulants & antiplatelets",
+    "دیابت": "Antidiabetics", "هورمون و تیروئید": "Hormones", "گوارش": "Gastrointestinal",
+    "تنفسی و آلرژی": "Respiratory & allergy", "اعصاب و روان": "Nervous system & psychiatric",
+    "بی‌حسی": "Anesthetics", "ایمنی و سرطان": "Immunology & oncology", "واکسن": "Vaccines",
+    "مکمل و ویتامین": "Vitamins & supplements", "چشم و گوش": "Eye & ear",
+    "پوست": "Dermatological", "ادراری و تناسلی": "Urological & gynecological", "سایر": "Other",
+}
+
+
 def classify_drug(class_list) -> str:
     """Map a pharm-class list to a farsi category name."""
     hay = " ".join(class_list or []).lower()
@@ -693,6 +737,20 @@ def _build_unified() -> list:
         if key not in seen:
             seen[key] = {"name": d.get("name", ""), "fa": d.get("fa", ""), "code": "",
                          "src": "engine", "sym": [s.get("name") for s in (d.get("symptoms") or [])][:8]}
+    # icd -> farsi crosswalk from the DOID/wiki rows (real data, no machine guessing)
+    xwalk: dict[str, str] = {}
+    for r in seen.values():
+        code = str(r.get("code", ""))
+        if r.get("fa") and code and ":" not in code and "-" not in code and len(code) >= 3:
+            xwalk.setdefault(code[:3].upper(), r["fa"])
+            xwalk.setdefault(code.upper(), r["fa"])
+    for r in seen.values():
+        if not r.get("fa"):
+            code = str(r.get("code", "")).upper()
+            if code in xwalk:
+                r["fa"] = xwalk[code]
+            elif len(code) >= 3 and code[:3] in xwalk:
+                r["fa"] = xwalk[code[:3]]
     out = list(seen.values())
     out.sort(key=lambda r: (r.get("name") or "").lower())
     _UNIFIED_CACHE = out

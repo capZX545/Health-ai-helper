@@ -180,12 +180,12 @@ class App:
         self._nav_canvas = nav_canvas
         items = [
             (("Chat (return)", "گفتگو (بازگشت)"), lambda: None),
-            (("Patient profile", "پروفایل بیمار"), self._panel_profile),
-            (("Vitals", "علائم حیاتی"), self._panel_vitals),
-            (("Lab analysis", "تحلیل آزمایش"), self._panel_labs),
-            (("Prescription scan", "اسکن نسخه"), self._panel_rx),
-            (("Drugs & interactions", "دارو و تداخلات"), self._panel_drugs),
-            (("Medical image", "تحلیل تصویر پزشکی"), self._panel_image),
+            (("Patient profile", self.L("Patient profile", "پروفایل بیمار")), self._panel_profile),
+            (("Vitals", self.L("Vitals", "علائم حیاتی")), self._panel_vitals),
+            (("Lab analysis", self.L("Lab analysis", "تحلیل آزمایش")), self._panel_labs),
+            (("Prescription scan", self.L("Prescription scan", "اسکن نسخه")), self._panel_rx),
+            (("Drugs & interactions", self.L("Drugs & interactions", "دارو و تداخلات")), self._panel_drugs),
+            (("Medical image", self.L("Medical image analysis", "تحلیل تصویر پزشکی")), self._panel_image),
             (("Disease likelihood", "ارزیابی احتمال بیماری"), self._panel_assess),
             (("Symptoms (check & analyze)", "علائم (تیک و تحلیل)"), self._panel_symptoms),
             (("Diseases database", "بانک بیماری‌ها"), self._panel_diseases),
@@ -195,9 +195,9 @@ class App:
             (("Mental health", "سلامت روان"), self._panel_mental),
             (("Sleep analysis", "تحلیل خواب"), self._panel_sleep),
             (("Checkup calendar", "تقویم چکاپ"), self._panel_checkup),
-            (("First aid / CPR", "کمک‌های اولیه / CPR"), self._panel_emergency),
+            (("First aid / CPR", self.L("First aid / CPR", "کمک‌های اولیه / CPR")), self._panel_emergency),
             (("Referral report", "گزارش ارجاع"), self._panel_referral),
-            (("Brain & learning", "مغز داخلی / یادگیری"), self._panel_brain),
+            (("Brain & learning", self.L("Internal brain & learning", "مغز داخلی / یادگیری")), self._panel_brain),
             (("Doctor Mode", "حالت دکتر"), self._panel_doctor),
             (("Local AI (GPU/Ollama)", "هوش محلی (GPU/Ollama)"), self._panel_gpu),
         ]
@@ -311,8 +311,8 @@ class App:
         return "break"
 
     def _attach(self):
-        p = filedialog.askopenfilename(title="انتخاب تصویر پزشکی",
-                                       filetypes=[("تصاویر", "*.jpg *.jpeg *.png *.webp *.bmp"), ("همه", "*.*")])
+        p = filedialog.askopenfilename(title=self.L("Attach medical image", "انتخاب تصویر پزشکی"),
+                                       filetypes=[(self.L("Images", "تصاویر"), "*.jpg *.jpeg *.png *.webp *.bmp"), (self.L("All", "همه"), "*.*")])
         if p:
             self.img_path = p
             self.attach_lbl.config(text=""+ os.path.basename(p))
@@ -371,7 +371,7 @@ class App:
         from i18n import is_fa
         w = self._win(self.L("Doctor Mode — Clinical Analysis", "حالت دکتر — تحلیل بالینی"))
         tk.Label(w, text=("Describe a patient scenario and get a clinical differential diagnosis." if not is_fa()
-                          else "سناریوی بیمار را بنویسید و تشخیص افتراقی بالینی بگیرید."),
+                          else self.L("Describe a patient scenario and get a clinical differential.", "سناریوی بیمار را بنویسید و تشخیص افتراقی بالینی بگیرید.")),
                  bg=C["panel2"], fg=C["dim"], font=pick_font(10)).pack(padx=16, pady=8)
         txt = scrolledtext.ScrolledText(w, bg="#0a1424", fg=C["tx"], font=pick_font(12), height=5, relief="flat")
         txt.pack(fill="x", padx=16)
@@ -388,7 +388,7 @@ class App:
                 # fallback: straight to the offline brain
                 from medical_engine import analyze
                 a = analyze(txt.get("1.0", "end").strip())
-                lines = ["[offline] تشخیص افتراقی مغز داخلی:"]
+                lines = [self.L("[offline] internal-brain differential:", "[offline] تشخیص افتراقی مغز داخلی:")]
                 for c in a["candidates"][:5]:
                     lines.append(f"  • {c['name']} ~{c['percent']}% [{c['urgency']}]")
                 box.delete("1.0", "end")
@@ -405,7 +405,7 @@ class App:
         if not text and not self.img_path:
             return
         self.entry.delete("1.0", "end")
-        self._user(text or "[تصویر پزشکی]")
+        self._user(text or self.L("[medical image]", "[تصویر پزشکی]"))
         self.send_btn.config(state="disabled", text="…")
         note = text
         img_path = self.img_path
@@ -429,7 +429,7 @@ class App:
                     meta += "•  یادگیری ثبت شد"
                 payload = (res.get("text", ""), tag, meta)
             except Exception as e:
-                payload = ("خطا: "+ str(e)[:200], "emg", "")
+                payload = (self.L("Error: ", "خطا: ")+ str(e)[:200], "emg", "")
 
             def apply():
                 # UI updates on the main thread only (tkinter isn't thread-safe) (Tkinter thread-safe
@@ -445,12 +445,12 @@ class App:
         def work():
             try:
                 s = self._engine().status()
-                ext = "AI خارجی فعال" if s.get("external_available") else "AI خارجی: کلید ندارد"
-                brain = "مغز داخلی روشن" if s.get("settings", {}).get("brain_enabled") else "مغز خاموش (یادگیری پس‌زمینه فعال)"
+                ext = self.L("external AI on", "AI خارجی فعال") if s.get("external_available") else self.L("external AI: no key", "AI خارجی: کلید ندارد")
+                brain = self.L("offline brain on", "مغز داخلی روشن") if s.get("settings", {}).get("brain_enabled") else self.L("brain off (background learning on)", "مغز خاموش (یادگیری پس‌زمینه فعال)")
                 learned = s.get("learning", {}).get("entries", 0)
                 msg = f"{ext} | {brain} |  حافظه: {learned} مورد"
             except Exception as e:
-                msg = "وضعیت: خطا — "+ str(e)[:80]
+                msg = self.L("status: error — ", "وضعیت: خطا — ")+ str(e)[:80]
 
             def apply():
                 try:
@@ -594,28 +594,28 @@ class App:
     def _panel_profile(self):
         from patient_profile import load_profile, save_profile
         p = load_profile()
-        w = self._win("پروفایل بیمار")
-        ents = self._form(w, [("name", "نام", p.get("name", "")), ("age", "سن", p.get("age", "")),
-                              ("gender", "جنسیت (مرد/زن)", p.get("gender", "")),
-                              ("weight_kg", "وزن (kg)", p.get("weight_kg", "")),
-                              ("height_cm", "قد (cm)", p.get("height_cm", "")),
-                              ("conditions", "بیماری زمینه‌ای", p.get("conditions", "")),
-                              ("allergies", "حساسیت دارویی/غذایی", p.get("allergies", "")),
-                              ("medications", "داروهای فعلی", p.get("medications", ""))])
+        w = self._win(self.L("Patient profile", "پروفایل بیمار"))
+        ents = self._form(w, [("name", self.L("Name", "نام"), p.get("name", "")), ("age", self.L("Age", "سن"), p.get("age", "")),
+                              ("gender", self.L("Sex (male/female)", "جنسیت (مرد/زن)"), p.get("gender", "")),
+                              ("weight_kg", self.L("Weight (kg)", "وزن (kg)"), p.get("weight_kg", "")),
+                              ("height_cm", self.L("Height (cm)", "قد (cm)"), p.get("height_cm", "")),
+                              ("conditions", self.L("Existing conditions", "بیماری زمینه‌ای"), p.get("conditions", "")),
+                              ("allergies", self.L("Drug/food allergies", "حساسیت دارویی/غذایی"), p.get("allergies", "")),
+                              ("medications", self.L("Current medications", "داروهای فعلی"), p.get("medications", ""))])
 
         def save():
             save_profile({k: e.get() for k, e in ents.items()})
-            messagebox.showinfo("پروفایل", "ذخیره شد (patient_profile.json)", parent=w)
-        tk.Button(w, text="ذخیره", command=save, bg="#0077b6", fg="#021018",
+            messagebox.showinfo(self.L("Profile", "پروفایل"), self.L("Saved (patient_profile.json)", "ذخیره شد (patient_profile.json)"), parent=w)
+        tk.Button(w, text=self.L("Save", "ذخیره"), command=save, bg="#0077b6", fg="#021018",
                   font=pick_font(11, True), relief="flat").pack(pady=10, ipadx=24, ipady=4)
 
     def _panel_vitals(self):
         from health_vitals import history, record, trend
-        w = self._win("علائم حیاتی")
-        ents = self._form(w, [("systolic_bp", "فشار سیستول (مثلاً ۱۲۰)", ""),
-                              ("diastolic_bp", "فشار دیاستول (مثلاً ۸۰)", ""),
-                              ("weight_kg", "وزن (kg)", ""), ("height_cm", "قد (cm)", ""),
-                              ("heart_rate", "نبض", ""), ("temp_c", "دمای بدن", ""), ("glucose", "قند خون", "")])
+        w = self._win(self.L("Vitals", "علائم حیاتی"))
+        ents = self._form(w, [("systolic_bp", self.L("Systolic pressure (e.g. 120)", "فشار سیستول (مثلاً ۱۲۰)"), ""),
+                              ("diastolic_bp", self.L("Diastolic pressure (e.g. 80)", "فشار دیاستول (مثلاً ۸۰)"), ""),
+                              ("weight_kg", self.L("Weight (kg)", "وزن (kg)"), ""), ("height_cm", self.L("Height (cm)", "قد (cm)"), ""),
+                              ("heart_rate", self.L("Pulse", "نبض"), ""), ("temp_c", self.L("Body temperature", "دمای بدن"), ""), ("glucose", self.L("Blood sugar", "قند خون"), "")])
         box = self._result_box(w)
 
         def go():
@@ -631,16 +631,16 @@ class App:
             lines.append("\n— تاریخچه‌ی اخیر —")
             for h in history(6):
                 lines.append(str(h))
-            lines.append("روند: "+ str(trend()))
+            lines.append(self.L("Trend: ", "روند: ")+ str(trend()))
             box.delete("1.0", "end")
             box.insert("1.0", "\n\n".join(lines))
-        tk.Button(w, text="ثبت و تحلیل", command=go, bg="#0077b6", fg="#021018",
+        tk.Button(w, text=self.L("Record & analyze", "ثبت و تحلیل"), command=go, bg="#0077b6", fg="#021018",
                   font=pick_font(11, True), relief="flat").pack(pady=8, ipadx=24, ipady=4)
 
     def _panel_labs(self):
         from lab_visualizer import analyze_text
-        w = self._win("تحلیل آزمایش")
-        tk.Label(w, text="هر خط یک آزمایش — مثال: FBS 132 / Hb 10.5 / TSH 6.2 / کلسترول 210",
+        w = self._win(self.L("Lab analysis", "تحلیل آزمایش"))
+        tk.Label(w, text=self.L("One test per line — e.g. FBS 132 / Hb 10.5 / TSH 6.2 / cholesterol 210", "هر خط یک آزمایش — مثال: FBS 132 / Hb 10.5 / TSH 6.2 / کلسترول 210"),
                  bg=C["panel2"], fg=C["dim"], font=pick_font(10)).pack(padx=16, pady=8)
         txt = scrolledtext.ScrolledText(w, bg="#0a1424", fg=C["tx"], font=pick_font(12), height=6, relief="flat")
         txt.pack(fill="x", padx=16)
@@ -652,13 +652,13 @@ class App:
             box.insert("1.0", r.get("text_report", "") + "\n\n"+ "\n".join(r.get("summary_fa", [])))
             if r.get("html_path"):
                 box.insert("end", "\n\n گزارش تصویری: "+ r["html_path"])
-        tk.Button(w, text="تحلیل", command=go, bg="#0077b6", fg="#021018",
+        tk.Button(w, text=self.L("Analyze", "تحلیل"), command=go, bg="#0077b6", fg="#021018",
                   font=pick_font(11, True), relief="flat").pack(pady=8, ipadx=24, ipady=4)
 
     def _panel_rx(self):
         from prescription_scanner import scan
-        w = self._win("اسکن نسخه")
-        tk.Label(w, text="متن نسخه/آزمایش را بنویس: BID, TID, PO, PRN, AC, QHS, WBC, FBS, TSH…",
+        w = self._win(self.L("Prescription scan", "اسکن نسخه"))
+        tk.Label(w, text=self.L("Type the prescription/lab text: BID, TID, PO, PRN, AC, QHS, WBC, FBS, TSH…", "متن نسخه/آزمایش را بنویس: BID, TID, PO, PRN, AC, QHS, WBC, FBS, TSH…"),
                  bg=C["panel2"], fg=C["dim"], font=pick_font(10)).pack(padx=16, pady=8)
         txt = scrolledtext.ScrolledText(w, bg="#0a1424", fg=C["tx"], font=pick_font(12), height=6, relief="flat")
         txt.pack(fill="x", padx=16)
@@ -675,14 +675,14 @@ class App:
                 lines.append(""+ a)
             lines.append(r.get("disclaimer", ""))
             box.delete("1.0", "end")
-            box.insert("1.0", "\n".join(lines) if lines else "چیزی شناسایی نشد.")
-        tk.Button(w, text="ترجمه", command=go, bg="#0077b6", fg="#021018",
+            box.insert("1.0", "\n".join(lines) if lines else self.L("Nothing recognized.", "چیزی شناسایی نشد."))
+        tk.Button(w, text=self.L("Translate", "ترجمه"), command=go, bg="#0077b6", fg="#021018",
                   font=pick_font(11, True), relief="flat").pack(pady=8, ipadx=24, ipady=4)
 
     def _panel_drugs(self):
         from drug_interaction import check_interaction, search_drug
-        w = self._win("دارو و تداخلات")
-        ents = self._form(w, [("a", "داروی اول (نام فارسی یا انگلیسی)", ""), ("b", "داروی دوم (برای بررسی تداخل)", "")])
+        w = self._win(self.L("Drugs & interactions", "دارو و تداخلات"))
+        ents = self._form(w, [("a", self.L("First drug (english or persian)", "داروی اول (نام فارسی یا انگلیسی)"), ""), ("b", self.L("Second drug (to check interaction)", "داروی دوم (برای بررسی تداخل)"), "")])
         box = self._result_box(w)
 
         def go():
@@ -700,36 +700,36 @@ class App:
                     lines.append(r["message_fa"])
                 lines.append(r.get("disclaimer", ""))
             box.delete("1.0", "end")
-            box.insert("1.0", "\n\n".join(lines) if lines else "نام دارو را وارد کن (مثلاً: وارفارین، ژلوفن، سیر، زنجبیل)")
-        tk.Button(w, text="بررسی", command=go, bg="#0077b6", fg="#021018",
+            box.insert("1.0", "\n\n".join(lines) if lines else self.L("Enter a drug (e.g. warfarin, ibuprofen, garlic, ginger)", "نام دارو را وارد کن (مثلاً: وارفارین، ژلوفن، سیر، زنجبیل)"))
+        tk.Button(w, text=self.L("Check", "بررسی"), command=go, bg="#0077b6", fg="#021018",
                   font=pick_font(11, True), relief="flat").pack(pady=8, ipadx=24, ipady=4)
 
     def _panel_image(self):
-        w = self._win("تحلیل تصویر پزشکی")
-        tk.Label(w, text="۱) عکس را انتخاب کن ۲) توضیح بنویس (مثلاً: این لک قرمز ۳ روزه خارش دارد) ۳) ارسال",
+        w = self._win(self.L("Medical image analysis", "تحلیل تصویر پزشکی"))
+        tk.Label(w, text=self.L("1) pick the photo 2) write a note (e.g. this red patch itches for 3 days) 3) send", "۱) عکس را انتخاب کن ۲) توضیح بنویس (مثلاً: این لک قرمز ۳ روزه خارش دارد) ۳) ارسال"),
                  bg=C["panel2"], fg=C["dim"], font=pick_font(10)).pack(padx=16, pady=8)
         path = {"p": ""}
 
         def pick():
-            p = filedialog.askopenfilename(parent=w, filetypes=[("تصاویر", "*.jpg *.jpeg *.png *.webp *.bmp")])
+            p = filedialog.askopenfilename(parent=w, filetypes=[(self.L("Images", "تصاویر"), "*.jpg *.jpeg *.png *.webp *.bmp")])
             if p:
                 path["p"] = p
                 lbl.config(text=""+ os.path.basename(p))
         from i18n import is_fa
-        tk.Label(w, text=("Image type (optional - auto-detected too)" if not is_fa() else "نوع تصویر (اختیاری — خودکار هم تشخیص داده می‌شود)"),
+        tk.Label(w, text=("Image type (optional - auto-detected too)" if not is_fa() else self.L("Image type (optional — auto-detected too)", "نوع تصویر (اختیاری — خودکار هم تشخیص داده می‌شود)")),
                  bg=C["panel2"], fg=C["dim"], font=pick_font(10)).pack(padx=16, pady=(8, 0))
-        hint_var = tk.StringVar(value=("Auto-detect" if not is_fa() else "تشخیص خودکار"))
+        hint_var = tk.StringVar(value=("Auto-detect" if not is_fa() else self.L("Auto detect", "تشخیص خودکار")))
         hint_menu = ttk.Combobox(w, textvariable=hint_var, state="readonly", font=pick_font(10),
                                  values=(["Auto-detect", "Skin / rash", "Wound / burn", "X-ray / CT / MRI", "ECG", "Lab report / prescription", "Eye", "Dental / oral", "Device screen", "Other"] if not is_fa()
-                                         else ["تشخیص خودکار", "پوست / جوش", "زخم / سوختگی", "رادیوگرافی / سی‌تی / ام‌آرآی", "نوار قلب", "برگه‌ی آزمایش / نسخه", "چشم", "دندان / دهان", "نمایشگر دستگاه", "سایر"]))
+                                         else [self.L("Auto detect", "تشخیص خودکار"), self.L("Skin / acne", "پوست / جوش"), self.L("Wound / burn", "زخم / سوختگی"), self.L("Radiology / CT / MRI", "رادیوگرافی / سی‌تی / ام‌آرآی"), self.L("ECG strip", "نوار قلب"), self.L("Lab sheet / prescription", "برگه‌ی آزمایش / نسخه"), self.L("Eye", "چشم"), self.L("Tooth / mouth", "دندان / دهان"), self.L("Device monitor", "نمایشگر دستگاه"), self.L("Other", "سایر")]))
         hint_menu.pack(fill="x", padx=16)
-        HINT_MAP = {"Auto-detect": "", "تشخیص خودکار": "", "Skin / rash": "skin", "پوست / جوش": "skin",
-                    "Wound / burn": "wound", "زخم / سوختگی": "wound", "X-ray / CT / MRI": "xray",
-                    "رادیوگرافی / سی‌تی / ام‌آرآی": "xray", "ECG": "ecg", "نوار قلب": "ecg",
-                    "Lab report / prescription": "lab", "برگه‌ی آزمایش / نسخه": "lab",
-                    "Eye": "eye", "چشم": "eye", "Dental / oral": "dental", "دندان / دهان": "dental",
-                    "Device screen": "device", "نمایشگر دستگاه": "device", "Other": "other", "سایر": "other"}
-        tk.Button(w, text=("Choose image" if not is_fa() else "انتخاب عکس"), command=pick, bg="#0d1930", fg=C["tx"], relief="flat",
+        HINT_MAP = {"Auto-detect": "", self.L("Auto detect", "تشخیص خودکار"): "", "Skin / rash": "skin", self.L("Skin / acne", "پوست / جوش"): "skin",
+                    "Wound / burn": "wound", self.L("Wound / burn", "زخم / سوختگی"): "wound", "X-ray / CT / MRI": "xray",
+                    self.L("Radiology / CT / MRI", "رادیوگرافی / سی‌تی / ام‌آرآی"): "xray", "ECG": "ecg", self.L("ECG strip", "نوار قلب"): "ecg",
+                    "Lab report / prescription": "lab", self.L("Lab sheet / prescription", "برگه‌ی آزمایش / نسخه"): "lab",
+                    "Eye": "eye", self.L("Eye", "چشم"): "eye", "Dental / oral": "dental", self.L("Tooth / mouth", "دندان / دهان"): "dental",
+                    "Device screen": "device", self.L("Device monitor", "نمایشگر دستگاه"): "device", "Other": "other", self.L("Other", "سایر"): "other"}
+        tk.Button(w, text=("Choose image" if not is_fa() else self.L("Pick photo", "انتخاب عکس")), command=pick, bg="#0d1930", fg=C["tx"], relief="flat",
                   font=pick_font(11)).pack(pady=4)
         lbl = tk.Label(w, text="—", bg=C["panel2"], fg=C["yl"], font=pick_font(10))
         lbl.pack()
@@ -739,7 +739,7 @@ class App:
 
         def go():
             if not path["p"]:
-                messagebox.showwarning("تصویر", "اول عکس را انتخاب کن.", parent=w)
+                messagebox.showwarning(self.L("Image", "تصویر"), self.L("Pick a photo first.", "اول عکس را انتخاب کن."), parent=w)
                 return
             from image_caption import analyze_image_file
             hint = HINT_MAP.get(hint_var.get(), "")
@@ -747,7 +747,7 @@ class App:
             box.delete("1.0", "end")
             box.insert("1.0", f"[{r.get('source','')}]\n\n"+ r.get("text", ""))
             self._refresh_status()
-        tk.Button(w, text="تحلیل", command=go, bg="#0077b6", fg="#021018",
+        tk.Button(w, text=self.L("Analyze", "تحلیل"), command=go, bg="#0077b6", fg="#021018",
                   font=pick_font(11, True), relief="flat").pack(pady=8, ipadx=24, ipady=4)
 
     def _panel_assess(self):
@@ -756,7 +756,7 @@ class App:
         w = self._win(self.L("Disease likelihood assessment", "ارزیابی احتمال بیماری‌ها"))
         from i18n import is_fa
         tk.Label(w, text=("Describe symptoms in one or a few lines (onset, severity, duration)" if not is_fa()
-                          else "علائم را در یک یا چند خط بنویس (شروع، شدت، مدت)"),
+                          else self.L("Describe symptoms in one or more lines (onset, severity, duration)", "علائم را در یک یا چند خط بنویس (شروع، شدت، مدت)")),
                  bg=C["panel2"], fg=C["dim"], font=pick_font(10)).pack(padx=16, pady=8)
         txt = scrolledtext.ScrolledText(w, bg="#0a1424", fg=C["tx"], font=pick_font(12), height=4, relief="flat")
         txt.pack(fill="x", padx=16)
@@ -774,34 +774,34 @@ class App:
                 return
             from i18n import is_fa
             fa_mode = is_fa()
-            lines.append((("علائم: " if fa_mode else "Symptoms: ") + ("، ".join(a["symptoms"]) if fa_mode else ", ".join(a["symptoms"]))) or "—")
+            lines.append(((self.L("Symptoms: ", "علائم: ") if fa_mode else "Symptoms: ") + ("، ".join(a["symptoms"]) if fa_mode else ", ".join(a["symptoms"]))) or "—")
             if a["denied"]:
-                lines.append(("ردشده: " if fa_mode else "Ruled out: ") + ("، ".join(a["denied"]) if fa_mode else ", ".join(a["denied"])))
+                lines.append((self.L("Denied: ", "ردشده: ") if fa_mode else "Ruled out: ") + ("، ".join(a["denied"]) if fa_mode else ", ".join(a["denied"])))
             lines.append("")
             if a["candidates"]:
-                lines.append("احتمالات (رتبه‌بندی احتمالی — تشخیص قطعی نیست):" if fa_mode else "Possibilities (probabilistic ranking - NOT a diagnosis):")
+                lines.append(self.L("Likelihoods (probable ranking — not a diagnosis):", "احتمالات (رتبه‌بندی احتمالی — تشخیص قطعی نیست):") if fa_mode else "Possibilities (probabilistic ranking - NOT a diagnosis):")
                 for c in a["candidates"]:
                     lines.append(f"• {c['name']} ~{c['percent']}%  [{c['urgency']}]")
                     lines.append("   " + ("؛ ".join(c.get("advice", [])[:2])))
                     if c.get("doctor_when"):
                         lines.append("   -> " + c["doctor_when"])
             else:
-                lines.append("اطلاعات کافی نیست." if fa_mode else "Not enough information yet.")
+                lines.append(self.L("Not enough information yet.", "اطلاعات کافی نیست.") if fa_mode else "Not enough information yet.")
             # triage suggestion
             if a["candidates"]:
                 urg = [c["urgency"] for c in a["candidates"][:3]]
                 level = "emergency" if "emergency" in urg else ("urgent" if "urgent" in urg else "routine")
-                where = {"emergency": ("Go to the emergency department NOW or call 115/112.", "همین حالا به اورژانس برو یا با ۱۱۵/۱۱۲ تماس بگیر."),
-                         "urgent": ("See a clinician today or at the first opportunity.", "امروز یا در اولین فرصت به پزشک مراجعه کن."),
-                         "routine": ("A routine visit is enough; monitor your symptoms.", "مراجعه‌ی سرپایی کافی است؛ علائم را زیر نظر بگیر.")}[level]
+                where = {"emergency": ("Go to the emergency department NOW or call 115/112.", self.L("Go to the ER now or call 115/112.", "همین حالا به اورژانس برو یا با ۱۱۵/۱۱۲ تماس بگیر.")),
+                         "urgent": ("See a clinician today or at the first opportunity.", self.L("See a doctor today or at the first chance.", "امروز یا در اولین فرصت به پزشک مراجعه کن.")),
+                         "routine": ("A routine visit is enough; monitor your symptoms.", self.L("A routine visit is enough; keep an eye on symptoms.", "مراجعه‌ی سرپایی کافی است؛ علائم را زیر نظر بگیر."))}[level]
                 lines.append("")
-                lines.append(("پیشنهاد تریاژ: " if fa_mode else "Triage suggestion: ") + level)
+                lines.append((self.L("Triage suggestion: ", "پیشنهاد تریاژ: ") if fa_mode else "Triage suggestion: ") + level)
                 lines.append("   " + (where[1] if fa_mode else where[0]))
             try:
                 ml = ml_predict(a["detected"], {}, None)
                 if ml:
                     lines.append("")
-                    lines.append(("سیگنال ML (دیتاست مصنوعی): " if fa_mode else "ML signal (synthetic dataset): ")
+                    lines.append((self.L("ML signal (synthetic dataset): ", "سیگنال ML (دیتاست مصنوعی): ") if fa_mode else "ML signal (synthetic dataset): ")
                                  + ("، ".join(f"{m['label']} (~{m['percent']}%)" for m in ml[:2])))
             except Exception:
                 pass
@@ -812,7 +812,7 @@ class App:
 
     def _panel_mental(self):
         from mental_health import GAD7, PHQ9
-        w = self._win("سلامت روان — PHQ-9 / GAD-7")
+        w = self._win(self.L("Mental health — PHQ-9 / GAD-7", "سلامت روان — PHQ-9 / GAD-7"))
         var_type = tk.StringVar(value="phq9")
         box = self._result_box(w)
         qs = {"phq9": [q["fa"] if __import__("i18n").is_fa() else q["en"] for q in PHQ9], "gad7": [q["fa"] if __import__("i18n").is_fa() else q["en"] for q in GAD7]}
@@ -841,21 +841,21 @@ class App:
                 rowf.pack(fill="x", padx=16)
                 v = tk.IntVar(value=0)
                 rows[i] = v
-                for val, lbl in enumerate(("هرگز", "چند روز", "نیمی از روزها", "هر روز")):
+                for val, lbl in enumerate((self.L("Not at all", "هرگز"), self.L("Several days", "چند روز"), self.L("More than half the days", "نیمی از روزها"), self.L("Nearly every day", "هر روز"))):
                     tk.Radiobutton(rowf, text=lbl, variable=v, value=val, bg=C["panel2"], fg=C["dim"],
                                    selectcolor="#0a1424", activebackground=C["panel2"],
                                    activeforeground=C["cy"], font=pick_font(9)).pack(side="right", padx=8)
-            tk.Button(frame, text="محاسبه", command=make_submit, bg="#0077b6", fg="#021018",
+            tk.Button(frame, text=self.L("Score it", "محاسبه"), command=make_submit, bg="#0077b6", fg="#021018",
                       font=pick_font(11, True), relief="flat").pack(pady=10)
         top_bar = tk.Frame(w, bg=C["panel2"])
         top_bar.pack(fill="x", pady=6)
-        tk.Radiobutton(top_bar, text="PHQ-9 (افسردگی)", variable=var_type, value="phq9", command=render,
+        tk.Radiobutton(top_bar, text=self.L("PHQ-9 (depression)", "PHQ-9 (افسردگی)"), variable=var_type, value="phq9", command=render,
                        bg=C["panel2"], fg=C["tx"], selectcolor="#0a1424", activebackground=C["panel2"],
                        activeforeground=C["cy"], font=pick_font(10)).pack(side="right", padx=14)
-        tk.Radiobutton(top_bar, text="GAD-7 (اضطراب)", variable=var_type, value="gad7", command=render,
+        tk.Radiobutton(top_bar, text=self.L("GAD-7 (anxiety)", "GAD-7 (اضطراب)"), variable=var_type, value="gad7", command=render,
                        bg=C["panel2"], fg=C["tx"], selectcolor="#0a1424", activebackground=C["panel2"],
                        activeforeground=C["cy"], font=pick_font(10)).pack(side="right", padx=14)
-        tk.Label(top_bar, text="تمرین تنفس ۴-۷-۸: دم ۴ ثانیه، نگه‌داشتن ۷، بازدم ۸ — چهار چرخه",
+        tk.Label(top_bar, text=self.L("4-7-8 breathing: inhale 4s, hold 7s, exhale 8s — four cycles", "تمرین تنفس ۴-۷-۸: دم ۴ ثانیه، نگه‌داشتن ۷، بازدم ۸ — چهار چرخه"),
                  bg=C["panel2"], fg=C["dim"], font=pick_font(9)).pack(side="left", padx=10)
         frame.pack(fill="x")
         render()
@@ -863,7 +863,7 @@ class App:
     def _panel_sleep(self):
         from sleep_analyzer import questions, stopbang
         qs = questions()
-        w = self._win("تحلیل خواب — STOP-BANG")
+        w = self._win(self.L("Sleep analysis — STOP-BANG", "تحلیل خواب — STOP-BANG"))
         box = self._result_box(w)
         vars_ = []
         f = tk.Frame(w, bg=C["panel2"])
@@ -882,12 +882,12 @@ class App:
             out.append(r.get("note", ""))
             box.delete("1.0", "end")
             box.insert("1.0", "\n".join(out))
-        tk.Button(w, text="محاسبه", command=go, bg="#0077b6", fg="#021018",
+        tk.Button(w, text=self.L("Score it", "محاسبه"), command=go, bg="#0077b6", fg="#021018",
                   font=pick_font(11, True), relief="flat").pack(pady=8, ipadx=24, ipady=4)
 
     def _panel_checkup(self):
         from checkup_calendar import recommendations
-        w = self._win("تقویم چکاپ و واکسن")
+        w = self._win(self.L("Checkup & vaccine calendar", "تقویم چکاپ و واکسن"))
         box = self._result_box(w)
 
         def go():
@@ -899,15 +899,15 @@ class App:
             lines.append("\n"+ r.get("note_fa", ""))
             box.delete("1.0", "end")
             box.insert("1.0", "\n".join(lines))
-        tk.Button(w, text="پیشنهاد بگیر", command=go, bg="#0077b6", fg="#021018",
+        tk.Button(w, text=self.L("Get suggestions", "پیشنهاد بگیر"), command=go, bg="#0077b6", fg="#021018",
                   font=pick_font(11, True), relief="flat").pack(pady=8, ipadx=24, ipady=4)
         go()
 
     def _panel_emergency(self):
         from first_aid import TOPICS, cpr_timing
-        w = self._win("کمک‌های اولیه / CPR")
+        w = self._win(self.L("First aid / CPR", "کمک‌های اولیه / CPR"))
         box = self._result_box(w)
-        tk.Label(w, text="اورژانس: ایران ۱۱۵ | اروپا/فنلاند ۱۱۲", bg="#2a0d1a", fg="#ff8fab",
+        tk.Label(w, text=self.L("Emergency: Iran 115 | Europe/Finland 112", "اورژانس: ایران ۱۱۵ | اروپا/فنلاند ۱۱۲"), bg="#2a0d1a", fg="#ff8fab",
                  font=pick_font(12, True), pady=6).pack(fill="x")
         cpr = {"on": False, "job": None}
         timing = cpr_timing()
@@ -974,11 +974,15 @@ class App:
             n = sum(1 for v in vars_.values() if v.get())
             cnt_lbl.config(text=self.L(f"selected: {n}", f"انتخاب‌شده: {n}"))
 
+        from i18n import get_lang as _gl_s
+        _fa_s = _gl_s() == "fa"
+        def _sym_name(s):
+            return s["fa"] if _fa_s else (s.get("en", "") or s["fa"])
         for s in syms:
             v = tk.BooleanVar(value=False)
             vars_[s["id"]] = v
             row = tk.Frame(inner, bg=C["panel2"])
-            cb = tk.Checkbutton(row, text=s["fa"], variable=v, command=upd_cnt,
+            cb = tk.Checkbutton(row, text=_sym_name(s), variable=v, command=upd_cnt,
                                 bg=C["panel2"], fg=C["tx"], selectcolor="#0a1424",
                                 activebackground=C["panel2"], activeforeground=C["cy"],
                                 font=pick_font(11), anchor="e", justify="right", cursor="hand2")
@@ -999,7 +1003,7 @@ class App:
                                         height=10, relief="flat", wrap="word")
 
         def analyze_now():
-            names = [s["fa"] for s in syms if vars_[s["id"]].get()]
+            names = [_sym_name(s) for s in syms if vars_[s["id"]].get()]
             box.delete("1.0", "end")
             if not names:
                 box.insert("1.0", self.L("Check at least one symptom first.", "اول حداقل یک علامت تیک بزن."))
@@ -1051,7 +1055,7 @@ class App:
         hpo_entry = tk.Entry(hpo_bar, textvariable=hpo_var, bg="#0a1424", fg=C["tx"], relief="flat",
                              font=pick_font(10), justify="right", insertbackground=C["cy"])
         hpo_entry.pack(side="right", fill="both", expand=True, ipady=3, padx=(16, 0))
-        tk.Button(hpo_bar, text="جستجوی HPO", command=lambda: run_hpo(), bg="#0d1930",
+        tk.Button(hpo_bar, text=self.L("HPO search", "جستجوی HPO"), command=lambda: run_hpo(), bg="#0d1930",
                   fg=C["yl"], font=pick_font(9), relief="flat").pack(side="right", padx=(6, 0), ipadx=6)
         def run_hpo():
             q = hpo_var.get().strip()
@@ -1066,9 +1070,9 @@ class App:
                     if t.get("syn"):
                         line += "  — " + "، ".join(t["syn"][:2])
                     lines.append(line)
-                out = "\n".join(lines) if res else "چیزی پیدا نشد — انگلیسی امتحان کن (مثل headache)."
+                out = "\n".join(lines) if res else self.L("Nothing found — try english (e.g. headache).", "چیزی پیدا نشد — انگلیسی امتحان کن (مثل headache).")
             except Exception as ex:
-                out = "خطا: " + str(ex)[:100]
+                out = self.L("Error: ", "خطا: ") + str(ex)[:100]
             box.delete("1.0", "end")
             box.insert("1.0", out)
         hpo_entry.bind("<Return>", lambda _e: run_hpo())
@@ -1126,12 +1130,16 @@ class App:
             box.tag_add("title", "1.0", "1.0 lineend")
             box.tag_config("title", foreground=u_col, font=pick_font(12, True))
 
+        urg_en = {"emergency": "emergency", "urgent": "urgent", "routine": "routine"}
+        from i18n import get_lang as _gl_c
+        _fa_c = _gl_c() == "fa"
         rows = []
         for d in dis:
             u_fa, u_col = urg_fa.get(d.get("urgency"), ("", C["tx"]))
+            u_lbl = u_fa if _fa_c else urg_en.get(d.get("urgency"), str(d.get("urgency", "")))
             n_sym = len(d.get("symptoms") or [])
             row = tk.Frame(inner, bg=C["panel2"])
-            b = tk.Button(row, text=f"{d.get('name','')}   [{u_fa}]", command=lambda dd=d: show_detail(dd),
+            b = tk.Button(row, text=str(d.get('name','')) + "   [" + u_lbl + "]", command=lambda dd=d: show_detail(dd),
                           anchor="e", bg="#0d1930", fg=u_col, relief="flat", font=pick_font(10, True),
                           activebackground="#101c36", activeforeground=C["cy"], cursor="hand2")
             b.pack(side="right", fill="x", expand=True)
@@ -1149,17 +1157,16 @@ class App:
         cat_rows: list[tk.Widget] = []
         _deb = {"job": None}
         def show_bank_detail(name, defn="", code="", syms=None, drugs=None):
+            _NR2 = self.L("not recorded in the open banks yet", "هنوز در بانک‌های آزاد ثبت نشده")
             box.delete("1.0", "end")
             lines = ["◀ " + name + ("   [" + code + "]" if code else ""), ""]
-            if defn:
-                lines.append("تعریف: " + defn[:350])
-                lines.append("")
-            if syms:
-                lines.append("علائم (Wikidata): " + "، ".join(str(s) for s in syms[:12]))
-            if drugs:
-                lines.append("داروهای درمان (Wikidata): " + "، ".join(str(d) for d in drugs[:12]))
+            lines.append(self.L("Definition: ", "تعریف: ") + (defn[:350] if defn else _NR2))
             lines.append("")
-            lines.append("(منبع: Disease Ontology / Wikidata — داده‌ی آزاد)")
+            lines.append(self.L("Symptoms: ", "علائم: ") + (("، ".join(str(s) for s in syms[:12])) if syms else _NR2))
+            if drugs:
+                lines.append(self.L("Treatments (Wikidata): ", "داروهای درمان (Wikidata): ") + "، ".join(str(d) for d in drugs[:12]))
+            lines.append("")
+            lines.append(self.L("(source: Disease Ontology / Wikidata — open data)", "(منبع: Disease Ontology / Wikidata — داده‌ی آزاد)"))
             box.insert("1.0", "\n".join(lines))
             box.tag_add("title", "1.0", "1.0 lineend")
             box.tag_config("title", foreground="#3bff9e", font=pick_font(12, True))
@@ -1265,16 +1272,16 @@ class App:
             lines = ["◀ " + r_.get("name", "") + (("   [" + r_["code"] + "]") if r_.get("code") else "")]
             if r_.get("fa"):
                 lines.append("(" + r_["fa"] + ")")
-            lines.append("منبع: " + r_.get("src", ""))
+            lines.append(self.L("Source: ", "منبع: ") + r_.get("src", ""))
             if r_.get("def"):
                 lines.append("")
                 lines.append("تعریف: " + r_["def"][:320])
             if r_.get("sym"):
                 lines.append("")
-                lines.append("علائم: " + "، ".join(str(s) for s in r_["sym"][:12]))
+                lines.append(self.L("Symptoms: ", "علائم: ") + "، ".join(str(s) for s in r_["sym"][:12]))
             if r_.get("drug"):
                 lines.append("")
-                lines.append("داروهای درمان: " + "، ".join(str(d) for d in r_["drug"][:12]))
+                lines.append(self.L("Treated with: ", "داروهای درمان: ") + "، ".join(str(d) for d in r_["drug"][:12]))
             box.insert("1.0", "\n".join(lines))
             box.tag_add("title", "1.0", "1.0 lineend")
             box.tag_config("title", foreground=C["cy"], font=pick_font(12, True))
@@ -1305,12 +1312,12 @@ class App:
         browse_bar.pack(fill="x", padx=16, pady=(2, 6))
         from knowledge_browser import disease_levels
         ch_box = ttk.Combobox(browse_bar, state="readonly", font=pick_font(8), width=30)
-        _all_ch = "— همه‌ی فصل‌ها —"
+        _all_ch = self.L("— all chapters —", "— همه‌ی فصل‌ها —")
         ch_box["values"] = [_all_ch] + [f"{c['fa']} ({c['count']:,})" for c in disease_levels()["chapters"]]
         ch_box.current(0)
         ch_box.pack(fill="x")
         cat_box = ttk.Combobox(browse_bar, state="readonly", font=pick_font(8), width=20)
-        cat_box["values"] = ["— همه —"]
+        cat_box["values"] = [self.L("— all —", "— همه —")]
         cat_box.current(0)
         cat_box.pack(fill="x", pady=(2, 0))
         from knowledge_browser import ICD_CHAPTERS as _CHAPTERS
@@ -1320,13 +1327,13 @@ class App:
             browse_state["cat"] = ""
             from knowledge_browser import disease_levels as _dl
             cats = _dl(browse_state["ch"]).get("cats") or [] if browse_state["ch"] else []
-            cat_box["values"] = ["— همه —"] + [f"{c['code']} ({c['count']})" for c in cats]
+            cat_box["values"] = [self.L("— all —", "— همه —")] + [f"{c['code']} ({c['count']})" for c in cats]
             cat_box.current(0)
             browse_state["page"] = 1
             load_browse(0)
         def on_cat_change(_e=None):
             txt = cat_box.get()
-            browse_state["cat"] = txt.split(" ")[0] if txt not in ("— همه —", "") else ""
+            browse_state["cat"] = txt.split(" ")[0] if txt not in (self.L("— all —", "— همه —"), "") else ""
             browse_state["page"] = 1
             load_browse(0)
         ch_box.bind("<<ComboboxSelected>>", on_ch_change)
@@ -1335,7 +1342,7 @@ class App:
         pg_lbl.pack(fill="x")
         btn_bar = tk.Frame(browse_bar, bg=C["panel2"])
         btn_bar.pack(fill="x")
-        for label, s_ in (("همه", "all"), ("ICD-10", "icd10"), ("DOID", "doid"), ("Wikidata", "wiki"), ("موتور", "engine")):
+        for label, s_ in ((self.L("All", "همه"), "all"), ("ICD-10", "icd10"), ("DOID", "doid"), ("Wikidata", "wiki"), (self.L("engine", "موتور"), "engine")):
             tk.Button(btn_bar, text=label,
                       command=lambda ss=s_: (browse_state.update(src=ss, page=1), load_browse(0)),
                       bg="#0d1930", fg=C["tx"], relief="flat", font=pick_font(8)).pack(side="right", padx=2, ipadx=4)
@@ -1343,7 +1350,7 @@ class App:
                   relief="flat", font=pick_font(9)).pack(side="left", padx=2)
         tk.Button(btn_bar, text="▶", command=lambda: load_browse(1), bg="#0d1930", fg=C["cy"],
                   relief="flat", font=pick_font(9)).pack(side="left", padx=2)
-        tk.Button(btn_bar, text="فهرست عادی", command=restore_rows, bg="#0d1930", fg=C["gr"],
+        tk.Button(btn_bar, text=self.L("normal list", "فهرست عادی"), command=restore_rows, bg="#0d1930", fg=C["gr"],
                   relief="flat", font=pick_font(8)).pack(side="left", padx=6)
 
     def _panel_drugs(self):
@@ -1354,8 +1361,8 @@ class App:
         drugs = get_all_drugs()
         w, top, inner, bottom = self._win_list(self.L("Drugs database", "بانک داروها"))
 
-        sev_fa = {"major": ("تداخل شدید", "#ff2a6d"), "moderate": ("تداخل متوسط", "#ffd60a"),
-                  "minor": ("تداخل خفیف", "#3bff9e")}
+        sev_fa = {"major": (self.L("severe interaction", "تداخل شدید"), "#ff2a6d"), "moderate": (self.L("moderate interaction", "تداخل متوسط"), "#ffd60a"),
+                  "minor": (self.L("mild interaction", "تداخل خفیف"), "#3bff9e")}
         _fda_n = 0
         try:
             from knowledge_browser import get_fda_drug_count
@@ -1380,8 +1387,8 @@ class App:
             cat = d.get("category")
             if cat:
                 lines.append(f"  دسته: {cat}")
-            for lbl, key in (("کلاس", "class"), ("کد ATC", "atc"), ("نیمه‌عمر", "half_life"),
-                             ("متابولیسم", "metabolism"), ("راه مصرف", "routes"), ("بارداری", "pregnancy")):
+            for lbl, key in ((self.L("Class", "کلاس"), "class"), (self.L("ATC code", "کد ATC"), "atc"), (self.L("Half-life", "نیمه‌عمر"), "half_life"),
+                             (self.L("Metabolism", "متابولیسم"), "metabolism"), (self.L("Route", "راه مصرف"), "routes"), (self.L("Pregnancy", "بارداری"), "pregnancy")):
                 r = row_fa(lbl, d.get(key))
                 if r:
                     lines.append(r)
@@ -1400,20 +1407,23 @@ class App:
             notes = d.get("notes")
             if notes:
                 lines.append("")
-                lines.append("نکته: " + str(notes))
+                lines.append(self.L("Note: ", "نکته: ") + str(notes))
             contra = d.get("contra")
             if contra:
-                lines.append("منع مصرف: " + str(contra))
+                lines.append(self.L("Contraindication: ", "منع مصرف: ") + str(contra))
             box.delete("1.0", "end")
             box.insert("1.0", "\n".join(x for x in lines if x != ""))
             box.tag_add("title", "1.0", "1.0 lineend")
             box.tag_config("title", foreground=C["mg"], font=pick_font(12, True))
 
+        from i18n import get_lang as _gl_d
+        _fa_d = _gl_d() == "fa"
         rows = []
         for d in drugs:
             row = tk.Frame(inner, bg=C["panel2"])
             n_inter = len(d.get("interactions") or [])
-            b = tk.Button(row, text=f"{d.get('fa','')}  —  {d.get('category','')}", command=lambda dd=d: show_detail(dd),
+            _nm_d = (d.get("fa", "") if _fa_d else (d.get("en", "") or d.get("fa", "")))
+            b = tk.Button(row, text=_nm_d + "  —  " + str(d.get('category','')), command=lambda dd=d: show_detail(dd),
                           anchor="e", bg="#0d1930", fg=C["tx"], relief="flat", font=pick_font(10, True),
                           activebackground="#101c36", activeforeground=C["cy"], cursor="hand2")
             b.pack(side="right", fill="x", expand=True)
@@ -1438,14 +1448,13 @@ class App:
             if _fa:
                 lines.append(f"  ({_fa})")
             lb = get_drug_label(d.get("g", "")) or {}
-            if lb.get("ind"):
-                lines.append("  ▸ موارد مصرف (لیبل FDA): " + lb["ind"][:280])
+            _NR_F2 = self.L("not in the FDA label set", "در مجموعه لیبل FDA نیست")
+            lines.append("  ▸ " + self.L("Indications (FDA label): ", "موارد مصرف (لیبل FDA): ") + (lb["ind"][:280] if lb.get("ind") else _NR_F2))
             if lb.get("box"):
-                lines.append("  ▸ هشدار جعبه: " + lb["box"][:220])
-            if lb.get("adv"):
-                lines.append("  ▸ عوارض: " + lb["adv"][:280])
+                lines.append("  ▸ " + self.L("Boxed warning: ", "هشدار جعبه: ") + lb["box"][:220])
+            lines.append("  ▸ " + self.L("Adverse reactions: ", "عوارض: ") + (lb["adv"][:280] if lb.get("adv") else _NR_F2))
             if lb.get("warn"):
-                lines.append("  ▸ هشدارها: " + lb["warn"][:220])
+                lines.append("  ▸ " + self.L("Warnings: ", "هشدارها: ") + lb["warn"][:220])
             if d.get("brands"):
                 lines.append("  نام‌های تجاری: " + "، ".join(d["brands"][:6]))
             if d.get("class"):
@@ -1538,7 +1547,8 @@ class App:
                     title += "  (" + d_["fa"] + ")"
                 title += (("  " + brand) if brand and brand.lower() != d_["g"].lower() else "")
                 if d_.get("cat"):
-                    title += "  — " + d_["cat"]
+                    _fa_6 = __import__("i18n").get_lang() == "fa"
+                    title += "  — " + (d_["cat"] if _fa_6 else d_.get("cat_en", d_["cat"]))
                 b_ = tk.Button(row_, text=title,
                                command=lambda dd=d_: show_fda_detail(dd),
                                anchor="e", bg="#101c36", fg=C["tx"], relief="flat", font=pick_font(9),
@@ -1550,7 +1560,7 @@ class App:
         fb_bar.pack(fill="x", padx=16, pady=(2, 6))
         from knowledge_browser import drug_levels
         dcat_box = ttk.Combobox(fb_bar, state="readonly", font=pick_font(8), width=30)
-        _all_dc = "— همه‌ی دسته‌ها —"
+        _all_dc = self.L("— all categories —", "— همه‌ی دسته‌ها —")
         _dc_by_idx = {f"{c['fa']} ({c['count']:,})": c["fa"] for c in drug_levels()}
         dcat_box["values"] = [_all_dc] + list(_dc_by_idx.keys())
         dcat_box.current(0)
@@ -1564,13 +1574,13 @@ class App:
         fpg_lbl.pack(fill="x")
         fbtn = tk.Frame(fb_bar, bg=C["panel2"])
         fbtn.pack(fill="x")
-        tk.Button(fbtn, text="مرور بانک FDA", command=lambda: load_fda_browse(0), bg="#0d1930",
+        tk.Button(fbtn, text=self.L("Browse FDA bank", "مرور بانک FDA"), command=lambda: load_fda_browse(0), bg="#0d1930",
                   fg=C["yl"], relief="flat", font=pick_font(8)).pack(side="right", padx=2, ipadx=6)
         tk.Button(fbtn, text="◀", command=lambda: load_fda_browse(-1), bg="#0d1930", fg=C["cy"],
                   relief="flat", font=pick_font(9)).pack(side="left", padx=2)
         tk.Button(fbtn, text="▶", command=lambda: load_fda_browse(1), bg="#0d1930", fg=C["cy"],
                   relief="flat", font=pick_font(9)).pack(side="left", padx=2)
-        tk.Button(fbtn, text="فهرست عادی", command=restore_drug_rows, bg="#0d1930", fg=C["gr"],
+        tk.Button(fbtn, text=self.L("normal list", "فهرست عادی"), command=restore_drug_rows, bg="#0d1930", fg=C["gr"],
                   relief="flat", font=pick_font(8)).pack(side="left", padx=6)
 
     def _panel_research(self):
@@ -1599,10 +1609,10 @@ class App:
             fr.pack(fill="x")
             return fr, e, lbl
 
-        fr1, e1, l1 = mk_section("", "📄 جستجوی مقالات PubMed (۴۰ میلیون+ منبع)", "", "مثلاً: ibuprofen migraine", "", "")
-        fr2, e2, l2 = mk_section("", "🧪 کارآزمایی‌های بالینی (ClinicalTrials.gov)", "", "مثلاً: diabetes", "", "")
-        fr3, e3, l3 = mk_section("", "⚠️ عوارض گزارش‌شده‌ی دارو (FAERS/FDA)", "", "نام دارو مثل: metformin", "", "")
-        fr4, e4, l4 = mk_section("", "💊 شناسه‌ی استاندارد دارو (RxNorm — NIH)", "", "نام دارو مثل: ibuprofen", "", "")
+        fr1, e1, l1 = mk_section("", self.L("PubMed literature search (40M+)", "📄 جستجوی مقالات PubMed (۴۰ میلیون+ منبع)"), "", self.L("e.g. ibuprofen migraine", "مثلاً: ibuprofen migraine"), "", "")
+        fr2, e2, l2 = mk_section("", self.L("Clinical trials (ClinicalTrials.gov)", "🧪 کارآزمایی‌های بالینی (ClinicalTrials.gov)"), "", self.L("e.g. diabetes", "مثلاً: diabetes"), "", "")
+        fr3, e3, l3 = mk_section("", self.L("Reported drug side effects (FAERS/FDA)", "⚠️ عوارض گزارش‌شده‌ی دارو (FAERS/FDA)"), "", self.L("drug name, e.g. metformin", "نام دارو مثل: metformin"), "", "")
+        fr4, e4, l4 = mk_section("", self.L("Standard drug identity (RxNorm — NIH)", "💊 شناسه‌ی استاندارد دارو (RxNorm — NIH)"), "", self.L("drug name, e.g. ibuprofen", "نام دارو مثل: ibuprofen"), "", "")
 
         def fetch(url):
             r = _rq.get(url, timeout=18, headers=UA)
@@ -1614,7 +1624,7 @@ class App:
 
         def do_pubmed(_e=None):
             q = e1.get().strip()   # read widgets on the main thread only
-            self._ui(lambda: l1.config(text="در حال جستجو…", fg=C["yl"]))
+            self._ui(lambda: l1.config(text=self.L("searching…", "در حال جستجو…"), fg=C["yl"]))
             def work():
                 import urllib.parse as up
                 try:
@@ -1626,16 +1636,16 @@ class App:
                         it = su.get("result", {}).get(pid, {})
                         lines.append("• " + str(it.get("title", "")))
                         lines.append("   " + str(it.get("source", "")) + " · " + str(it.get("pubdate", "")) + " — pubmed.ncbi.nlm.nih.gov/" + pid + "/")
-                    out = "\n".join(lines) if ids else "چیزی پیدا نشد."
+                    out = "\n".join(lines) if ids else self.L("Nothing found.", "چیزی پیدا نشد.")
                 except Exception as ex:
-                    out = "خطا در اتصال به PubMed: " + str(ex)[:120]
+                    out = self.L("Error reaching PubMed: ", "خطا در اتصال به PubMed: ") + str(ex)[:120]
                 self._ui(lambda: l1.winfo_exists() and l1.config(text=out, fg=C["tx"]))
             if q:
                 run_async(work)
 
         def do_trials(_e=None):
             q = e2.get().strip()
-            self._ui(lambda: l2.config(text="در حال جستجو…", fg=C["yl"]))
+            self._ui(lambda: l2.config(text=self.L("searching…", "در حال جستجو…"), fg=C["yl"]))
             def work():
                 import urllib.parse as up
                 try:
@@ -1646,16 +1656,16 @@ class App:
                         im = p.get("identificationModule", {})
                         lines.append("• " + str(im.get("briefTitle", "")))
                         lines.append("   " + str(im.get("nctId", "")) + " · " + str(p.get("statusModule", {}).get("overallStatus", "")) + " · " + str((p.get("designModule", {}).get("phases") or ["—"])[0]))
-                    out = "\n".join(lines) if d.get("studies") else "چیزی پیدا نشد."
+                    out = "\n".join(lines) if d.get("studies") else self.L("Nothing found.", "چیزی پیدا نشد.")
                 except Exception as ex:
-                    out = "خطا در اتصال به ClinicalTrials.gov: " + str(ex)[:120]
+                    out = self.L("Error reaching ClinicalTrials.gov: ", "خطا در اتصال به ClinicalTrials.gov: ") + str(ex)[:120]
                 self._ui(lambda: l2.winfo_exists() and l2.config(text=out, fg=C["tx"]))
             if q:
                 run_async(work)
 
         def do_faers(_e=None):
             q = e3.get().strip()
-            self._ui(lambda: l3.config(text="در حال بررسی…", fg=C["yl"]))
+            self._ui(lambda: l3.config(text=self.L("checking…", "در حال بررسی…"), fg=C["yl"]))
             def work():
                 import urllib.parse as up
                 try:
@@ -1665,24 +1675,24 @@ class App:
                     lines = ["≥" + str(sum(r.get("count", 0) for r in rs)) + " گزارش — پرتکرارترین عوارض:"]
                     for r in rs:
                         lines.append("• " + str(r.get("term", "")).lower() + ": " + str(r.get("count", 0)))
-                    out = "\n".join(lines) if rs else "گزارشی پیدا نشد — نام دقیق انگلیسی دارو را امتحان کن."
+                    out = "\n".join(lines) if rs else self.L("No reports found — try the exact english drug name.", "گزارشی پیدا نشد — نام دقیق انگلیسی دارو را امتحان کن.")
                     out += "\n(گزارش‌ها علت-معلولی را ثابت نمی‌کنند — با پزشک مشورت کن.)"
                 except Exception as ex:
-                    out = "خطا در اتصال به openFDA: " + str(ex)[:120]
+                    out = self.L("Error reaching openFDA: ", "خطا در اتصال به openFDA: ") + str(ex)[:120]
                 self._ui(lambda: l3.winfo_exists() and l3.config(text=out, fg=C["tx"]))
             if q:
                 run_async(work)
 
         def do_rxnorm(_e=None):
             q = e4.get().strip()
-            self._ui(lambda: l4.config(text="در حال جستجو…", fg=C["yl"]))
+            self._ui(lambda: l4.config(text=self.L("searching…", "در حال جستجو…"), fg=C["yl"]))
             def work():
                 import urllib.parse as up
                 try:
                     qq = up.quote(q)
                     rid = fetch("https://rxnav.nlm.nih.gov/REST/rxcui.json?name=" + qq)
                     rxcui = ((rid.get("idGroup", {}).get("rxnormId") or [""])[0])
-                    lines = ["RxCUI: " + (rxcui or "پیدا نشد")]
+                    lines = ["RxCUI: " + (rxcui or self.L("not found", "پیدا نشد"))]
                     if rxcui:
                         d = fetch("https://rxnav.nlm.nih.gov/REST/drugs.json?name=" + qq)
                         n = 0
@@ -1696,7 +1706,7 @@ class App:
                                 break
                     out = "\n".join(lines)
                 except Exception as ex:
-                    out = "خطا در اتصال به RxNav: " + str(ex)[:120]
+                    out = self.L("Error reaching RxNav: ", "خطا در اتصال به RxNav: ") + str(ex)[:120]
                 self._ui(lambda: l4.winfo_exists() and l4.config(text=out, fg=C["tx"]))
             if q:
                 run_async(work)
@@ -1704,7 +1714,7 @@ class App:
         for ent, fn in ((e1, do_pubmed), (e2, do_trials), (e3, do_faers), (e4, do_rxnorm)):
             ent.bind("<Return>", fn)
             bar = ent.master
-            tk.Button(bar, text="جستجو", command=fn, bg="#0077b6", fg="#021018",
+            tk.Button(bar, text=self.L("Search", "جستجو"), command=fn, bg="#0077b6", fg="#021018",
                       font=pick_font(10, True), relief="flat").pack(side="left", padx=(6, 0), ipadx=10)
 
     def _panel_lab(self):
@@ -1726,7 +1736,7 @@ class App:
         flt_bar = tk.Frame(top, bg=C["panel2"])
         flt_bar.pack(fill="x", padx=16, pady=(0, 4))
         cat_box = ttk.Combobox(flt_bar, state="readonly", font=pick_font(9), width=28)
-        _all_c = self.L("— all categories —", "— همه‌ی دسته‌ها —")
+        _all_c = self.L("— all categories —", self.L("— all categories —", "— همه‌ی دسته‌ها —"))
         _cats = lab_full.LAB_CATEGORIES
         cat_box["values"] = [_all_c] + [(_cats[c][1] if fa_mode else _cats[c][0]) for c in _cats]
         cat_box.current(0)
@@ -1800,8 +1810,8 @@ class App:
                 col = C["gr"] if r["status"] == "normal" else C["mg"]
                 txt = f"{r['test']}: {'مثبت' if fa_mode else 'positive' if r['status']=='positive' else ('منفی' if fa_mode else 'negative')}\n{r['note']}"
             else:
-                st_fa = {"normal": "نرمال", "low": "پایین‌تر از حد", "high": "بالاتر از حد", "very_low": "خیلی پایین",
-                         "very_high": "خیلی بالا", "crit_low": "⚠️ خطرناک — پایین", "crit_high": "⚠️ خطرناک — بالا"}
+                st_fa = {"normal": self.L("normal", "نرمال"), "low": self.L("below range", "پایین‌تر از حد"), "high": self.L("above range", "بالاتر از حد"), "very_low": self.L("far below range", "خیلی پایین"),
+                         "very_high": self.L("far above range", "خیلی بالا"), "crit_low": self.L("CRITICAL — low", "⚠️ خطرناک — پایین"), "crit_high": self.L("CRITICAL — high", "⚠️ خطرناک — بالا")}
                 st_en = {"normal": "normal", "low": "below range", "high": "above range", "very_low": "far below",
                          "very_high": "far above", "crit_low": "CRITICAL LOW", "crit_high": "CRITICAL HIGH"}
                 st = (st_fa if fa_mode else st_en).get(r["status"], r["status"])
@@ -1822,7 +1832,7 @@ class App:
     def _panel_referral(self):
         from doctor_referral import generate
         from patient_profile import load_profile
-        w = self._win("گزارش ارجاع به پزشک")
+        w = self._win(self.L("Referral report for the doctor", "گزارش ارجاع به پزشک"))
         box = self._result_box(w)
 
         def go():
@@ -1837,12 +1847,12 @@ class App:
                 except Exception:
                     pass
             else:
-                box.insert("1.0", r.get("message_fa", "خطا"))
-        tk.Button(w, text="تولید گزارش", command=go, bg="#0077b6", fg="#021018",
+                box.insert("1.0", r.get("message_fa", self.L("Error", "خطا")))
+        tk.Button(w, text=self.L("Generate report", "تولید گزارش"), command=go, bg="#0077b6", fg="#021018",
                   font=pick_font(11, True), relief="flat").pack(pady=8, ipadx=24, ipady=4)
 
     def _panel_brain(self):
-        w = self._win("مغز داخلی / یادگیری")
+        w = self._win(self.L("Internal brain & learning", "مغز داخلی / یادگیری"))
         box = self._result_box(w)
 
         def go():
@@ -1859,18 +1869,18 @@ class App:
             lines.append("تقلید فقط لحن/ساختار است، نه تولید محتوای پزشکی جعلی.")
             box.delete("1.0", "end")
             box.insert("1.0", "\n".join(lines))
-        tk.Button(w, text="به‌روزرسانی", command=go, bg="#0077b6", fg="#021018",
+        tk.Button(w, text=self.L("Refresh", "به‌روزرسانی"), command=go, bg="#0077b6", fg="#021018",
                   font=pick_font(11, True), relief="flat").pack(pady=8, ipadx=24, ipady=4)
         go()
 
     def _panel_gpu(self):
         from local_llm import get_config, save_config, test_setup
-        w = self._win("هوش مصنوعی محلی (Ollama)")
+        w = self._win(self.L("Local AI (Ollama)", "هوش مصنوعی محلی (Ollama)"))
         cfg = get_config()
         ent_on = tk.BooleanVar(value=bool(cfg.get("enabled")))
-        ents = self._form(w, [("base_url", "آدرس Ollama", cfg.get("base_url", "")),
-                              ("model", "مدل (پیش‌فرض qwen2.5:7b-instruct)", cfg.get("model", ""))])
-        tk.Checkbutton(w, text="استفاده از مدل محلی در زنجیره‌ی پاسخ", variable=ent_on, bg=C["panel2"],
+        ents = self._form(w, [("base_url", self.L("Ollama address", "آدرس Ollama"), cfg.get("base_url", "")),
+                              ("model", self.L("Model (default qwen2.5:7b-instruct)", "مدل (پیش‌فرض qwen2.5:7b-instruct)"), cfg.get("model", ""))])
+        tk.Checkbutton(w, text=self.L("Use the local model in the answer chain", "استفاده از مدل محلی در زنجیره‌ی پاسخ"), variable=ent_on, bg=C["panel2"],
                        fg=C["tx"], selectcolor="#0a1424", activebackground=C["panel2"],
                        activeforeground=C["cy"], font=pick_font(10), anchor="e").pack(fill="x", padx=16)
         box = self._result_box(w)
@@ -1879,10 +1889,10 @@ class App:
             save_config({"enabled": ent_on.get(), "base_url": ents["base_url"].get().strip(),
                          "model": ents["model"].get().strip()})
             box.delete("1.0", "end")
-            box.insert("1.0", "ذخیره شد (local_llm_config.json)")
+            box.insert("1.0", self.L("Saved (local_llm_config.json)", "ذخیره شد (local_llm_config.json)"))
         def test():
             box.delete("1.0", "end")
-            box.insert("1.0", "… در حال بررسی Ollama")
+            box.insert("1.0", self.L("… checking Ollama", "… در حال بررسی Ollama"))
             def work():
                 r = test_setup()
                 out = r.get("message_fa", "") + "\nمدل‌ها: "+ ("، ".join(r.get("models", [])) or "—")
@@ -1894,9 +1904,9 @@ class App:
             threading.Thread(target=work, daemon=True).start()
         bar = tk.Frame(w, bg=C["panel2"])
         bar.pack(pady=8)
-        tk.Button(bar, text="ذخیره", command=save, bg="#0077b6", fg="#021018",
+        tk.Button(bar, text=self.L("Save", "ذخیره"), command=save, bg="#0077b6", fg="#021018",
                   font=pick_font(11, True), relief="flat").pack(side="right", padx=8)
-        tk.Button(bar, text="بررسی و تست", command=test, bg="#0d1930", fg=C["tx"],
+        tk.Button(bar, text=self.L("Check & test", "بررسی و تست"), command=test, bg="#0d1930", fg=C["tx"],
                   relief="flat", font=pick_font(11)).pack(side="right", padx=8)
 
     # ------------------------------------------------------ API settings
@@ -1905,10 +1915,10 @@ class App:
         from free_ai import OPENROUTER_FREE_MODELS
         import webbrowser
         s = get_settings()
-        w = self._win("تنظیمات API — بدون نیاز به ری‌استارت")
+        w = self._win(self.L("API settings — applies without restart", "تنظیمات API — بدون نیاز به ری‌استارت"))
         keys = {}
-        for provider, title in (("openrouter", "کلید OpenRouter (پیشنهادی — رایگان)"),
-                                ("openai", "کلید OpenAI"), ("deepseek", "کلید DeepSeek")):
+        for provider, title in (("openrouter", self.L("OpenRouter key (recommended — free)", "کلید OpenRouter (پیشنهادی — رایگان)")),
+                                ("openai", self.L("OpenAI key", "کلید OpenAI")), ("deepseek", self.L("DeepSeek key", "کلید DeepSeek"))):
             tk.Label(w, text=title, bg=C["panel2"], fg=C["dim"], font=pick_font(10), anchor="e").pack(fill="x", padx=16, pady=(8, 0))
             e = tk.Entry(w, bg="#0a1424", fg=C["tx"], relief="flat", font=pick_font(11),
                          justify="right", show="•", insertbackground=C["cy"])
@@ -1916,24 +1926,24 @@ class App:
             keys[provider] = e
         top = tk.Frame(w, bg=C["panel2"])
         top.pack(fill="x", padx=16, pady=4)
-        tk.Label(top, text="مدل OpenRouter", bg=C["panel2"], fg=C["dim"], font=pick_font(10)).pack(side="right", anchor="e")
+        tk.Label(top, text=self.L("OpenRouter model", "مدل OpenRouter"), bg=C["panel2"], fg=C["dim"], font=pick_font(10)).pack(side="right", anchor="e")
         cb = ttk.Combobox(w, values=[m["id"] for m in OPENROUTER_FREE_MODELS], font=pick_font(10))
         cb.set(s.get("openrouter_model", "openai/gpt-oss-120b:free"))
         cb.pack(fill="x", padx=16, ipady=4)
-        tk.Label(w, text="یا نوشتن دستی model id", bg=C["panel2"], fg=C["dim"], font=pick_font(9)).pack(anchor="e", padx=16)
+        tk.Label(w, text=self.L("or type a model id manually", "یا نوشتن دستی model id"), bg=C["panel2"], fg=C["dim"], font=pick_font(9)).pack(anchor="e", padx=16)
         manual = tk.Entry(w, bg="#0a1424", fg=C["tx"], relief="flat", font=pick_font(11), justify="right", insertbackground=C["cy"])
         manual.insert(0, s.get("openrouter_model", ""))
         manual.pack(fill="x", padx=16, ipady=4)
         var_reason = tk.BooleanVar(value=bool(s.get("reasoning_enabled")))
         var_brain = tk.BooleanVar(value=bool(s.get("brain_enabled")))
-        tk.Checkbutton(w, text="پشتیبانی از reasoning (پیش‌فرض خاموش؛ مصرف توکن بیشتر)", variable=var_reason,
+        tk.Checkbutton(w, text=self.L("Reasoning support (off by default; uses more tokens)", "پشتیبانی از reasoning (پیش‌فرض خاموش؛ مصرف توکن بیشتر)"), variable=var_reason,
                        bg=C["panel2"], fg=C["tx"], selectcolor="#0a1424", activebackground=C["panel2"],
                        activeforeground=C["cy"], font=pick_font(10), anchor="e", justify="right").pack(fill="x", padx=16)
-        tk.Checkbutton(w, text="مغز داخلی روشن باشد (پاسخ آفلاین — یادگیری همیشه فعال است)", variable=var_brain,
+        tk.Checkbutton(w, text=self.L("Keep the offline brain on (learning always stays on)", "مغز داخلی روشن باشد (پاسخ آفلاین — یادگیری همیشه فعال است)"), variable=var_brain,
                        bg=C["panel2"], fg=C["tx"], selectcolor="#0a1424", activebackground=C["panel2"],
                        activeforeground=C["cy"], font=pick_font(10), anchor="e", justify="right").pack(fill="x", padx=16)
         box = self._result_box(w)
-        box.insert("1.0", "راهنما: کلید رایگان OpenRouter را از openrouter.ai/keys بگیر و همین‌جا وارد کن.")
+        box.insert("1.0", self.L("Tip: get a free OpenRouter key at openrouter.ai/keys and paste it here.", "راهنما: کلید رایگان OpenRouter را از openrouter.ai/keys بگیر و همین‌جا وارد کن."))
 
         def save():
             for provider, e in keys.items():
@@ -1960,15 +1970,15 @@ class App:
             threading.Thread(target=work, daemon=True).start()
         bar = tk.Frame(w, bg=C["panel2"])
         bar.pack(pady=8)
-        tk.Button(bar, text="ذخیره", command=save, bg="#0077b6", fg="#021018",
+        tk.Button(bar, text=self.L("Save", "ذخیره"), command=save, bg="#0077b6", fg="#021018",
                   font=pick_font(11, True), relief="flat").pack(side="right", padx=6)
-        tk.Button(bar, text="تست OpenRouter", command=lambda: test("openrouter"), bg="#0d1930",
+        tk.Button(bar, text=self.L("Test OpenRouter", "تست OpenRouter"), command=lambda: test("openrouter"), bg="#0d1930",
                   fg=C["tx"], relief="flat", font=pick_font(10)).pack(side="right", padx=4)
-        tk.Button(bar, text="تست OpenAI", command=lambda: test("openai"), bg="#0d1930",
+        tk.Button(bar, text=self.L("Test OpenAI", "تست OpenAI"), command=lambda: test("openai"), bg="#0d1930",
                   fg=C["tx"], relief="flat", font=pick_font(10)).pack(side="right", padx=4)
-        tk.Button(bar, text="تست DeepSeek", command=lambda: test("deepseek"), bg="#0d1930",
+        tk.Button(bar, text=self.L("Test DeepSeek", "تست DeepSeek"), command=lambda: test("deepseek"), bg="#0d1930",
                   fg=C["tx"], relief="flat", font=pick_font(10)).pack(side="right", padx=4)
-        tk.Button(bar, text="گرفتن کلید OpenRouter", command=lambda: webbrowser.open("https://openrouter.ai/keys"),
+        tk.Button(bar, text=self.L("Get an OpenRouter key", "گرفتن کلید OpenRouter"), command=lambda: webbrowser.open("https://openrouter.ai/keys"),
                   bg="#0d1930", fg=C["cy"], relief="flat", font=pick_font(10)).pack(side="left", padx=4)
 
 
