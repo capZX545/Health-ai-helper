@@ -46,7 +46,7 @@ def main() -> int:
     if sys.platform.startswith("win"):
         pyinstaller = [sys.executable, "-m", "PyInstaller"]
     else:
-        print("you are on linux; a real windows exe can only be built on windows.")
+        print("you are on linux; a real Windows exe can only be built on Windows.")
         print("run this script on windows with python and pyinstaller installed.")
         return 1
 
