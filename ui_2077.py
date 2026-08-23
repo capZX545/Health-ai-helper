@@ -37,7 +37,8 @@ def _load_bundled_fonts() -> None:
         from ctypes import wintypes
         g32 = ctypes.windll.gdi32
         here = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts")
-        for name in ("Vazirmatn-Regular.ttf", "Vazirmatn-Bold.ttf"):
+        for name in ("Vazirmatn-Regular.ttf", "Vazirmatn-Bold.ttf",
+                     "Inter-Regular.ttf", "Inter-Bold.ttf"):
             path = os.path.join(here, name)
             if not os.path.exists(path):
                 continue
@@ -53,7 +54,14 @@ def _load_bundled_fonts() -> None:
 def pick_font(size: int, bold: bool = False):
     _load_bundled_fonts()
     fams = set(tkfont.families())
-    for fam in ("Vazirmatn", "B Nazanin", "IRANSans", "Segoe UI", "Tahoma"):
+    try:
+        from i18n import get_lang
+        english = get_lang() == "en"
+    except Exception:
+        english = False
+    order = ("Inter", "Vazirmatn", "Segoe UI", "Tahoma") if english else \
+            ("Vazirmatn", "B Nazanin", "IRANSans", "Inter", "Segoe UI", "Tahoma")
+    for fam in order:
         if fam in fams:
             return (fam, size, "bold" if bold else "normal")
     return ("Tahoma", size, "bold" if bold else "normal")

@@ -23,6 +23,8 @@ DATA_FILES = [
     "requirements.txt",
     "fonts/Vazirmatn-Regular.ttf",
     "fonts/Vazirmatn-Bold.ttf",
+    "fonts/Inter-Regular.ttf",
+    "fonts/Inter-Bold.ttf",
 ]
 
 
