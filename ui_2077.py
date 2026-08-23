@@ -1175,7 +1175,10 @@ class App:
             from knowledge_browser import fa_disease_name as _fdn
             fa_n = fa_n or _fdn(icd=code, en=name)
             box.delete("1.0", "end")
-            box.insert("1.0", f"◀ {name}" + (f" ({fa_n})" if fa_n else "") + f"\nکد ICD-10: {code}\nفصل: {chapter}\n\n(این مورد از کاتالوگ کامل ICD-10-CM است — برای تشخیص، از ماژول علائم استفاده کن.)")
+            _fa_cd = __import__("i18n").get_lang() == "fa"
+            from knowledge_browser import explain_disease_entry as _expl
+            _ex = _expl(name, code, chapter, chapter)
+            box.insert("1.0", f"◀ {name}" + (f" ({fa_n})" if fa_n else "") + f"\nکد ICD-10: {code}\nفصل: {chapter}\n\n{_ex['note_fa'] if _fa_cd else _ex['note_en']}\n\n({self.L('typical signs: ', 'نشانه‌های معمول: ')}{_ex['sym_fa'] if _fa_cd else _ex['sym_en']})\n\n({self.L('this entry comes from the full ICD-10-CM catalog — for diagnosis use the Symptoms module', 'این مورد از کاتالوگ کامل ICD-10-CM است — برای تشخیص، از ماژول علائم استفاده کن')})")
             box.tag_add("title", "1.0", "1.0 lineend")
             box.tag_config("title", foreground=C["cy"], font=pick_font(12, True))
         def run_catalog_search():
@@ -1279,6 +1282,11 @@ class App:
             if r_.get("sym"):
                 lines.append("")
                 lines.append(self.L("Symptoms: ", "علائم: ") + "، ".join(str(s) for s in r_["sym"][:12]))
+            elif r_.get("note_en"):
+                _fa_nd = __import__("i18n").get_lang() == "fa"
+                lines.append("")
+                lines.append(r_.get("note_fa") if _fa_nd else r_.get("note_en"))
+                lines.append(self.L("Typical signs: ", "نشانه‌های معمول: ") + (r_.get("nsym_fa") if _fa_nd else r_.get("nsym_en")))
             if r_.get("drug"):
                 lines.append("")
                 lines.append(self.L("Treated with: ", "داروهای درمان: ") + "، ".join(str(d) for d in r_["drug"][:12]))

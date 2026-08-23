@@ -751,6 +751,16 @@ def _build_unified() -> list:
                 r["fa"] = xwalk[code]
             elif len(code) >= 3 and code[:3] in xwalk:
                 r["fa"] = xwalk[code[:3]]
+    # entries with no definition, no symptoms and no treatments get an
+    # auto explanation from their title family (bilingual, honest)
+    for r in seen.values():
+        if not (r.get("def") or r.get("sym") or r.get("drug")):
+            ex = explain_disease_entry(r.get("name", ""), r.get("code", ""),
+                                       r.get("ch_en", ""), r.get("ch_fa", ""))
+            r["note_en"] = ex["note_en"]
+            r["note_fa"] = ex["note_fa"]
+            r["nsym_en"] = ex["sym_en"]
+            r["nsym_fa"] = ex["sym_fa"]
     out = list(seen.values())
     out.sort(key=lambda r: (r.get("name") or "").lower())
     _UNIFIED_CACHE = out
@@ -823,3 +833,100 @@ def drug_levels() -> list:
     order = [c["fa"] for c in drug_categories()]
     out = [{"fa": c, "count": cnt.get(c, 0)} for c in order if cnt.get(c)]
     return out
+
+
+# ---------- auto explanations for entries with no description ----------
+
+import re as _re
+
+DISEASE_FAMILY_PATTERNS = [
+    (_re.compile(r"abnormal cytological finding", _re.I),
+     "This is a LAB RESULT code, not a disease: a smear/sample taken from the digestive organs or abdominal cavity showed abnormal cells under the microscope. By itself it has no symptoms; it means the sample needs a doctor's review, often with repeat sampling, imaging or a biopsy to find the cause (inflammation, infection, benign growth or, less often, a tumor).",
+     "این کد یک «نتیجه‌ی آزمایش» است، نه یک بیماری: در نمونه‌ی گرفته‌شده از اندام‌های گوارشی یا حفره‌ی شکم، سلول‌های غیرطبیعی دیده شده است. خودش علامتی ندارد؛ یعنی نمونه باید توسط پزشک بررسی شود و معمولاً تکرار آزمایش، تصویربرداری یا بیوپسی برای یافتن علت (التهاب، عفونت، توده‌ی خوش‌خیم یا به‌ندرت تومور) لازم می‌شود.",
+     "none by itself — follow-up tests decide", "خودش علامت ندارد — آزمایش‌های تکمیلی مشخص می‌کنند"),
+    (_re.compile(r"abnormal (radiological|ultrasound|imaging|mri|ct|x-?ray).*finding|abnormal finding.*(imaging|radiolog)", _re.I),
+     "An IMAGING RESULT code: something unusual was seen on a scan (ultrasound/CT/MRI/X-ray). It is a finding, not a diagnosis. Common causes are benign (cysts, calcification, normal variants) but a doctor should compare it with your symptoms and sometimes repeat or further image it.",
+     "کد «نتیجه‌ی تصویربرداری» است: در سونوگرافی/سی‌تی/ام‌آر‌ی/رادیوگرافی نکته‌ی غیرمعمولی دیده شده. این یک یافته است نه تشخیص قطعی. علل شایع خوش‌خیم‌اند (کیست، کلسیفیکاسیون، تنوع طبیعی) اما پزشک باید آن را با علائم شما تطبیق دهد و گاهی تصویربرداری تکراری یا تکمیلی بدهد.",
+     "none by itself", "خودش علامت ندارد"),
+    (_re.compile(r"abnormal finding", _re.I),
+     "A LAB/EXAM FINDING code: something outside the normal range showed up in a specimen or examination. It is a result, not a disease by itself. The meaning depends completely on which test and how abnormal — a doctor interprets it together with your symptoms.",
+     "کد «یافته‌ی آزمایش/معاینه» است: موردی خارج از بازه‌ی طبیعی در نمونه یا بررسی دیده شده. این یک نتیجه است، نه بیماری مستقل. معنای آن کاملاً به نوع آزمایش و میزان انحراف بستگی دارد و پزشک آن را همراه علائم شما تفسیر می‌کند.",
+     "depends on the underlying cause", "بسته به علت زمینه‌ای"),
+    (_re.compile(r"personal history of", _re.I),
+     "A HISTORY code: it records that you had this condition in the past. It matters for future care (risk of recurrence, follow-up, medication choices) but it is not an active illness right now.",
+     "کد «سابقه‌ی شخصی» است: ثبت می‌کند که در گذشته این مشکل را داشته‌ای. برای مراقبت آینده (خطر عود، پیگیری، انتخاب دارو) مهم است اما الان یک بیماری فعال نیست.",
+     "no current symptoms required", "لازم نیست علامت فعلی داشته باشد"),
+    (_re.compile(r"family history of", _re.I),
+     "A FAMILY HISTORY code: a close relative had this condition. It does not mean you have it; it usually raises attention so screening can start earlier.",
+     "کد «سابقه‌ی خانوادگی» است: یکی از بستگان این مشکل را داشته. به این معنا نیست که شما آن را دارید؛ معمولاً فقط یعنی غربالگری زودتر و دقیق‌تری توصیه می‌شود.",
+     "none — it is a risk marker", "هیچ — فقط نشانگر ریسک است"),
+    (_re.compile(r"encounter for (.*screening|screening)", _re.I),
+     "A SCREENING VISIT code: the visit happened to check for a disease before any symptoms. Screening is preventive care; the result decides the next step.",
+     "کد «ویزیت غربالگری» است: مراجعه برای بررسی یک بیماری قبل از بروز علامت انجام شده. غربالگری مراقبت پیشگیرانه است؛ نتیجه‌ی آن قدم بعدی را مشخص می‌کند.",
+     "none — preventive check", "هیچ — بررسی پیشگیرانه"),
+    (_re.compile(r"encounter for (vaccination|immunization)", _re.I),
+     "A VACCINATION VISIT code: the visit was for receiving a vaccine. Expected effects are a sore arm or mild fever for a day or two.",
+     "کد «ویزیت واکسیناسیون» است: مراجعه برای تزریق واکسن انجام شده. اثرات مورد انتظار: درد بازو یا تب خفیف برای یک دو روز.",
+     "sore arm, mild fever (normal)", "درد بازو، تب خفیف (طبیعی)"),
+    (_re.compile(r"encounter for|follow-?up|aftercare|routine", _re.I),
+     "An ADMINISTRATIVE VISIT code: a check-up, follow-up or aftercare contact. It documents the reason for the visit, not a new disease.",
+     "کد «ویزیت اداری» است: چکاپ، پیگیری یا مراقبت بعدی. فقط دلیل مراجعه را ثبت می‌کند، نه یک بیماری جدید.",
+     "none by itself", "خودش علامت ندارد"),
+    (_re.compile(r"suspected|rule out|probable", _re.I),
+     "A 'SUSPECTED' code: this condition was being investigated as a possibility. It is not a confirmed diagnosis.",
+     "کد «مشکوک» است: این حالت به‌عنوان یک احتمال بررسی شده. تشخیص قطعی نیست.",
+     "depends on the final diagnosis", "بسته به تشخیص نهایی"),
+    (_re.compile(r"sequela|late effect", _re.I),
+     "A SEQUELA code: a late, lasting effect of a previous disease or injury (for example weakness after a stroke).",
+     "کد «عوارض دیررس» است: اثر باقی‌مانده‌ی یک بیماری یا آسیب قبلی (مثلاً ضعف بعد از سکته).",
+     "varies with the original condition", "بسته به بیماری اولیه"),
+    (_re.compile(r"(unspecified|other specified|not otherwise)", _re.I),
+     "An UNSPECIFIED variant of this condition: the diagnosis was not narrowed down further. The symptoms and care follow the parent condition.",
+     "نوع «مشخص‌نشده»ی این بیماری: تشخیص دقیق‌تر از این سطح ثبت نشده. علائم و درمان تابع همان بیماری اصلی است.",
+     "same as the parent condition", "مثل بیماری اصلی"),
+    (_re.compile(r"(neoplasm|carcinoma|tumor|tumour|lymphoma|leukemia|melanoma|sarcoma|adenoma|metasta|cancer)", _re.I),
+     "A CANCER-RELATED entry. General signs that push people to get checked: unexplained weight loss, night sweats, persistent fatigue, a lump, bleeding or pain in the affected area. Diagnosis needs imaging and tissue sampling; treatment is planned by an oncologist.",
+     "مورد مرتبط با «بدخیمی/تومور». نشانه‌های عمومی که فرد را وادار به بررسی می‌کند: کاهش وزن بی‌دلیل، عرق شبانه، خستگی مداوم، توده، خونریزی یا درد در ناحیه‌ی درگیر. تشخیص نیازمند تصویربرداری و نمونه‌برداری است و درمان توسط متخصص انکولوژی برنامه‌ریزی می‌شود.",
+     "weight loss, night sweats, fatigue, lump, local pain/bleeding",
+     "کاهش وزن، عرق شبانه، خستگی، توده، درد/خونریزی موضعی"),
+    (_re.compile(r"fracture", _re.I),
+     "A FRACTURE entry: a broken bone, usually from trauma or a fall (in osteoporosis even from minor force). Typical signs: pain, swelling, bruising, deformity and inability to bear weight. Needs imaging and orthopedic care.",
+     "مورد «شکستگی استخوان»: معمولاً در اثر ضربه یا زمین‌خوردن (در پوکی استخوان حتی با ضربه‌ی خفیف). نشانه‌های معمول: درد، تورم، کبودی، تغییر شکل و ناتوانی در تحمل وزن. نیاز به تصویربرداری و مراقبت ارتوپدی دارد.",
+     "pain, swelling, deformity, can't bear weight", "درد، تورم، تغییر شکل، عدم تحمل وزن"),
+    (_re.compile(r"(poisoning|toxic effect|overdose)", _re.I),
+     "A POISONING/TOXICITY entry: harm from a drug, chemical or substance. Depending on the substance it can be an emergency — call 115/112 with confusion, breathing trouble or loss of consciousness.",
+     "مورد «مسمومیت»: آسیب ناشی از دارو، ماده‌ی شیمیایی یا مواد. بسته به ماده ممکن است اورژانسی باشد — با گیجی، تنگی نفس یا کاهش هوشیاری با ۱۱۵/۱۱۲ تماس بگیر.",
+     "nausea, vomiting, confusion, breathing changes", "تهوع، استفراغ، گیجی، تغییر تنفس"),
+    (_re.compile(r"burn|corrosion", _re.I),
+     "A BURN/CORROSIVE injury entry. Depth and size decide severity; large, deep, face/hand/genital or chemical burns need emergency care.",
+     "مورد «سوختگی/اسید». عمق و وسعت، شدت را تعیین می‌کند؛ سوختگی وسیع، عمیق، صورت/دست/ناحیه‌ی تناسلی یا شیمیایی نیاز به مراقبت اورژانسی دارد.",
+     "pain, redness, blisters, skin loss", "درد، قرمزی، تاول، از دست رفتن پوست"),
+    (_re.compile(r"(pregnan|delivery|birth|puerperium|gravid|obstetric)", _re.I),
+     "A PREGNANCY/CHILDBIRTH-related entry. Care is shared between the mother-care team; warning signs during pregnancy are bleeding, severe headache, swelling and reduced fetal movement.",
+     "مورد مرتبط با «بارداری/زایمان». مراقبت با تیم مراقبت مادر است؛ علائم خطر در بارداری: خونریزی، سردرد شدید، تورم و کاهش حرکات جنین.",
+     "context: pregnancy care", "در چارچوب مراقبت بارداری"),
+    (_re.compile(r"(injury|laceration|wound|contusion|sprain|strain|dislocation)", _re.I),
+     "An INJURY entry: physical damage from trauma. Typical signs are pain, swelling, bruising and limited movement; care depends on the injured part and severity.",
+     "مورد «آسیب/ضربه»: آسیب فیزیکی ناشی از تروما. نشانه‌های معمول: درد، تورم، کبودی و محدودیت حرکت؛ مراقبت بسته به ناحیه و شدت است.",
+     "pain, swelling, bruising, limited movement", "درد، تورم، کبودی، محدودیت حرکت"),
+    (_re.compile(r"congenital|malformation|birth defect", _re.I),
+     "A CONGENITAL entry: a condition present from birth. Some are found on newborn screening, others later; many need specialist follow-up.",
+     "مورد «مادرزادی»: حالتی که از بدو تولد وجود دارد. بعضی در غربالگری نوزادی و بعضی دیرتر پیدا می‌شوند؛ بسیاری نیاز به پیگیری تخصصی دارند.",
+     "varies by the specific condition", "بسته به نوع آن"),
+]
+
+
+def explain_disease_entry(name: str, code: str = "", chapter_en: str = "", chapter_fa: str = "") -> dict:
+    """Bilingual explanation + 'symptoms' line for entries with no recorded data."""
+    n = name or ""
+    for pat, en, fa, sym_en, sym_fa in DISEASE_FAMILY_PATTERNS:
+        if pat.search(n):
+            return {"note_en": en, "note_fa": fa, "sym_en": sym_en, "sym_fa": sym_fa, "family": True}
+    # توضیح عمومی مبتنی بر فصل
+    if chapter_en:
+        return {"note_en": f"A condition classified in the ICD-10 chapter '{chapter_en}'. No open-data description or symptom list is recorded for this specific code yet; if you have symptoms, the Symptoms module can rank likely causes.",
+                "note_fa": f"حالتی طبقه‌بندی‌شده در فصل «{chapter_fa or chapter_en}»ی ICD-10 است. هنوز توضیح یا فهرست علامت برای این کد خاص در داده‌های آزاد ثبت نشده؛ اگر علامت داری، ماژول «علائم» می‌تواند احتمالات را رتبه‌بندی کند.",
+                "sym_en": "not recorded in open data", "sym_fa": "در داده‌های آزاد ثبت نشده", "family": False}
+    return {"note_en": "No open-data description recorded for this entry yet.",
+            "note_fa": "هنوز توضیحی برای این مورد در داده‌های آزاد ثبت نشده است.",
+            "sym_en": "not recorded", "sym_fa": "ثبت نشده", "family": False}

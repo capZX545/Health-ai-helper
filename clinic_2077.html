@@ -940,6 +940,7 @@ async function allSearch(){
     h+='<div class="q"><b>'+esc(x.name)+'</b>'+(x.fa?' <b style="color:var(--cy)">('+esc(x.fa)+')</b>':'')+
     ' <span class="tag" style="color:'+col+'">'+SRC[x.src]+'</span>'+(x.code?' <span class="tag">'+esc(x.code)+'</span>':'');
     if(x.def)h+='<br><small style="color:var(--dim)">'+esc(x.def.slice(0,180))+'</small>';
+    else if(x.note_en)h+='<br><small style="color:var(--dim)">'+esc((L?x.note_fa:x.note_en).slice(0,200))+'</small>';
     if(x.sym&&x.sym.length)h+='<br><small style="color:var(--cy)">'+(L?"علائم: ":"symptoms: ")+esc(x.sym.join("، ").slice(0,180))+'</small>';
     if(x.drug&&x.drug.length)h+='<br><small style="color:#3bff9e">'+(L?"داروهای درمان: ":"treated with: ")+esc(x.drug.join("، ").slice(0,180))+'</small>';
     if(x.labs&&x.labs.length)h+='<br><small style="color:var(--cy)">'+(L?"آزمایش‌های مرتبط: ":"typical labs: ")+esc(x.labs.join("، ").slice(0,140))+'</small>';
@@ -1032,6 +1033,7 @@ async function browseDis(delta){
     if(x.drug&&x.drug.length)h+='<br><small style="color:#3bff9e">'+(L?"داروها: ":"drugs: ")+esc(x.drug.join("، ").slice(0,140))+'</small>';
     if(x.labs&&x.labs.length)h+='<br><small style="color:var(--cy)">'+(L?"آزمایش‌های مرتبط: ":"typical labs: ")+esc(x.labs.join("، ").slice(0,140))+'</small>';
     if(x.ch_fa)h+='<br><small style="color:var(--dim)">'+(L?"فصل: ":"chapter: ")+esc(L?x.ch_fa:(x.ch_en||x.ch_fa))+(x.cat?" · "+esc(x.cat):"")+'</small>';
+    if(x.note_en)h+='<br><small style="color:#ffd60a">'+esc((L?x.note_fa:x.note_en).slice(0,170))+'</small>';
     h+='</div>';
   });
   el.innerHTML=h||'<p class=warn>'+(L?"خالی":"empty")+'</p>';
