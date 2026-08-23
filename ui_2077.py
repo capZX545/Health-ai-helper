@@ -6,6 +6,7 @@ Persian-first and friendly for non-programmers; API settings live inside the app
 from __future__ import annotations
 
 import os
+import sys
 import threading
 import tkinter as tk
 import tkinter.font as tkfont
@@ -21,7 +22,36 @@ C = {
 }
 
 
+_FONT_LOADED = False
+
+
+def _load_bundled_fonts() -> None:
+    """Load Vazirmatn from ./fonts into memory (Windows only, nothing installed).
+    Falls back silently on other platforms or when the files are missing."""
+    global _FONT_LOADED
+    if _FONT_LOADED or sys.platform != "win32":
+        return
+    _FONT_LOADED = True
+    try:
+        import ctypes
+        from ctypes import wintypes
+        g32 = ctypes.windll.gdi32
+        here = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts")
+        for name in ("Vazirmatn-Regular.ttf", "Vazirmatn-Bold.ttf"):
+            path = os.path.join(here, name)
+            if not os.path.exists(path):
+                continue
+            with open(path, "rb") as f:
+                data = f.read()
+            buf = ctypes.create_string_buffer(data, len(data))
+            n = wintypes.DWORD(0)
+            g32.AddFontMemResourceEx(buf, len(data), None, ctypes.byref(n))
+    except Exception:
+        pass
+
+
 def pick_font(size: int, bold: bool = False):
+    _load_bundled_fonts()
     fams = set(tkfont.families())
     for fam in ("Vazirmatn", "B Nazanin", "IRANSans", "Segoe UI", "Tahoma"):
         if fam in fams:

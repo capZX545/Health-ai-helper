@@ -21,6 +21,8 @@ DATA_FILES = [
     "medical_ml_test_dataset.csv",
     ".env.example",
     "requirements.txt",
+    "fonts/Vazirmatn-Regular.ttf",
+    "fonts/Vazirmatn-Bold.ttf",
 ]
 
 
