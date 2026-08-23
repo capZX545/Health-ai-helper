@@ -244,9 +244,14 @@ class Handler(BaseHTTPRequestHandler):
                     break
             # 2) ICD catalog (with the fa -> en bridge)
             if q and len(rows) < limit:
+                from knowledge_browser import explain_disease_entry as _expl
+                from medical_catalog import get_chapter_fa as _gch
                 for c in (get_catalog_diseases(q, 10).get("results") or []):
+                    ex = _expl(c.get("name", ""), c.get("icd10", ""))
                     rows.append({"src": "icd10", "name": c.get("name", ""), "fa": c.get("fa", "") or fa_disease_name(icd=c.get("icd10", "")),
-                                 "code": c.get("icd10", ""), "sym": []})
+                                 "code": c.get("icd10", ""), "sym": [],
+                                 "note_en": ex["note_en"], "note_fa": ex["note_fa"],
+                                 "nsym_en": ex["sym_en"], "nsym_fa": ex["sym_fa"]})
                     if len(rows) >= limit:
                         break
             # 3) DOID
@@ -304,6 +309,11 @@ class Handler(BaseHTTPRequestHandler):
             from lab_full import all_tests, LAB_CATEGORIES
             from i18n import is_fa
             self._json({"ok": True, "tests": all_tests(is_fa()), "cats": LAB_CATEGORIES})
+            return True
+        if path == "/api/knowledge/symptom-diseases":
+            from knowledge_browser import search_symptom_diseases, symptom_index_count
+            self._json({"ok": True, "total": symptom_index_count(),
+                        "symptoms": search_symptom_diseases(q, 25) if q else []})
             return True
         if path == "/api/knowledge/drug-label":
             from knowledge_browser import get_drug_label, fa_drug_name

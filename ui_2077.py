@@ -426,7 +426,7 @@ class App:
                 if res.get("image_type") and res["image_type"].get("label"):
                     meta += " | " + res["image_type"]["label"]
                 if res.get("learned"):
-                    meta += "•  یادگیری ثبت شد"
+                    meta += self.L("•  learned", "•  یادگیری ثبت شد")
                 payload = (res.get("text", ""), tag, meta)
             except Exception as e:
                 payload = (self.L("Error: ", "خطا: ")+ str(e)[:200], "emg", "")
@@ -448,7 +448,7 @@ class App:
                 ext = self.L("external AI on", "AI خارجی فعال") if s.get("external_available") else self.L("external AI: no key", "AI خارجی: کلید ندارد")
                 brain = self.L("offline brain on", "مغز داخلی روشن") if s.get("settings", {}).get("brain_enabled") else self.L("brain off (background learning on)", "مغز خاموش (یادگیری پس‌زمینه فعال)")
                 learned = s.get("learning", {}).get("entries", 0)
-                msg = f"{ext} | {brain} |  حافظه: {learned} مورد"
+                msg = f"{ext} | {brain} | " + self.L(f"memory: {learned}", f"حافظه: {learned} مورد")
             except Exception as e:
                 msg = self.L("status: error — ", "وضعیت: خطا — ")+ str(e)[:80]
 
@@ -627,8 +627,8 @@ class App:
             if r.get("bmi"):
                 lines.append(f"BMI: {r['bmi']['bmi']} — {r['bmi']['category_fa']}\n{r['bmi']['tip_fa']}")
             if r.get("bp"):
-                lines.append(f"فشار: {r['bp']['systolic']}/{r['bp']['diastolic']} — {r['bp']['category_fa']}\n{r['bp']['action_fa']}")
-            lines.append("\n— تاریخچه‌ی اخیر —")
+                lines.append(self.L("Pressure: ", "فشار: ") + f"{r['bp']['systolic']}/{r['bp']['diastolic']} — {r['bp']['category_fa']}\n{r['bp']['action_fa']}")
+            lines.append(self.L("\n— recent history —", "\n— تاریخچه‌ی اخیر —"))
             for h in history(6):
                 lines.append(str(h))
             lines.append(self.L("Trend: ", "روند: ")+ str(trend()))
@@ -651,7 +651,7 @@ class App:
             box.delete("1.0", "end")
             box.insert("1.0", r.get("text_report", "") + "\n\n"+ "\n".join(r.get("summary_fa", [])))
             if r.get("html_path"):
-                box.insert("end", "\n\n گزارش تصویری: "+ r["html_path"])
+                box.insert("end", self.L("\n\n visual report: ", "\n\n گزارش تصویری: ") + r["html_path"])
         tk.Button(w, text=self.L("Analyze", "تحلیل"), command=go, bg="#0077b6", fg="#021018",
                   font=pick_font(11, True), relief="flat").pack(pady=8, ipadx=24, ipady=4)
 
@@ -670,7 +670,7 @@ class App:
             for t in r.get("translations", []):
                 lines.append(f"{t['abbr']} → {t['fa']} ({t['type']})")
             for d in r.get("drugs", []):
-                lines.append(f"دارو: {d['fa']} ({d['cat']})")
+                lines.append(self.L("Drug: ", "دارو: ") + f"{d['fa']} ({d['cat']})")
             for a in r.get("alerts", []):
                 lines.append(""+ a)
             lines.append(r.get("disclaimer", ""))
@@ -828,7 +828,7 @@ class App:
                 n = 9 if var_type.get() == "phq9"else 7
                 answers = [rows.get(i, tk.IntVar(value=0)).get() for i in range(n)]
                 r = phq9(answers) if var_type.get() == "phq9"else gad7(answers)
-                out = [f"نمره: {r['total']} — {r['band_fa']}"]
+                out = [self.L("Score: ", "نمره: ") + f"{r['total']} — {r['band_fa']}"]
                 out += r.get("recommendations_fa", [])
                 if r.get("crisis"):
                     out.append("\n"+ r["crisis_text"])
@@ -877,7 +877,7 @@ class App:
 
         def go():
             r = stopbang([1 if v.get() else 0 for v in vars_])
-            out = [f"{r['total']} از ۸ — {r['risk_fa']}", "موارد مثبت: "+ ("، ".join(r["answers_fa"]) or "—")]
+            out = [f"{r['total']} " + self.L("of 8 — ", "از ۸ — ") + r["risk_fa"], self.L("positives: ", "موارد مثبت: ") + ("، ".join(r["answers_fa"]) or "—")]
             out += r.get("recommendations_fa", [])
             out.append(r.get("note", ""))
             box.delete("1.0", "end")
@@ -892,9 +892,9 @@ class App:
 
         def go():
             r = recommendations()
-            lines = [f"— چکاپ‌ها (سن {r.get('age') or '—'}) —"]
+            lines = [self.L("— checkups (age ", "— چکاپ‌ها (سن ") + str(r.get('age') or '—') + " —"]
             lines += [f"• {c['title']}: {c['interval_fa']}" for c in r.get("checkups", [])]
-            lines.append("\n— واکسن‌ها —")
+            lines.append(self.L("\n— vaccines —", "\n— واکسن‌ها —"))
             lines += [f"• {v['title']}: {v['interval_fa']}" for v in r.get("vaccines", [])]
             lines.append("\n"+ r.get("note_fa", ""))
             box.delete("1.0", "end")
@@ -911,7 +911,7 @@ class App:
                  font=pick_font(12, True), pady=6).pack(fill="x")
         cpr = {"on": False, "job": None}
         timing = cpr_timing()
-        cpr_btn = tk.Button(w, text=f"START/STOP مترونوم CPR — {timing['bpm']} BPM", relief="flat",
+        cpr_btn = tk.Button(w, text=self.L("START/STOP CPR metronome", "START/STOP مترونوم CPR") + f" — {timing['bpm']} BPM", relief="flat",
                             bg="#1c0a14", fg=C["mg"], font=pick_font(13, True))
 
         def beat():
@@ -922,7 +922,7 @@ class App:
                 if cpr["job"]:
                     w.after_cancel(cpr["job"])
                 cpr["on"] = False
-                cpr_btn.config(text=f"START/STOP مترونوم CPR — {timing['bpm']} BPM")
+                cpr_btn.config(text=self.L("START/STOP CPR metronome", "START/STOP مترونوم CPR") + f" — {timing['bpm']} BPM")
             else:
                 cpr["on"] = True
                 beat()
@@ -940,7 +940,7 @@ class App:
             lines = [tp.get("title", key), "="* 34, *(tp.get("steps") or []), ""]
             lines += list(tp.get("warnings") or [])
             lines.append(tp.get("disclaimer", ""))
-            lines.append(f"\n{tp.get('emergency_line', '')} | عمق {timing['depth_cm']} | نسبت {timing['ratio']}")
+            lines.append("\n" + str(tp.get('emergency_line', '')) + self.L(" | depth ", " | عمق ") + str(timing['depth_cm']) + self.L(" | ratio ", " | نسبت ") + str(timing['ratio']))
             box.delete("1.0", "end")
             box.insert("1.0", "\n".join(lines))
         show("cpr")
@@ -1021,7 +1021,7 @@ class App:
             lines.append("")
             for c in (r.get("candidates") or [])[:8]:
                 pct = c.get("percent")
-                pct = f"{pct}٪" if pct not in (None, "") else ""
+                pct = (str(pct) + self.L("%", "٪")) if pct not in (None, "") else ""
                 urg = {"emergency": self.L("emergency", "اورژانس"), "urgent": self.L("urgent", "فوری"),
                        "routine": self.L("routine", "معمولی")}.get(c.get("urgency"), c.get("urgency", ""))
                 from i18n import get_lang as _gl2
@@ -1064,7 +1064,7 @@ class App:
             try:
                 from knowledge_browser import search_hpo, hpo_count
                 res = search_hpo(q, 40)
-                lines = ["HPO (" + str(hpo_count()) + " اصطلاح) — نتایج «" + q + "»:"]
+                lines = [self.L("HPO (", "HPO (") + str(hpo_count()) + self.L(" terms) — results for: ", " اصطلاح) — نتایج «") + q + self.L("", "»:")]
                 for t in res:
                     line = "• " + t["name"] + "  [" + t["id"] + "]"
                     if t.get("syn"):
@@ -1076,6 +1076,38 @@ class App:
             box.delete("1.0", "end")
             box.insert("1.0", out)
         hpo_entry.bind("<Return>", lambda _e: run_hpo())
+
+
+
+        # which diseases have a symptom (wiki + engine index)
+        sd_bar = tk.Frame(bottom, bg=C["panel2"])
+        sd_bar.pack(fill="x", pady=(6, 0), before=box)
+        sd_var = tk.StringVar(value="")
+        sd_entry = tk.Entry(sd_bar, textvariable=sd_var, bg="#0a1424", fg=C["tx"], relief="flat",
+                            font=pick_font(10), justify="right", insertbackground=C["cy"])
+        sd_entry.pack(side="right", fill="both", expand=True, ipady=3, padx=(16, 0))
+        tk.Button(sd_bar, text=self.L("symptom → diseases", "این علامت کدام بیماری‌ها"), command=lambda: run_symdis(),
+                  bg="#0d1930", fg=C["yl"], font=pick_font(9), relief="flat").pack(side="right", padx=(6, 0), ipadx=6)
+        def run_symdis():
+            q = sd_var.get().strip()
+            if not q:
+                return
+            try:
+                from knowledge_browser import search_symptom_diseases
+                res = search_symptom_diseases(q, 20)
+                _fa_sd = __import__("i18n").get_lang() == "fa"
+                lines = [self.L("diseases carrying this symptom:", "بیماری‌هایی که این علامت را دارند:")]
+                for s in res:
+                    nm = (s.get("fa") or s.get("en")) if _fa_sd else s.get("en")
+                    lines.append("• " + nm)
+                    dis = [((d.get("fa") or d.get("en")) if _fa_sd else d.get("en")) for d in s.get("diseases", [])]
+                    lines.append("    " + self.L("diseases: ", "بیماری‌ها: ") + (_fa_sd and "، " or ", ").join(dis))
+                out = "\n".join(lines) if res else self.L("nothing found — try another wording", "چیزی پیدا نشد — عبارت دیگری امتحان کن")
+            except Exception as ex:
+                out = "Error: " + str(ex)[:100]
+            box.delete("1.0", "end")
+            box.insert("1.0", out)
+        sd_entry.bind("<Return>", lambda _e: run_symdis())
 
 
     def _panel_diseases(self):
@@ -1107,7 +1139,7 @@ class App:
             if sy:
                 lines.append(self.L("Symptoms (probability):", "علائم (با احتمال):"))
                 for s in sy:
-                    lines.append(f"   • {s.get('name','')} — {int(round((s.get('probability') or 0) * 100))}٪")
+                    lines.append(f"   • {s.get('name','')} — {int(round((s.get('probability') or 0) * 100))}" + self.L("%", "٪"))
             lines.append("")
             labs = d.get("labs") or []
             if labs:
@@ -1124,7 +1156,7 @@ class App:
                 lines.append("")
                 lines.append(self.L("When to see a doctor: ", "⏰ چه زمانی پزشک: ") + str(d["doctor_when"]))
             lines.append("")
-            lines.append(f"(فوریت: {u_fa} | شیوع پایه: {int(round((d.get('prior') or 0) * 1000) / 10)}٪)")
+            lines.append(self.L("(urgency: ", "(فوریت: ") + u_fa + self.L(" | base prevalence: ", " | شیوع پایه: ") + f"{int(round((d.get('prior') or 0) * 1000) / 10)}" + self.L("%)", "٪)"))
             box.delete("1.0", "end")
             box.insert("1.0", "\n".join(lines))
             box.tag_add("title", "1.0", "1.0 lineend")
@@ -1165,12 +1197,12 @@ class App:
             lines.append(self.L("Symptoms: ", "علائم: ") + (("، ".join(str(s) for s in syms[:12])) if syms else _NR2))
             if drugs:
                 lines.append(self.L("Treatments (Wikidata): ", "داروهای درمان (Wikidata): ") + "، ".join(str(d) for d in drugs[:12]))
-            lines.append("")
-            lines.append(self.L("(source: Disease Ontology / Wikidata — open data)", "(منبع: Disease Ontology / Wikidata — داده‌ی آزاد)"))
             box.insert("1.0", "\n".join(lines))
             box.tag_add("title", "1.0", "1.0 lineend")
             box.tag_config("title", foreground="#3bff9e", font=pick_font(12, True))
 
+        from knowledge_browser import ICD_CHAPTERS as _CHS
+        _CH_EN = {fa: en for _r, en, fa in _CHS}
         def show_catalog_detail(name, code, chapter, fa_n=""):
             from knowledge_browser import fa_disease_name as _fdn
             fa_n = fa_n or _fdn(icd=code, en=name)
@@ -1178,7 +1210,7 @@ class App:
             _fa_cd = __import__("i18n").get_lang() == "fa"
             from knowledge_browser import explain_disease_entry as _expl
             _ex = _expl(name, code, chapter, chapter)
-            box.insert("1.0", f"◀ {name}" + (f" ({fa_n})" if fa_n else "") + f"\nکد ICD-10: {code}\nفصل: {chapter}\n\n{_ex['note_fa'] if _fa_cd else _ex['note_en']}\n\n({self.L('typical signs: ', 'نشانه‌های معمول: ')}{_ex['sym_fa'] if _fa_cd else _ex['sym_en']})\n\n({self.L('this entry comes from the full ICD-10-CM catalog — for diagnosis use the Symptoms module', 'این مورد از کاتالوگ کامل ICD-10-CM است — برای تشخیص، از ماژول علائم استفاده کن')})")
+            box.insert("1.0", f"◀ {name}" + (f" ({fa_n})" if fa_n else "") + "\n" + self.L("ICD-10 code: ", "کد ICD-10: ") + str(code) + "\n" + self.L("chapter: ", "فصل: ") + str(chapter if _fa_cd else _CH_EN.get(chapter, chapter)) + "\n\n" + (_ex['note_fa'] if _fa_cd else _ex['note_en']) + "\n\n" + self.L("typical signs: ", "نشانه‌های معمول: ") + (_ex['sym_fa'] if _fa_cd else _ex['sym_en']))
             box.tag_add("title", "1.0", "1.0 lineend")
             box.tag_config("title", foreground=C["cy"], font=pick_font(12, True))
         def run_catalog_search():
@@ -1278,7 +1310,7 @@ class App:
             lines.append(self.L("Source: ", "منبع: ") + r_.get("src", ""))
             if r_.get("def"):
                 lines.append("")
-                lines.append("تعریف: " + r_["def"][:320])
+                lines.append(self.L("Definition: ", "تعریف: ") + r_["def"][:320])
             if r_.get("sym"):
                 lines.append("")
                 lines.append(self.L("Symptoms: ", "علائم: ") + "، ".join(str(s) for s in r_["sym"][:12]))
@@ -1301,7 +1333,7 @@ class App:
                                  chapter=browse_state.get("ch", ""), cat=browse_state.get("cat", ""))
             r_["rows"] = [dict(x) for x in r_["rows"]]
             browse_state["page"] = r_["page"]
-            pg_lbl.config(text=f"صفحه {r_['page']} از {r_['pages']:,} — {r_['total']:,} بیماری")
+            pg_lbl.config(text=self.L("page ", "صفحه ") + str(r_['page']) + self.L(" of ", " از ") + f"{r_['pages']:,} — {r_['total']:,} " + self.L("diseases", "بیماری"))
             for e_ in r_["rows"]:
                 row_ = tk.Frame(inner, bg=C["panel2"])
                 title = e_["name"] + (("  (" + e_["fa"] + ")") if e_.get("fa") else "")
@@ -1394,7 +1426,7 @@ class App:
             lines = [f"◀ {d.get('fa','')} ({d.get('en','')})"]
             cat = d.get("category")
             if cat:
-                lines.append(f"  دسته: {cat}")
+                lines.append(self.L("  category: ", "  دسته: ") + str(cat))
             for lbl, key in ((self.L("Class", "کلاس"), "class"), (self.L("ATC code", "کد ATC"), "atc"), (self.L("Half-life", "نیمه‌عمر"), "half_life"),
                              (self.L("Metabolism", "متابولیسم"), "metabolism"), (self.L("Route", "راه مصرف"), "routes"), (self.L("Pregnancy", "بارداری"), "pregnancy")):
                 r = row_fa(lbl, d.get(key))
@@ -1402,14 +1434,14 @@ class App:
                     lines.append(r)
             aliases = d.get("aliases_fa") or []
             if aliases:
-                lines.append("  نام‌های دیگر: " + "، ".join(str(a) for a in aliases[:6]))
+                lines.append(self.L("  other names: ", "  نام‌های دیگر: ") + "، ".join(str(a) for a in aliases[:6]))
             inter = d.get("interactions") or []
             if inter:
                 lines.append("")
-                lines.append(f"عوارض/تداخل‌ها ({len(inter)}):")
+                lines.append(self.L("Side effects/interactions (", "عوارض/تداخل‌ها (") + str(len(inter)) + "):")
                 for it in inter:
                     s_fa, _col = sev_fa.get(it.get("severity"), (it.get("severity", ""), C["tx"]))
-                    lines.append(f"   • با «{it.get('other','')}» — {s_fa}")
+                    lines.append("   • " + self.L("with ", "با «") + str(it.get('other','')) + self.L(" — ", "» — ") + str(s_fa))
                     if it.get("detail"):
                         lines.append("      " + str(it["detail"])[:160])
             notes = d.get("notes")
@@ -1464,20 +1496,20 @@ class App:
             if lb.get("warn"):
                 lines.append("  ▸ " + self.L("Warnings: ", "هشدارها: ") + lb["warn"][:220])
             if d.get("brands"):
-                lines.append("  نام‌های تجاری: " + "، ".join(d["brands"][:6]))
+                lines.append(self.L("  brand names: ", "  نام‌های تجاری: ") + "، ".join(d["brands"][:6]))
             if d.get("class"):
-                lines.append("  کلاس دارویی: " + "، ".join(d["class"][:4]))
+                lines.append(self.L("  drug class: ", "  کلاس دارویی: ") + "، ".join(d["class"][:4]))
             if d.get("ing"):
-                lines.append("  ماده‌ی فعال: " + " + ".join(d["ing"]))
+                lines.append(self.L("  active ingredient: ", "  ماده‌ی فعال: ") + " + ".join(d["ing"]))
             if d.get("forms"):
-                lines.append("  فرم دارویی: " + "، ".join(d["forms"][:5]))
+                lines.append(self.L("  dosage forms: ", "  فرم دارویی: ") + "، ".join(d["forms"][:5]))
             if d.get("routes"):
-                lines.append("  راه مصرف: " + "، ".join(d["routes"][:4]))
+                lines.append(self.L("  routes: ", "  راه مصرف: ") + "، ".join(d["routes"][:4]))
             if d.get("mkt"):
-                lines.append("  دسته‌بندی بازاریابی: " + "، ".join(d["mkt"]))
-            lines.append(f"  تعداد محصولات ثبت‌شده در FDA: {d.get('n', 0)}")
+                lines.append(self.L("  marketing category: ", "  دسته‌بندی بازاریابی: ") + "، ".join(d["mkt"]))
+            lines.append(self.L("  registered FDA products: ", "  تعداد محصولات ثبت‌شده در FDA: ") + str(d.get('n', 0)))
             lines.append("")
-            lines.append("(این مورد از بانک کامل openFDA/NDC است — برای تداخل‌ها داروی منتخب را هم ببین.)")
+            
             box.delete("1.0", "end")
             box.insert("1.0", "\n".join(lines))
             box.tag_add("title", "1.0", "1.0 lineend")
@@ -1546,7 +1578,7 @@ class App:
             from knowledge_browser import browse_fda_drugs
             r_ = browse_fda_drugs(fb_state["page"], 25, q=sv.get().strip(), cat=fb_state.get("cat", ""))
             fb_state["page"] = r_["page"]
-            fpg_lbl.config(text=f"صفحه {r_['page']} از {r_['pages']:,} — {r_['total']:,} دارو")
+            fpg_lbl.config(text=self.L("page ", "صفحه ") + str(r_['page']) + self.L(" of ", " از ") + f"{r_['pages']:,} — {r_['total']:,} " + self.L("drugs", "دارو"))
             for d_ in r_["rows"]:
                 row_ = tk.Frame(inner, bg=C["panel2"])
                 brand = (d_.get("brands") or [""])[0]
@@ -1639,7 +1671,7 @@ class App:
                     es = fetch("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&retmode=json&retmax=8&term=" + up.quote(q))
                     ids = es.get("esearchresult", {}).get("idlist", [])
                     su = fetch("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&retmode=json&id=" + ",".join(ids)) if ids else {}
-                    lines = ["~" + str(es.get("esearchresult", {}).get("count", "0")) + " نتیجه:"]
+                    lines = ["~" + str(es.get("esearchresult", {}).get("count", "0")) + self.L(" results:", " نتیجه:")]
                     for pid in ids:
                         it = su.get("result", {}).get(pid, {})
                         lines.append("• " + str(it.get("title", "")))
@@ -1658,7 +1690,7 @@ class App:
                 import urllib.parse as up
                 try:
                     d = fetch("https://clinicaltrials.gov/api/v2/studies?query.term=" + up.quote(q) + "&pageSize=8&countTotal=true")
-                    lines = ["~" + str(d.get("totalCount", 0)) + " کارآزمایی:"]
+                    lines = ["~" + str(d.get("totalCount", 0)) + self.L(" trials:", " کارآزمایی:")]
                     for s in d.get("studies", []):
                         p = s.get("protocolSection", {})
                         im = p.get("identificationModule", {})
@@ -1680,11 +1712,11 @@ class App:
                     rx = up.quote('patient.drug.medicinalproduct:"' + q + '"')
                     cnt = fetch("https://api.fda.gov/drug/event.json?search=" + rx + "&count=patient.reaction.reactionmeddrapt.exact&limit=12")
                     rs = cnt.get("results", [])
-                    lines = ["≥" + str(sum(r.get("count", 0) for r in rs)) + " گزارش — پرتکرارترین عوارض:"]
+                    lines = ["≥" + str(sum(r.get("count", 0) for r in rs)) + self.L(" reports — most frequent reactions:", " گزارش — پرتکرارترین عوارض:")]
                     for r in rs:
                         lines.append("• " + str(r.get("term", "")).lower() + ": " + str(r.get("count", 0)))
                     out = "\n".join(lines) if rs else self.L("No reports found — try the exact english drug name.", "گزارشی پیدا نشد — نام دقیق انگلیسی دارو را امتحان کن.")
-                    out += "\n(گزارش‌ها علت-معلولی را ثابت نمی‌کنند — با پزشک مشورت کن.)"
+                    out += self.L("\n(reports do not prove causation — consult your doctor.)", "\n(گزارش‌ها علت-معلولی را ثابت نمی‌کنند — با پزشک مشورت کن.)")
                 except Exception as ex:
                     out = self.L("Error reaching openFDA: ", "خطا در اتصال به openFDA: ") + str(ex)[:120]
                 self._ui(lambda: l3.winfo_exists() and l3.config(text=out, fg=C["tx"]))
@@ -1824,7 +1856,7 @@ class App:
                          "very_high": "far above", "crit_low": "CRITICAL LOW", "crit_high": "CRITICAL HIGH"}
                 st = (st_fa if fa_mode else st_en).get(r["status"], r["status"])
                 col = C["gr"] if r["status"] == "normal" else (C["mg"] if r["status"].startswith("crit") else C["yl"])
-                dev = f"  ({r['deviation_pct']}٪)" if r.get("deviation_pct") else ""
+                dev = ("  (" + str(r['deviation_pct']) + self.L("%)", "٪)")) if r.get("deviation_pct") else ""
                 txt = f"{r['test']}: {r['value']} {r.get('unit','')}  →  {st}{dev}\n"
                 txt += (self.L("reference: ", "بازه‌ی مرجع: ") + r["range"] + "\n")
                 if r.get("note"):
@@ -1848,7 +1880,7 @@ class App:
             r = generate(load_profile(), None, dlg.get("symptoms_fa"), [], dlg, "")
             box.delete("1.0", "end")
             if r.get("ok"):
-                box.insert("1.0", "گزارش ساخته شد: "+ r["path"] + "\n(در مرورگر باز کنید و Ctrl+P بزنید)")
+                box.insert("1.0", self.L("Report generated: ", "گزارش ساخته شد: ") + r["path"] + self.L("\n(open it in the browser and press Ctrl+P)", "\n(در مرورگر باز کنید و Ctrl+P بزنید)"))
                 try:
                     import webbrowser
                     webbrowser.open("file://"+ r["path"])
@@ -1867,14 +1899,14 @@ class App:
             from auto_learning import recent, stats
             from semantic_rag import status as rag_status
             st = stats()
-            lines = [f"موارد یادگرفته‌شده از AI خارجی: {st['entries']} (سقف {st['max']})",
-                     f"موضوعات پرتکرار: "+ ("، ".join(st.get("top_topics", [])) or "—"),
-                     f"RAG: {rag_status()}", "", "— ۵ مورد آخر —"]
+            lines = [self.L("entries learned from external AI: ", "موارد یادگرفته‌شده از AI خارجی: ") + str(st['entries']) + self.L(" (cap ", " (سقف ") + str(st['max']) + ")",
+                     self.L("frequent topics: ", "موضوعات پرتکرار: ") + ("، ".join(st.get("top_topics", [])) or "—"),
+                     f"RAG: {rag_status()}", "", self.L("— last 5 entries —", "— ۵ مورد آخر —")]
             for e in recent(5):
                 lines.append(f"[{e.get('ts', '')[:16]}] {e.get('topic', '')} ({e.get('provider', '')} / {e.get('model', '')})")
                 lines.append(""+ (e.get("ai_summary", "") or "")[:120])
-            lines.append("\nیادگیری پس‌زمینه همیشه از هر پاسخ AI خارجی انجام می‌شود؛")
-            lines.append("تقلید فقط لحن/ساختار است، نه تولید محتوای پزشکی جعلی.")
+            lines.append(self.L("\nbackground learning happens with every external AI answer;", "\nیادگیری پس‌زمینه همیشه از هر پاسخ AI خارجی انجام می‌شود؛"))
+            lines.append(self.L("imitation is tone/structure only, never fake medical content.", "تقلید فقط لحن/ساختار است، نه تولید محتوای پزشکی جعلی."))
             box.delete("1.0", "end")
             box.insert("1.0", "\n".join(lines))
         tk.Button(w, text=self.L("Refresh", "به‌روزرسانی"), command=go, bg="#0077b6", fg="#021018",
@@ -1903,7 +1935,7 @@ class App:
             box.insert("1.0", self.L("… checking Ollama", "… در حال بررسی Ollama"))
             def work():
                 r = test_setup()
-                out = r.get("message_fa", "") + "\nمدل‌ها: "+ ("، ".join(r.get("models", [])) or "—")
+                out = r.get("message_fa", "") + self.L("\nmodels: ", "\nمدل‌ها: ") + ("، ".join(r.get("models", [])) or "—")
                 def apply():
                     if box.winfo_exists():
                         box.delete("1.0", "end")
@@ -1960,12 +1992,12 @@ class App:
             from ai_api_manager import save_settings
             save_settings({"openrouter_model": manual.get().strip() or cb.get(),
                            "reasoning_enabled": var_reason.get(), "brain_enabled": var_brain.get()})
-            box.insert("end", "\n ذخیره شد (فایل .env) — بدون نیاز به ری‌استارت اعمال می‌شود.")
+            box.insert("end", self.L("\n saved (.env) — applies without a restart.", "\n ذخیره شد (فایل .env) — بدون نیاز به ری‌استارت اعمال می‌شود."))
             self._refresh_status()
 
         def test(provider):
             box.delete("1.0", "end")
-            box.insert("1.0", "… در حال تست اتصال "+ provider)
+            box.insert("1.0", self.L("… testing connection ", "… در حال تست اتصال ") + provider)
 
             def work():
                 r = test_connection(provider)

@@ -751,6 +751,35 @@ def _build_unified() -> list:
                 r["fa"] = xwalk[code]
             elif len(code) >= 3 and code[:3] in xwalk:
                 r["fa"] = xwalk[code[:3]]
+    # category-level inheritance: ICD subcodes (E11.x, J45.x ...) inherit the
+    # definition/symptoms of a sibling that has real data (DOID/wiki/engine)
+    cat_best: dict[str, dict] = {}
+    for r in seen.values():
+        c = r.get("cat", "")
+        if not c:
+            continue
+        b = cat_best.setdefault(c, {"def": "", "sym": [], "drug": []})
+        if r.get("def") and not b["def"]:
+            b["def"] = r["def"]
+        for s in r.get("sym") or []:
+            if s not in b["sym"] and len(b["sym"]) < 10:
+                b["sym"].append(s)
+        for d in r.get("drug") or []:
+            if d not in b["drug"] and len(b["drug"]) < 8:
+                b["drug"].append(d)
+    inherited = 0
+    for r in seen.values():
+        b = cat_best.get(r.get("cat", "") or "")
+        if not b:
+            continue
+        if not r.get("def") and b["def"]:
+            r["def"] = b["def"]
+            inherited += 1
+        if not r.get("sym") and b["sym"]:
+            r["sym"] = b["sym"]
+        if not r.get("drug") and b["drug"]:
+            r["drug"] = b["drug"]
+
     # entries with no definition, no symptoms and no treatments get an
     # auto explanation from their title family (bilingual, honest)
     for r in seen.values():
@@ -930,3 +959,57 @@ def explain_disease_entry(name: str, code: str = "", chapter_en: str = "", chapt
     return {"note_en": "No open-data description recorded for this entry yet.",
             "note_fa": "هنوز توضیحی برای این مورد در داده‌های آزاد ثبت نشده است.",
             "sym_en": "not recorded", "sym_fa": "ثبت نشده", "family": False}
+
+
+# ---------- symptom -> diseases index (wiki + engine data) ----------
+
+_SYM_DIS_CACHE: dict | None = None
+
+
+def _sym_index() -> dict:
+    """symptom name -> {en, fa, diseases:[{en, fa}]} from wikidata + engine."""
+    global _SYM_DIS_CACHE
+    if _SYM_DIS_CACHE is not None:
+        return _SYM_DIS_CACHE
+    from medical_engine import SYMPTOM_NAMES_FA, SYMPTOM_NAMES_EN
+    from common_2077 import normalize
+    idx: dict[str, dict] = {}
+    for qid, e in _load_wiki().items():
+        for s in e.get("sym") or []:
+            k = normalize(s)
+            if not k:
+                continue
+            ent = idx.setdefault(k, {"en": s, "fa": "", "diseases": []})
+            if len(ent["diseases"]) < 15:
+                ent["diseases"].append({"en": e.get("en", ""), "fa": e.get("fa", "")})
+    # فارسی‌سازی نام علائم wiki از طریق دیکشنری موتور (en -> fa)
+    rev_en = {}
+    for sid, en in SYMPTOM_NAMES_EN.items():
+        rev_en[normalize(en)] = SYMPTOM_NAMES_FA.get(sid, "")
+    for k, ent in idx.items():
+        fa = rev_en.get(k, "")
+        if fa:
+            ent["fa"] = fa
+        else:
+            for sid, fa_name in SYMPTOM_NAMES_FA.items():
+                if normalize(fa_name) == k:
+                    ent["fa"] = fa_name
+                    break
+    _SYM_DIS_CACHE = idx
+    return idx
+
+
+def search_symptom_diseases(query: str, limit: int = 25) -> list[dict]:
+    """Find symptoms by name (fa/en) and return their diseases."""
+    q = normalize(query)
+    out = []
+    for k, ent in _sym_index().items():
+        if (q in k) or (q in normalize(ent.get("fa", ""))):
+            out.append(ent)
+            if len(out) >= limit:
+                break
+    return out
+
+
+def symptom_index_count() -> int:
+    return len(_sym_index())

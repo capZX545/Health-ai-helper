@@ -921,6 +921,25 @@ async function labEval(){
   h+='<br><small style="color:var(--dim)">'+(L?"این تفسیر عمومی است؛ تشخیص نهایی با پزشک است.":"General info only; a doctor makes the final call.")+'</small></div>';
   $("labres").innerHTML=h;
 }
+var _symDisT=null;
+function symDisDebounced(){clearTimeout(_symDisT);_symDisT=setTimeout(symDisSearch,350)}
+async function symDisSearch(){
+  var q=$("symdisq").value.trim();
+  var el=$("symdisres");
+  if(!q){el.innerHTML="";return}
+  el.innerHTML='<div class="spin"></div>';
+  var r=await api("/api/knowledge/symptom-diseases?q="+encodeURIComponent(q));
+  if(!r.ok){el.innerHTML='<p class=bad>Error</p>';return}
+  var L=LANG==="fa";
+  if(r.total)window._SYMIDX_N=r.total;
+  var h='<small style="color:var(--dim)">'+fa(r.symptoms.length)+' / '+fa(r.total)+'</small>';
+  if(!r.symptoms.length)h+='<p class=warn>'+(L?"پیدا نشد.":"not found.")+'</p>';
+  r.symptoms.forEach(function(s){
+    h+='<div class="q"><b>'+esc(L?(s.fa||s.en):s.en)+'</b>'+(s.fa?' <small style="color:var(--cy)">('+esc(L?s.en:s.fa)+')</small>':'')+
+    '<br><small style="color:var(--yl)">'+(L?"بیماری‌ها: ":"diseases: ")+esc(s.diseases.map(function(d){return L?(d.fa||d.en):d.en}).join("، ").slice(0,180))+'</small></div>';
+  });
+  el.innerHTML=h;
+}
 var _allT=null;
 function allSearchDebounced(){clearTimeout(_allT);_allT=setTimeout(allSearch,350)}
 async function allSearch(){
@@ -1102,6 +1121,9 @@ async function uiSymptomsBrowser(){
     h+='</div>';
   }
   h+='</div></div>';
+  h+='<div class="card"><h3>🔎 '+(LANG==="fa"?"هر علامت چه بیماری‌هایی دارد ("+fa(window._SYMIDX_N||579)+" علامت)":"Which diseases have this symptom ("+(window._SYMIDX_N||579)+" symptoms)")+'</h3>';
+  h+='<input class="f" id="symdisq" placeholder="'+(LANG==="fa"?"مثلاً: سردرد یا headache":"e.g. headache")+'" oninput="symDisDebounced()">';
+  h+='<div id="symdisres" style="margin-top:8px"></div></div>';
   h+='<div class="card"><h3>🧬 '+(LANG==="fa"?"واژگان کامل علائم پزشکی (HPO)":"Full medical symptom vocabulary (HPO)")+'</h3>';
   h+='<p style="font-size:11.5px;color:var(--dim)">'+(LANG==="fa"?"همه‌ی علائم/نشانه‌های پزشکی شناخته‌شده — "+fa(window._HPO_N||19836)+" اصطلاح":"every known medical sign/symptom")+'</p>';
   h+='<input class="f" id="hpoq" placeholder="'+(LANG==="fa"?"جستجو... (انگلیسی)":"Search... (english)")+'" oninput="hpoSearchDebounced()">';
