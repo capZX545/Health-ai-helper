@@ -279,13 +279,24 @@ class Handler(BaseHTTPRequestHandler):
             src_ = (qs.get("src", ["all"])[0] or "all")
             page = int((qs.get("page", ["1"])[0] or 1))
             per = min(60, int((qs.get("per", ["40"])[0] or 40)))
-            self._json({"ok": True, **browse_diseases(src_, page, per, q)})
+            chapter = (qs.get("chapter", [""])[0] or "")
+            cat = (qs.get("cat", [""])[0] or "")
+            self._json({"ok": True, **browse_diseases(src_, page, per, q, chapter, cat)})
+            return True
+        if path == "/api/knowledge/diseases-tree":
+            from knowledge_browser import disease_levels
+            self._json({"ok": True, **disease_levels((qs.get("chapter", [""])[0] or ""))})
+            return True
+        if path == "/api/knowledge/drugs-tree":
+            from knowledge_browser import drug_levels
+            self._json({"ok": True, "cats": drug_levels()})
             return True
         if path == "/api/knowledge/drugs-list":
             from knowledge_browser import browse_fda_drugs
             page = int((qs.get("page", ["1"])[0] or 1))
             per = min(60, int((qs.get("per", ["40"])[0] or 40)))
-            self._json({"ok": True, **browse_fda_drugs(page, per, q)})
+            cat = (qs.get("cat", [""])[0] or "")
+            self._json({"ok": True, **browse_fda_drugs(page, per, q, cat)})
             return True
         if path == "/api/knowledge/drug-label":
             from knowledge_browser import get_drug_label, fa_drug_name

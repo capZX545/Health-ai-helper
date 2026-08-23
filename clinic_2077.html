@@ -905,11 +905,51 @@ function drawBankTabs(){
   $("banktabs").innerHTML=h;
 }
 function setBank(s){_disState.src=s;_disState.page=1;drawBankTabs();browseDis(0)}
+var _chLoaded=false;
+async function loadChapters(){
+  if(_chLoaded)return;_chLoaded=true;
+  var r=await api("/api/knowledge/diseases-tree");
+  if(!r.ok)return;
+  var sel=$("disch");var L=LANG==="fa";
+  r.chapters.forEach(function(c){
+    var o=document.createElement("option");
+    o.value=c.key;o.textContent=(L?c.fa:c.en)+" ("+fa(c.count)+")";
+    sel.appendChild(o);
+  });
+}
+async function loadCats(){
+  var chv=$("disch").value;
+  var sel=$("disccat");
+  sel.innerHTML='<option value="">'+(LANG==="fa"?"همه‌ی دسته‌ها":"all categories")+'</option>';
+  if(!chv)return;
+  var r=await api("/api/knowledge/diseases-tree?chapter="+encodeURIComponent(chv));
+  if(!r.ok)return;
+  r.cats.forEach(function(c){
+    var o=document.createElement("option");
+    o.value=c.code;o.textContent=c.code+" ("+fa(c.count)+")";
+    sel.appendChild(o);
+  });
+}
+var _dcatLoaded=false;
+async function loadDrugCats(){
+  if(_dcatLoaded)return;_dcatLoaded=true;
+  var r=await api("/api/knowledge/drugs-tree");
+  if(!r.ok)return;
+  var sel=$("fdacat");
+  r.cats.forEach(function(c){
+    var o=document.createElement("option");
+    o.value=c.fa;o.textContent=c.fa+" ("+fa(c.count)+")";
+    sel.appendChild(o);
+  });
+}
 async function browseDis(delta){
   _disState.page=Math.max(1,_disState.page+delta);
   var el=$("disbrowse");
   el.innerHTML='<div class="spin"></div>';
-  var r=await api("/api/knowledge/diseases-list?src="+_disState.src+"&page="+_disState.page+"&per=25");
+  var chv=($("disch")&&$("disch").value)||"";
+  var cav=($("disccat")&&$("disccat").value)||"";
+  var r=await api("/api/knowledge/diseases-list?src="+_disState.src+"&page="+_disState.page+"&per=25"
+    +(chv?"&chapter="+encodeURIComponent(chv):"")+(cav?"&cat="+encodeURIComponent(cav):""));
   if(!r.ok){el.innerHTML='<p class=bad>Error</p>';return}
   var L=LANG==="fa";
   $("dispage").textContent=fa(r.page)+" / "+fa(r.pages)+" ("+fa(r.total)+")";
@@ -918,6 +958,7 @@ async function browseDis(delta){
     h+='<div class="q"><b>'+esc(x.name)+'</b>'+(x.fa?' <b style="color:var(--cy)">('+esc(x.fa)+')</b>':'')+
     (x.code?' <span class="tag">'+esc(x.code)+'</span>':'')+' <span class="tag" style="color:var(--dim)">'+esc(x.src)+'</span>';
     if(x.drug&&x.drug.length)h+='<br><small style="color:#3bff9e">'+(L?"داروها: ":"drugs: ")+esc(x.drug.join("، ").slice(0,140))+'</small>';
+    if(x.ch_fa)h+='<br><small style="color:var(--dim)">'+(L?"فصل: ":"chapter: ")+esc(x.ch_fa)+(x.cat?" · "+esc(x.cat):"")+'</small>';
     h+='</div>';
   });
   el.innerHTML=h||'<p class=warn>'+(L?"خالی":"empty")+'</p>';
@@ -930,7 +971,9 @@ async function browseFda(delta){
   var el=$("fdabrowse");
   el.innerHTML='<div class="spin"></div>';
   var q=($("fdaBrowseQ")&&$("fdaBrowseQ").value.trim())||"";
-  var r=await api("/api/knowledge/drugs-list?page="+_fdaState.page+"&per=25"+(q?"&q="+encodeURIComponent(q):""));
+  var cv=($("fdacat")&&$("fdacat").value)||"";
+  var r=await api("/api/knowledge/drugs-list?page="+_fdaState.page+"&per=25"
+    +(q?"&q="+encodeURIComponent(q):"")+(cv?"&cat="+encodeURIComponent(cv):""));
   if(!r.ok){el.innerHTML='<p class=bad>Error</p>';return}
   var L=LANG==="fa";
   $("fdapage").textContent=fa(r.page)+" / "+fa(r.pages)+" ("+fa(r.total)+")";
@@ -939,6 +982,8 @@ async function browseFda(delta){
     h+='<div class="q"><b>'+esc(d.g)+'</b>';
     if(d.brands&&d.brands.length)h+=' <small style="color:var(--cy)">'+esc(d.brands.slice(0,3).join("، "))+'</small>';
     if(d.class&&d.class.length)h+='<br><small>'+esc(d.class.slice(0,2).join("، "))+'</small>';
+    if(d.fa)h+='<br><small style="color:var(--cy)">('+esc(d.fa)+')</small>';
+    if(d.cat)h+=' <span class="tag">'+esc(d.cat)+'</span>';
     h+=' <small style="color:var(--dim)">('+fa(d.n)+')</small></div>';
   });
   el.innerHTML=h||'<p class=warn>'+(L?"خالی":"empty")+'</p>';
@@ -1075,6 +1120,10 @@ async function uiDiseasesBrowser(){
   h+='<div id="allres" style="margin-top:8px"></div></div>';
   h+='<div class="card"><h3>📚 '+(LANG==="fa"?"مرور همه‌ی بیماری‌ها — صفحه به صفحه":"Browse every disease, page by page")+'</h3>';
   h+='<div id="banktabs" style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0"></div>';
+  h+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin:4px 0">';
+  h+='<select id="disch" class="f" style="max-width:220px" onchange="_disState.page=1;loadCats();browseDis(0)"><option value="">'+(LANG==="fa"?"همه‌ی فصل‌ها":"all chapters")+'</option></select>';
+  h+='<select id="disccat" class="f" style="max-width:200px" onchange="_disState.page=1;browseDis(0)"><option value="">'+(LANG==="fa"?"همه‌ی دسته‌ها":"all categories")+'</option></select>';
+  h+='</div>';
   h+='<div style="display:flex;gap:6px;align-items:center;margin:6px 0">';
   h+='<button class="btn" onclick="browseDis(-1)">◀</button>';
   h+='<span id="dispage" style="color:var(--yl);font-size:12px;min-width:110px;text-align:center"></span>';
@@ -1082,7 +1131,7 @@ async function uiDiseasesBrowser(){
   h+='<div id="disbrowse"></div></div>';
   el.innerHTML=h;
 
-  drawBankTabs();browseDis(0);
+  drawBankTabs();loadChapters();browseDis(0);
 }
 function filterDiseases(q){
   q=q.toLowerCase();
@@ -1145,10 +1194,11 @@ async function uiDrugsBrowser(){
   h+='<button class="btn" onclick="browseFda(-1)">◀</button>';
   h+='<span id="fdapage" style="color:var(--yl);font-size:12px;min-width:110px;text-align:center"></span>';
   h+='<button class="btn" onclick="browseFda(1)">▶</button></div>';
+  h+='<select id="fdacat" class="f" style="max-width:220px;margin-bottom:6px" onchange="_fdaState.page=1;browseFda(0)"><option value="">'+(LANG==="fa"?"همه‌ی دسته‌ها":"all categories")+'</option></select>';
   h+='<div id="fdabrowse"></div></div>';
   el.innerHTML=h;
 
-  browseFda(0);
+  loadDrugCats();browseFda(0);
 }
 var _fdaT=null;
 function fdaSearchDebounced(){

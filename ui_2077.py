@@ -1200,7 +1200,7 @@ class App:
             show_detail(dis[0])
 
         # page-by-page browsing over every bank (about 45k diseases)
-        browse_state = {"src": "all", "page": 1}
+        browse_state = {"src": "all", "page": 1, "ch": "", "cat": ""}
         engine_row_widgets = list(rows)
         def clear_rows():
             for r_ in cat_rows:
@@ -1233,13 +1233,17 @@ class App:
         def load_browse(delta=0):
             browse_state["page"] = max(1, browse_state["page"] + delta)
             clear_rows()
-            from knowledge_browser import browse_diseases
-            r_ = browse_diseases(browse_state["src"], browse_state["page"], 25)
+            from knowledge_browser import browse_diseases, icd_chapter
+            r_ = browse_diseases(browse_state["src"], browse_state["page"], 25,
+                                 chapter=browse_state.get("ch", ""), cat=browse_state.get("cat", ""))
+            r_["rows"] = [dict(x) for x in r_["rows"]]
             browse_state["page"] = r_["page"]
             pg_lbl.config(text=f"صفحه {r_['page']} از {r_['pages']:,} — {r_['total']:,} بیماری")
             for e_ in r_["rows"]:
                 row_ = tk.Frame(inner, bg=C["panel2"])
                 title = e_["name"] + (("  (" + e_["fa"] + ")") if e_.get("fa") else "")
+                if e_.get("ch_fa"):
+                    title += "  — " + e_["ch_fa"]
                 b_ = tk.Button(row_, text=title,
                                command=lambda ee=e_: show_unified_detail(ee),
                                anchor="e", bg="#101c36", fg=C["tx"], relief="flat", font=pick_font(9),
@@ -1251,6 +1255,34 @@ class App:
                 cat_rows.append(row_)
         browse_bar = tk.Frame(top, bg=C["panel2"])
         browse_bar.pack(fill="x", padx=16, pady=(2, 6))
+        from knowledge_browser import disease_levels
+        ch_box = ttk.Combobox(browse_bar, state="readonly", font=pick_font(8), width=30)
+        _all_ch = "— همه‌ی فصل‌ها —"
+        ch_box["values"] = [_all_ch] + [f"{c['fa']} ({c['count']:,})" for c in disease_levels()["chapters"]]
+        ch_box.current(0)
+        ch_box.pack(fill="x")
+        cat_box = ttk.Combobox(browse_bar, state="readonly", font=pick_font(8), width=20)
+        cat_box["values"] = ["— همه —"]
+        cat_box.current(0)
+        cat_box.pack(fill="x", pady=(2, 0))
+        from knowledge_browser import ICD_CHAPTERS as _CHAPTERS
+        _ch_by_idx = {f"{c['fa']} ({c['count']:,})": c["key"] for c in disease_levels()["chapters"]}
+        def on_ch_change(_e=None):
+            browse_state["ch"] = _ch_by_idx.get(ch_box.get(), "")
+            browse_state["cat"] = ""
+            from knowledge_browser import disease_levels as _dl
+            cats = _dl(browse_state["ch"]).get("cats") or [] if browse_state["ch"] else []
+            cat_box["values"] = ["— همه —"] + [f"{c['code']} ({c['count']})" for c in cats]
+            cat_box.current(0)
+            browse_state["page"] = 1
+            load_browse(0)
+        def on_cat_change(_e=None):
+            txt = cat_box.get()
+            browse_state["cat"] = txt.split(" ")[0] if txt not in ("— همه —", "") else ""
+            browse_state["page"] = 1
+            load_browse(0)
+        ch_box.bind("<<ComboboxSelected>>", on_ch_change)
+        cat_box.bind("<<ComboboxSelected>>", on_cat_change)
         pg_lbl = tk.Label(browse_bar, text="", bg=C["panel2"], fg=C["yl"], font=pick_font(8), anchor="e")
         pg_lbl.pack(fill="x")
         btn_bar = tk.Frame(browse_bar, bg=C["panel2"])
@@ -1427,7 +1459,7 @@ class App:
             show_detail(drugs[0])
 
         # page-by-page browsing over the whole FDA bank (19k drugs)
-        fb_state = {"page": 1}
+        fb_state = {"page": 1, "cat": ""}
         drug_row_widgets = list(rows)
         fda_row_widgets: list[tk.Widget] = []
         def clear_fda():
@@ -1447,13 +1479,18 @@ class App:
             fb_state["page"] = max(1, fb_state["page"] + delta)
             clear_fda()
             from knowledge_browser import browse_fda_drugs
-            r_ = browse_fda_drugs(fb_state["page"], 25, q=sv.get().strip())
+            r_ = browse_fda_drugs(fb_state["page"], 25, q=sv.get().strip(), cat=fb_state.get("cat", ""))
             fb_state["page"] = r_["page"]
             fpg_lbl.config(text=f"صفحه {r_['page']} از {r_['pages']:,} — {r_['total']:,} دارو")
             for d_ in r_["rows"]:
                 row_ = tk.Frame(inner, bg=C["panel2"])
                 brand = (d_.get("brands") or [""])[0]
-                title = d_["g"] + (("  (" + brand + ")") if brand and brand.lower() != d_["g"].lower() else "")
+                title = d_["g"]
+                if d_.get("fa"):
+                    title += "  (" + d_["fa"] + ")"
+                title += (("  " + brand) if brand and brand.lower() != d_["g"].lower() else "")
+                if d_.get("cat"):
+                    title += "  — " + d_["cat"]
                 b_ = tk.Button(row_, text=title,
                                command=lambda dd=d_: show_fda_detail(dd),
                                anchor="e", bg="#101c36", fg=C["tx"], relief="flat", font=pick_font(9),
@@ -1463,6 +1500,18 @@ class App:
                 fda_row_widgets.append(row_)
         fb_bar = tk.Frame(top, bg=C["panel2"])
         fb_bar.pack(fill="x", padx=16, pady=(2, 6))
+        from knowledge_browser import drug_levels
+        dcat_box = ttk.Combobox(fb_bar, state="readonly", font=pick_font(8), width=30)
+        _all_dc = "— همه‌ی دسته‌ها —"
+        _dc_by_idx = {f"{c['fa']} ({c['count']:,})": c["fa"] for c in drug_levels()}
+        dcat_box["values"] = [_all_dc] + list(_dc_by_idx.keys())
+        dcat_box.current(0)
+        dcat_box.pack(fill="x")
+        def on_dcat(_e=None):
+            fb_state["cat"] = _dc_by_idx.get(dcat_box.get(), "")
+            fb_state["page"] = 1
+            load_fda_browse(0)
+        dcat_box.bind("<<ComboboxSelected>>", on_dcat)
         fpg_lbl = tk.Label(fb_bar, text="", bg=C["panel2"], fg=C["yl"], font=pick_font(8), anchor="e")
         fpg_lbl.pack(fill="x")
         fbtn = tk.Frame(fb_bar, bg=C["panel2"])

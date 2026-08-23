@@ -273,9 +273,15 @@ def _load_fda() -> list[dict]:
             print(f"[knowledge_browser] بانک FDA بارگذاری نشد: {e}")
             _FDA_CACHE = []
         # search index
+        from common_2077 import normalize as _n
+        _fa_drugs = _load_fa_names().get("drug_en_fa", {})
         for i, d in enumerate(_FDA_CACHE):
             hay = " ".join([d.get("g", "")] + (d.get("brands") or []) + (d.get("ing") or [])).lower()
             d["_i"], d["_hay"] = i, hay
+            if "fa" not in d:
+                d["fa"] = _fa_drugs.get(_n(d.get("g", "")), "")
+            if "cat" not in d:
+                d["cat"] = classify_drug(d.get("class") or [])
     return _FDA_CACHE
 
 
@@ -386,6 +392,129 @@ def fa_disease_name(icd: str = "", en: str = "") -> str:
     if en:
         return m.get("disease_en_fa", {}).get(en.strip().lower(), "")
     return ""
+
+
+def fa_disease_full(en: str = "", icd: str = "", doid: str = "", mesh: str = "") -> str:
+    """Try every key we have (icd, doid, mesh, en) until a farsi name shows up."""
+    v = fa_disease_name(icd=icd, en=en)
+    m = _load_fa_names()
+    if not v and doid:
+        v = m.get("doid_fa", {}).get(str(doid).lstrip("DOID:").strip(), "")
+    if not v and mesh:
+        v = m.get("mesh_fa", {}).get(str(mesh).strip(), "")
+    if not v and en:
+        v = m.get("disease_en_fa", {}).get(en.strip().lower(), "")
+    return v
+
+
+# icd-10 chapters: (range, english, farsi)
+ICD_CHAPTERS = [
+    ("A00-B99", "Infectious & parasitic diseases", "بیماری‌های عفونی و انگلی"),
+    ("C00-D49", "Neoplasms", "بدخیمی‌ها (تومورها)"),
+    ("D50-D89", "Blood & immune disorders", "بیماری‌های خون و ایمنی"),
+    ("E00-E89", "Endocrine, nutritional, metabolic", "غدد، تغذیه و متابولیسم"),
+    ("F01-F99", "Mental & behavioral disorders", "اختلالات روانی و رفتاری"),
+    ("G00-G99", "Nervous system", "بیماری‌های سیستم عصبی"),
+    ("H00-H59", "Eye", "بیماری‌های چشم"),
+    ("H60-H95", "Ear", "بیماری‌های گوش"),
+    ("I00-I99", "Circulatory system", "بیماری‌های قلب و عروق"),
+    ("J00-J99", "Respiratory system", "بیماری‌های تنفسی"),
+    ("K00-K95", "Digestive system", "بیماری‌های گوارش"),
+    ("L00-L99", "Skin", "بیماری‌های پوست"),
+    ("M00-M99", "Musculoskeletal system", "بیماری‌های عضله و استخوان"),
+    ("N00-N99", "Genitourinary system", "بیماری‌های ادراری و تناسلی"),
+    ("O00-O9A", "Pregnancy & childbirth", "بارداری و زایمان"),
+    ("P00-P96", "Perinatal conditions", "دوره‌ی نوزادی"),
+    ("Q00-Q99", "Congenital malformations", "ناهنجاری‌های مادرزادی"),
+    ("R00-R99", "Symptoms & abnormal findings", "علائم و یافته‌های غیرطبیعی"),
+    ("S00-T88", "Injury & poisoning", "آسیب و مسمومیت"),
+    ("V00-Y99", "External causes", "علل خارجی"),
+    ("Z00-Z99", "Health status factors", "عوامل وضعیت سلامت"),
+    ("U00-U85", "Special codes", "کدهای خاص"),
+]
+
+
+def icd_chapter(code: str) -> dict:
+    """Chapter info {key, en, fa} for an ICD-10 code, empty dict if unknown."""
+    c = (code or "").strip().upper()
+    if not c or not c[0].isalpha():
+        return {}
+    # the category is the letter + the next two digits ("G912" -> G91, "Z3A10" -> Z3)
+    n = 0
+    got = 0
+    for ch in c[1:]:
+        if ch.isdigit() and got < 2:
+            n = n * 10 + int(ch)
+            got += 1
+        else:
+            break
+    if got == 0:
+        return {}
+    for rng, en, fa in ICD_CHAPTERS:
+        a, b = rng.split("-")
+
+        def num(s):
+            v = 0
+            taken = 0
+            for ch in s[1:]:
+                if ch.isdigit() and taken < 2:
+                    v = v * 10 + int(ch)
+                    taken += 1
+                elif ch.isalpha() and taken:
+                    v += 1  # 7th character style (O9A)
+                if taken >= 2 and not ch.isdigit():
+                    break
+            return v
+
+        if a[0] == b[0] == c[0]:
+            if num(a) <= n <= num(b):
+                return {"key": rng, "en": en, "fa": fa}
+        elif a[0] == c[0]:
+            if n >= num(a):
+                return {"key": rng, "en": en, "fa": fa}
+        elif b[0] == c[0]:
+            if n <= num(b):
+                return {"key": rng, "en": en, "fa": fa}
+        elif a[0] < c[0] < b[0]:
+            return {"key": rng, "en": en, "fa": fa}
+    return {}
+
+
+# drug categories: (farsi, english, keywords in the pharm class)
+DRUG_CATS = [
+    ("درد و تب (مسکن)", "Analgesics & antipyretics", ["analges", "anti-inflammatory", "antipyretic", "non-steroidal"]),
+    ("آنتی‌بیوتیک", "Antibacterials", ["antibacterial", "antibiotic"]),
+    ("ضدویروس", "Antivirals", ["antiviral"]),
+    ("ضدقارچ", "Antifungals", ["antifungal"]),
+    ("انگل‌کش", "Antiparasitics", ["antiparasitic", "anthelmintic", "antimalarial"]),
+    ("قلب و فشار خون", "Cardiovascular", ["angiotensin", "beta block", "calcium channel", "diuretic", "cardiac", "antiarrhyth", "antihypertensive", "vasodilat", "statin", "lipid"]),
+    ("لختگی خون", "Anticoagulants & antiplatelets", ["anticoagul", "antiplatelet", "thrombolytic", "factor xa"]),
+    ("دیابت", "Antidiabetics", ["hypoglycemic", "insulin", "biguanide", "sulfonylurea", "gliptin", "glp-1"]),
+    ("هورمون و تیروئید", "Hormones", ["hormone", "thyroid", "corticosteroid", "steroid", "estrogen", "testosterone"]),
+    ("گوارش", "Gastrointestinal", ["proton pump", "antacid", "antiemetic", "laxative", "antidiarrheal", "h2 block"]),
+    ("تنفسی و آلرژی", "Respiratory & allergy", ["bronchodilat", "corticosteroid inhal", "antihistamine", "leukotriene", "decongestant"]),
+    ("اعصاب و روان", "Nervous system & psychiatric", ["antidepress", "antipsychotic", "anxiolytic", "sedative", "anticonvuls", "antiepileptic", "dopamine", "serotonin", "opioid", "cns"]),
+    ("بی‌حسی", "Anesthetics", ["anesthetic", "anaesthetic"]),
+    ("ایمنی و سرطان", "Immunology & oncology", ["immunosuppress", "kinase inhibitor", "antineoplastic", "checkpoint", "monoclonal", "immunomodulat"]),
+    ("واکسن", "Vaccines", ["vaccine", "toxoid"]),
+    ("مکمل و ویتامین", "Vitamins & supplements", ["vitamin", "mineral", "iron", "calcium", "supplement"]),
+    ("چشم و گوش", "Eye & ear", ["ophthalmic", "otic", "miotic", "mydriatic"]),
+    ("پوست", "Dermatological", ["dermat", "topical anti-acne", "keratolytic", "emollient"]),
+    ("ادراری و تناسلی", "Urological & gynecological", ["urinary", "urologic", "contraceptive", "vaginal", "prostate"]),
+]
+
+
+def classify_drug(class_list) -> str:
+    """Map a pharm-class list to a farsi category name."""
+    hay = " ".join(class_list or []).lower()
+    for fa, _en, keys in DRUG_CATS:
+        if any(k in hay for k in keys):
+            return fa
+    return "سایر"
+
+
+def drug_categories() -> list:
+    return [{"fa": fa, "en": en} for fa, en, _k in DRUG_CATS] + [{"fa": "سایر", "en": "Other"}]
 
 
 # ---------- big open banks: DOID / Wikidata / HPO ----------
@@ -520,18 +649,32 @@ def _build_unified() -> list:
     _mc._load()
     for c in (_mc._DATA.get("conditions") or []):
         key = normalize(c.get("name", ""))
-        seen[key] = {"name": c.get("name", ""), "fa": fa_disease_name(icd=c.get("icd10", "")),
-                     "code": c.get("icd10", ""), "src": "icd10"}
+        code = c.get("icd10", "")
+        ch = icd_chapter(code)
+        seen[key] = {"name": c.get("name", ""), "fa": fa_disease_full(icd=code),
+                     "code": code, "src": "icd10",
+                     "ch": ch.get("key", ""), "ch_fa": ch.get("fa", ""), "ch_en": ch.get("en", ""),
+                     "cat": code[:3] if len(code) >= 4 else ""}
     for d in _load_doid():
         key = normalize(d.get("name", ""))
         if key not in seen:
-            seen[key] = {"name": d.get("name", ""), "fa": "", "code": "DOID:" + d.get("doid", ""),
-                         "src": "doid", "def": d.get("def", "")}
+            code = d.get("icd", "")
+            ch = icd_chapter(code) if code else {}
+            seen[key] = {"name": d.get("name", ""), "code": "DOID:" + d.get("doid", ""),
+                         "src": "doid", "def": d.get("def", ""),
+                         "fa": fa_disease_full(en=d.get("name", ""), doid=d.get("doid", ""), mesh=d.get("mesh", "")),
+                         "ch": ch.get("key", ""), "ch_fa": ch.get("fa", ""), "ch_en": ch.get("en", ""),
+                         "cat": code[:3] if len(code) >= 4 else ""}
     for qid, e in _load_wiki().items():
         key = normalize(e.get("en", ""))
         row = seen.get(key)
         if row is None:
-            row = seen[key] = {"name": e.get("en", ""), "fa": "", "code": "", "src": "wiki"}
+            wcode = e.get("icd", "")
+            wch = icd_chapter(wcode) if wcode else {}
+            row = seen[key] = {"name": e.get("en", ""), "fa": e.get("fa", ""),
+                               "code": wcode, "src": "wiki",
+                               "ch": wch.get("key", ""), "ch_fa": wch.get("fa", ""), "ch_en": wch.get("en", ""),
+                               "cat": wcode[:3] if len(wcode) >= 4 else ""}
         if e.get("fa") and not row.get("fa"):
             row["fa"] = e["fa"]
         if e.get("sym") and not row.get("sym"):
@@ -551,10 +694,15 @@ def _build_unified() -> list:
     return out
 
 
-def browse_diseases(src: str = "all", page: int = 1, per: int = 40, q: str = "") -> dict:
+def browse_diseases(src: str = "all", page: int = 1, per: int = 40, q: str = "",
+                    chapter: str = "", cat: str = "") -> dict:
     rows = _build_unified()
     if src and src != "all":
         rows = [r for r in rows if r.get("src") == src]
+    if chapter:
+        rows = [r for r in rows if r.get("ch") == chapter or (chapter == "other" and not r.get("ch"))]
+    if cat:
+        rows = [r for r in rows if r.get("cat", "").upper() == cat.upper()]
     if q:
         nq = normalize(q)
         rows = [r for r in rows if nq in normalize(r.get("name", "")) or nq in normalize(r.get("fa", ""))]
@@ -565,8 +713,34 @@ def browse_diseases(src: str = "all", page: int = 1, per: int = 40, q: str = "")
             "rows": rows[(page - 1) * per: page * per]}
 
 
-def browse_fda_drugs(page: int = 1, per: int = 40, q: str = "") -> dict:
+def disease_levels(chapter: str = "") -> dict:
+    """Chapters (or categories inside a chapter) with counts, for the level dropdowns."""
+    rows = _build_unified()
+    if chapter:
+        cnt: dict[str, int] = {}
+        for r in rows:
+            if r.get("ch") == chapter and r.get("cat"):
+                cnt[r["cat"]] = cnt.get(r["cat"], 0) + 1
+        cats = [{"code": c, "count": n} for c, n in sorted(cnt.items())]
+        return {"cats": cats}
+    ch_cnt: dict[str, int] = {}
+    for r in rows:
+        k = r.get("ch") or "other"
+        ch_cnt[k] = ch_cnt.get(k, 0) + 1
+    out = []
+    for _rng, en, fa in ICD_CHAPTERS:
+        if ch_cnt.get(_rng):
+            out.append({"key": _rng, "en": en, "fa": fa, "count": ch_cnt[_rng]})
+    if ch_cnt.get("other"):
+        out.append({"key": "other", "en": "Uncategorized", "fa": "دسته‌بندی نشده", "count": ch_cnt["other"]})
+    out.sort(key=lambda x: -x["count"])
+    return {"chapters": out}
+
+
+def browse_fda_drugs(page: int = 1, per: int = 40, q: str = "", cat: str = "") -> dict:
     rows = _load_fda()
+    if cat:
+        rows = [r for r in rows if r.get("cat", "سایر") == cat]
     if q:
         nq = normalize(q)
         rows = [r for r in rows if nq in normalize(r.get("g", ""))]
@@ -575,3 +749,14 @@ def browse_fda_drugs(page: int = 1, per: int = 40, q: str = "") -> dict:
     page = max(1, min(page, pages))
     return {"total": total, "page": page, "pages": pages, "per": per,
             "rows": rows[(page - 1) * per: page * per]}
+
+
+def drug_levels() -> list:
+    """Drug category counts over the FDA bank."""
+    rows = _load_fda()
+    cnt: dict[str, int] = {}
+    for r in rows:
+        cnt[r.get("cat", "سایر")] = cnt.get(r.get("cat", "سایر"), 0) + 1
+    order = [c["fa"] for c in drug_categories()]
+    out = [{"fa": c, "count": cnt.get(c, 0)} for c in order if cnt.get(c)]
+    return out
