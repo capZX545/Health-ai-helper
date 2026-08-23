@@ -930,8 +930,9 @@ class App:
         cpr_btn.pack(fill="x", padx=16, pady=8, ipady=8)
         bar = tk.Frame(w, bg=C["panel2"])
         bar.pack(fill="x")
+        from i18n import pick as _pick2
         for key, t in TOPICS.items():
-            tk.Button(bar, text=t["title"], command=lambda k=key: show(k), bg="#0d1930",
+            tk.Button(bar, text=_pick2(t["title"]), command=lambda k=key: show(k), bg="#0d1930",
                       fg=C["tx"], relief="flat", font=pick_font(10)).pack(side="right", padx=3, pady=4)
 
         def show(key):
@@ -1210,7 +1211,8 @@ class App:
             _fa_cd = __import__("i18n").get_lang() == "fa"
             from knowledge_browser import explain_disease_entry as _expl
             _ex = _expl(name, code, chapter, chapter)
-            box.insert("1.0", f"◀ {name}" + (f" ({fa_n})" if fa_n else "") + "\n" + self.L("ICD-10 code: ", "کد ICD-10: ") + str(code) + "\n" + self.L("chapter: ", "فصل: ") + str(chapter if _fa_cd else _CH_EN.get(chapter, chapter)) + "\n\n" + (_ex['note_fa'] if _fa_cd else _ex['note_en']) + "\n\n" + self.L("typical signs: ", "نشانه‌های معمول: ") + (_ex['sym_fa'] if _fa_cd else _ex['sym_en']))
+            _show_fa = fa_n and __import__("i18n").get_lang() == "fa"
+            box.insert("1.0", f"◀ {name}" + (f" ({fa_n})" if _show_fa else "") + "\n" + self.L("ICD-10 code: ", "کد ICD-10: ") + str(code) + "\n" + self.L("chapter: ", "فصل: ") + str(chapter if _fa_cd else _CH_EN.get(chapter, chapter)) + "\n\n" + (_ex['note_fa'] if _fa_cd else _ex['note_en']) + "\n\n" + self.L("typical signs: ", "نشانه‌های معمول: ") + (_ex['sym_fa'] if _fa_cd else _ex['sym_en']))
             box.tag_add("title", "1.0", "1.0 lineend")
             box.tag_config("title", foreground=C["cy"], font=pick_font(12, True))
         def run_catalog_search():
@@ -1305,7 +1307,7 @@ class App:
         def show_unified_detail(r_):
             box.delete("1.0", "end")
             lines = ["◀ " + r_.get("name", "") + (("   [" + r_["code"] + "]") if r_.get("code") else "")]
-            if r_.get("fa"):
+            if r_.get("fa") and __import__("i18n").get_lang() == "fa":
                 lines.append("(" + r_["fa"] + ")")
             lines.append(self.L("Source: ", "منبع: ") + r_.get("src", ""))
             if r_.get("def"):
@@ -1334,11 +1336,12 @@ class App:
             r_["rows"] = [dict(x) for x in r_["rows"]]
             browse_state["page"] = r_["page"]
             pg_lbl.config(text=self.L("page ", "صفحه ") + str(r_['page']) + self.L(" of ", " از ") + f"{r_['pages']:,} — {r_['total']:,} " + self.L("diseases", "بیماری"))
+            _fa_br = __import__("i18n").get_lang() == "fa"
             for e_ in r_["rows"]:
                 row_ = tk.Frame(inner, bg=C["panel2"])
-                title = e_["name"] + (("  (" + e_["fa"] + ")") if e_.get("fa") else "")
+                title = e_["name"] + ((("  (" + e_["fa"] + ")") if e_.get("fa") else "") if _fa_br else "")
                 if e_.get("ch_fa"):
-                    title += "  — " + e_["ch_fa"]
+                    title += "  — " + (e_["ch_fa"] if _fa_br else (e_.get("ch_en") or e_["ch_fa"]))
                 b_ = tk.Button(row_, text=title,
                                command=lambda ee=e_: show_unified_detail(ee),
                                anchor="e", bg="#101c36", fg=C["tx"], relief="flat", font=pick_font(9),
@@ -1423,18 +1426,38 @@ class App:
         def show_detail(d):
             def row_fa(label, val):
                 return f"  {label}: {val}" if val not in (None, "", []) else ""
-            lines = [f"◀ {d.get('fa','')} ({d.get('en','')})"]
-            cat = d.get("category")
+            _fa_hdr = __import__("i18n").get_lang() == "fa"
+            _nm_hdr = (str(d.get("fa", "")) + " (" + str(d.get("en", "")) + ")") if _fa_hdr else (str(d.get("en", "")) or str(d.get("fa", "")))
+            lines = ["◀ " + _nm_hdr]
+            cat = (d.get("category") if _fa_hdr else (d.get("category_en") or d.get("category")))
             if cat:
                 lines.append(self.L("  category: ", "  دسته: ") + str(cat))
-            for lbl, key in ((self.L("Class", "کلاس"), "class"), (self.L("ATC code", "کد ATC"), "atc"), (self.L("Half-life", "نیمه‌عمر"), "half_life"),
-                             (self.L("Metabolism", "متابولیسم"), "metabolism"), (self.L("Route", "راه مصرف"), "routes"), (self.L("Pregnancy", "بارداری"), "pregnancy")):
+            _en_md = not _fa_hdr
+            def _pick_fld(fa_key, en_key):
+                if _en_md and en_key:
+                    v = d.get(en_key)
+                    if v not in (None, "", []):
+                        return v
+                    return None if d.get(fa_key) in (None, "", []) else _NR_D
+                return d.get(fa_key)
+            for lbl, key, enk in ((self.L("Class", "کلاس"), "class", "class_en"), (self.L("ATC code", "کد ATC"), "atc", None), (self.L("Half-life", "نیمه‌عمر"), "half_life", None),
+                             (self.L("Metabolism", "متابولیسم"), "metabolism", "metabolism_en"), (self.L("Route", "راه مصرف"), "routes", "routes_en"), (self.L("Pregnancy", "بارداری"), "pregnancy", "pregnancy_en")):
+                if _en_md and enk:
+                    _val = _pick_fld(key, enk)
+                    if _val is not None and _val != "":
+                        if isinstance(_val, list):
+                            _val = ", ".join(str(x) for x in _val)
+                        lines.append(f"  {lbl}: {_val}")
+                    continue
                 r = row_fa(lbl, d.get(key))
                 if r:
                     lines.append(r)
             aliases = d.get("aliases_fa") or []
             if aliases:
-                lines.append(self.L("  other names: ", "  نام‌های دیگر: ") + "، ".join(str(a) for a in aliases[:6]))
+                _al = d.get("aliases_en") if not _fa_hdr else aliases
+                _al = [a for a in (_al or []) if not (_en_md and any("\u0600" <= ch <= "\u06ff" for ch in str(a)))][:6]
+                _sep = "، " if _fa_hdr else ", "
+                lines.append(self.L("  other names: ", "  نام‌های دیگر: ") + (_al and (_sep.join(str(a) for a in _al)) or _NR_D))
             inter = d.get("interactions") or []
             if inter:
                 lines.append("")
@@ -1463,7 +1486,8 @@ class App:
             row = tk.Frame(inner, bg=C["panel2"])
             n_inter = len(d.get("interactions") or [])
             _nm_d = (d.get("fa", "") if _fa_d else (d.get("en", "") or d.get("fa", "")))
-            b = tk.Button(row, text=_nm_d + "  —  " + str(d.get('category','')), command=lambda dd=d: show_detail(dd),
+            _cat_d = (d.get("category", "") if _fa_d else (d.get("category_en", "") or d.get("category", "")))
+            b = tk.Button(row, text=_nm_d + (("  —  " + str(_cat_d)) if _cat_d else ""), command=lambda dd=d: show_detail(dd),
                           anchor="e", bg="#0d1930", fg=C["tx"], relief="flat", font=pick_font(10, True),
                           activebackground="#101c36", activeforeground=C["cy"], cursor="hand2")
             b.pack(side="right", fill="x", expand=True)

@@ -202,6 +202,7 @@ def get_all_drugs() -> list[dict]:
     """
     from drug_interaction import DRUGS, INTERACTIONS, SEV_FA
     from drugbank_connector import DRUG_DATABASE
+    from drug_interaction import INTERACTIONS_EN as _INTER_EN
     fa = is_fa()
     drug_db_map = {k: v for k, v in DRUG_DATABASE.items()}
     out = []
@@ -217,7 +218,11 @@ def get_all_drugs() -> list[dict]:
                     "other": other["fa"] if other and fa else (other["en"][0] if other else other_id),
                     "severity": it["sev"],
                     "severity_fa": SEV_FA()[it["sev"]],
-                    "detail": it["fa"] if fa else it["fa"],  # persian only for now
+                    "detail": it["fa"] if fa else (
+                        _INTER_EN.get((it["a"], it["b"])) or _INTER_EN.get((it["b"], it["a"]))
+                        or {"major": "Combining these two significantly increases the risk of serious side effects; use only with a doctor's supervision.",
+                            "moderate": "Combined use may need dose adjustment or monitoring; ask your doctor or pharmacist.",
+                            "minor": "Mild possible interaction; usually manageable."}.get(it["sev"], "Possible interaction — consult your doctor.")),
                 })
         # drugbank record
         db_info = drug_db_map.get(did, {})
@@ -227,6 +232,7 @@ def get_all_drugs() -> list[dict]:
             "en": d["en"][0] if d["en"] else did,
             "category": d["cat"],
             "category_en": cat_en(d["cat"]),
+            **_drug_en_fields(db_info),
             "aliases_fa": d["fa"],
             "aliases_en": d["en"],
             "interactions": interactions,
@@ -236,8 +242,8 @@ def get_all_drugs() -> list[dict]:
             "metabolism": db_info.get("metabolism", ""),
             "routes": db_info.get("routes", []),
             "pregnancy": db_info.get("pregnancy", ""),
-            "contra": db_info.get("contra_fa", ""),
-            "notes": db_info.get("notes_fa", ""),
+            "contra": db_info.get("contra_fa", "") if fa else "",
+            "notes": db_info.get("notes_fa", "") if fa else "",
         })
     return out
 
@@ -533,8 +539,52 @@ CAT_KW = [
     ("خواب", "sleep"), ("چشم", "eye drop"), ("حساسیت", "allergy"), ("قارچ", "antifungal"),
     ("ویروس", "antiviral"), ("تب", "antipyretic"), ("سرفه", "cough"), ("هورمون", "hormone"),
     ("ضد درد", "analgesic"), ("کاهنده", "lowering agent"), ("رقیق", "blood thinner"),
+    ("مدر", "diuretic"), ("برونکودیلاتور", "bronchodilator"), ("اسپری", "inhaler"),
+    ("کورتون", "corticosteroid inhaler"), ("کورتیکواستروئید", "corticosteroid"),
+    ("استنشاقی", "inhaled"), ("بینی", "nasal"), ("قلب", "cardiac"), ("خلق", "mood stabilizer"),
+    ("نقرس", "gout"), ("میگرن", "migraine prophylaxis"), ("آسم", "asthma"),
+    ("انسولین", "insulin"), ("بیولوژیک", "biologic"), ("وازودیلاتور", "vasodilator"),
+    ("ضربان", "rate control"), ("بازکننده", "decongestant"), ("پیشگیری", "prophylaxis"),
     ("ضد", "anti-"),
 ]
+
+
+
+
+# english labels derived from ATC level-2 codes (WHO classification)
+ATC_L2_EN = {
+    "A03": "functional gastrointestinal disorders", "A10": "antidiabetic",
+    "B01": "antithrombotic", "B03": "antianemic", "C01": "cardiac therapy",
+    "C03": "diuretic", "C10": "lipid-modifying", "G04": "urologicals",
+    "H02": "corticosteroid", "H03": "thyroid therapy", "J01": "antibacterial",
+    "L01": "antineoplastic", "M04": "antigout", "M05": "bone disease drugs",
+    "N02": "analgesic/antipyretic", "N05": "psycholeptic", "N06": "psychoanaleptic",
+    "R03": "respiratory (obstructive airway)",
+}
+ROUTES_EN = {"خوراکی": "oral", "زیرجلدی": "subcutaneous", "وریدی": "intravenous",
+             "ورودی": "intravenous", "استنشاق": "inhaled", "موضعی": "topical", "بینی": "nasal"}
+
+
+def _drug_en_fields(rec: dict) -> dict:
+    """English versions of the persian drugbank-style fields (ATC-derived)."""
+    out = {}
+    atc = str(rec.get("atc", "") or "")
+    cls_fa = str(rec.get("class_fa", "") or rec.get("class", "") or "")
+    if atc:
+        out["class_en"] = ATC_L2_EN.get(atc[:3], atc)
+    elif cls_fa:
+        out["class_en"] = cat_en(cls_fa)
+    out["routes_en"] = [ROUTES_EN.get(r, r) for r in (rec.get("routes") or [])]
+    p = str(rec.get("pregnancy", "") or "")
+    out["pregnancy_en"] = (p[:1] if p[:1] in "ABCDX" else "") + (" category" if p[:1] in "ABCDX" else "")
+    met = str(rec.get("metabolism", "") or "")
+    if met and any("\u0600" <= ch <= "\u06ff" for ch in met):
+        m2 = met
+        for k, v in (("کبدی", "hepatic"), ("کلیوی", "renal"), ("بدون متابولیسم", "no metabolism, excreted unchanged"),
+                     ("دفع", "excretion"), ("متابولیسم", "metabolism")):
+            m2 = m2.replace(k, v)
+        out["metabolism_en"] = m2
+    return out
 
 
 def cat_en(fa_cat: str) -> str:

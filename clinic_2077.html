@@ -935,7 +935,7 @@ async function symDisSearch(){
   var h='<small style="color:var(--dim)">'+fa(r.symptoms.length)+' / '+fa(r.total)+'</small>';
   if(!r.symptoms.length)h+='<p class=warn>'+(L?"پیدا نشد.":"not found.")+'</p>';
   r.symptoms.forEach(function(s){
-    h+='<div class="q"><b>'+esc(L?(s.fa||s.en):s.en)+'</b>'+(s.fa?' <small style="color:var(--cy)">('+esc(L?s.en:s.fa)+')</small>':'')+
+    h+='<div class="q"><b>'+esc(L?(s.fa||s.en):s.en)+'</b>'+((L&&s.en&&s.fa)?' <small style="color:var(--cy)">('+esc(s.en)+')</small>':'')+
     '<br><small style="color:var(--yl)">'+(L?"بیماری‌ها: ":"diseases: ")+esc(s.diseases.map(function(d){return L?(d.fa||d.en):d.en}).join("، ").slice(0,180))+'</small></div>';
   });
   el.innerHTML=h;
@@ -956,7 +956,7 @@ async function allSearch(){
   if(!r.results.length)h+='<p class=warn>'+(L?"چیزی پیدا نشد.":"Nothing found.")+'</p>';
   r.results.forEach(function(x){
     var col=x.src==="engine"?"#3bff9e":(x.src==="wiki"?"#00f0ff":"#ffd60a");
-    h+='<div class="q"><b>'+esc(x.name)+'</b>'+(x.fa?' <b style="color:var(--cy)">('+esc(x.fa)+')</b>':'')+
+    h+='<div class="q"><b>'+esc(x.name)+'</b>'+((L&&x.fa)?' <b style="color:var(--cy)">('+esc(x.fa)+')</b>':'')+
     ' <span class="tag" style="color:'+col+'">'+SRC[x.src]+'</span>'+(x.code?' <span class="tag">'+esc(x.code)+'</span>':'');
     if(x.def)h+='<br><small style="color:var(--dim)">'+esc(x.def.slice(0,180))+'</small>';
     else if(x.note_en)h+='<br><small style="color:var(--dim)">'+esc((L?x.note_fa:x.note_en).slice(0,200))+'</small>';
@@ -1047,11 +1047,12 @@ async function browseDis(delta){
   $("dispage").textContent=fa(r.page)+" / "+fa(r.pages)+" ("+fa(r.total)+")";
   var h="";
   r.rows.forEach(function(x){
-    h+='<div class="q"><b>'+esc(x.name)+'</b>'+(x.fa?' <b style="color:var(--cy)">('+esc(x.fa)+')</b>':'')+
+    h+='<div class="q"><b>'+esc(x.name)+'</b>'+((L&&x.fa)?' <b style="color:var(--cy)">('+esc(x.fa)+')</b>':'')+
     (x.code?' <span class="tag">'+esc(x.code)+'</span>':'')+' <span class="tag" style="color:var(--dim)">'+esc(x.src)+'</span>';
     if(x.drug&&x.drug.length)h+='<br><small style="color:#3bff9e">'+(L?"داروها: ":"drugs: ")+esc(x.drug.join("، ").slice(0,140))+'</small>';
     if(x.labs&&x.labs.length)h+='<br><small style="color:var(--cy)">'+(L?"آزمایش‌های مرتبط: ":"typical labs: ")+esc(x.labs.join("، ").slice(0,140))+'</small>';
     if(x.ch_fa)h+='<br><small style="color:var(--dim)">'+(L?"فصل: ":"chapter: ")+esc(L?x.ch_fa:(x.ch_en||x.ch_fa))+(x.cat?" · "+esc(x.cat):"")+'</small>';
+
     if(x.note_en)h+='<br><small style="color:#ffd60a">'+esc((L?x.note_fa:x.note_en).slice(0,170))+'</small>';
     h+='</div>';
   });
@@ -1076,7 +1077,7 @@ async function browseFda(delta){
     h+='<div class="q"><b>'+esc(d.g)+'</b>';
     if(d.brands&&d.brands.length)h+=' <small style="color:var(--cy)">'+esc(d.brands.slice(0,3).join("، "))+'</small>';
     if(d.class&&d.class.length)h+='<br><small>'+esc(d.class.slice(0,2).join("، "))+'</small>';
-    if(d.fa)h+='<br><small style="color:var(--cy)">('+esc(d.fa)+')</small>';
+    if(L&&d.fa)h+='<br><small style="color:var(--cy)">('+esc(d.fa)+')</small>';
     if(d.cat)h+=' <span class="tag">'+esc((LANG==="fa"?d.cat:(d.cat_en||d.cat)))+'</span>';
     h+=' <small style="color:var(--dim)">('+fa(d.n)+')</small></div>';
   });
@@ -1248,7 +1249,7 @@ async function searchCatalog(){
     h='<small style="color:var(--dim)">'+fa(r.results.length)+' '+(LANG==="fa"?"نتیجه از":"of")+' '+fa(r.total)+'</small>';
     for(var i=0;i<r.results.length;i++){
       var c=r.results[i];
-      h+='<div class="q"><b>'+esc(c.name)+'</b>'+(c.fa?' <b style="color:var(--cy)">('+esc(c.fa)+')</b>':'')+' <span class="tag">'+esc(c.icd10)+'</span> <small style="color:var(--dim)">'+esc(c.chapter||"")+'</small>'+
+      h+='<div class="q"><b>'+esc(c.name)+'</b>'+((LANG==="fa"&&c.fa)?' <b style="color:var(--cy)">('+esc(c.fa)+')</b>':'')+' <span class="tag">'+esc(c.icd10)+'</span> <small style="color:var(--dim)">'+esc(c.chapter||"")+'</small>'+
       ((c.note_en||c.note_fa)?'<br><small style="color:#ffd60a">'+esc(LANG==="fa"?(c.note_fa||c.note_en):(c.note_en||c.note_fa)).slice(0,220)+'</small><br><small style="color:var(--dim)">ⓘ '+(LANG==="fa"?(c.nsym_fa||c.nsym_en):(c.nsym_en||c.nsym_fa))+'</small>':'')+'</div>';
     }
     if(!r.results.length)h+='<p class=warn>'+(LANG==="fa"?"چیزی پیدا نشد — شاید املای انگلیسی را امتحان کنی.":"Not found — try the English spelling.")+'</p>';
