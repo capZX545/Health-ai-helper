@@ -25,6 +25,15 @@ DATA_FILES = [
     "fonts/Vazirmatn-Bold.ttf",
     "fonts/Inter-Regular.ttf",
     "fonts/Inter-Bold.ttf",
+    # knowledge banks
+    "nlm_conditions.json",
+    "drugs_fda.json",
+    "drug_labels.json.gz",
+    "fa_names.json",
+    "wiki_diseases.json",
+    "diseases_doid.json",
+    "symptoms_hpo.json",
+    "elements.json",
 ]
 
 
@@ -60,10 +69,11 @@ def main() -> int:
     import shutil
     dest = os.path.join(BASE, "dist", APP_NAME)
     for f in DATA_FILES:
-        src = os.path.join(BASE, f)
-        if os.path.exists(src):
-            shutil.copy2(src, os.path.join(dest, f))
-            print("کپی شد:", f)
+        src_path = os.path.join(BASE, f)
+        if os.path.exists(src_path):
+            os.makedirs(os.path.dirname(os.path.join(dest, f)) or dest, exist_ok=True)
+            shutil.copy2(src_path, os.path.join(dest, f))
+            print("copied:", f)
     print(f"EXE ساخته شد: dist\\{APP_NAME}\\{APP_NAME}.exe")
     print("قدم بعدی: Create_Setup_Installer.bat  →  Output\\NexusMed_Setup_v2.0.exe")
     return 0

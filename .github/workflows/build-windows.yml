@@ -1,0 +1,56 @@
+name: windows installer
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: install dependencies
+        shell: pwsh
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: sanity compile check
+        shell: pwsh
+        run: python -m compileall -q .
+
+      - name: build the exe
+        shell: pwsh
+        run: python build_exe.py
+
+      - name: build the setup with inno setup
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" NexusMed_Installer.iss
+          Get-ChildItem Output
+
+      - name: publish to github releases
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Output/NexusMed_Setup_v2.1.0.exe
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: upload artifact (manual runs)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: NexusMed-Setup
+          path: Output/NexusMed_Setup_v2.1.0.exe
