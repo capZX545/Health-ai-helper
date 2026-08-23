@@ -236,8 +236,10 @@ class Handler(BaseHTTPRequestHandler):
             # 1) engine diseases
             for d in get_all_diseases():
                 if q and (nq in __import__("common_2077").normalize(d.get("name", "")) or nq in __import__("common_2077").normalize(d.get("fa", ""))):
+                    from i18n import is_fa as _isfa
                     rows.append({"src": "engine", "name": d.get("name", ""), "fa": d.get("fa", ""),
-                                 "code": "", "sym": [s.get("name") for s in (d.get("symptoms") or [])][:8]})
+                                 "code": "", "sym": [s.get("name") for s in (d.get("symptoms") or [])][:8],
+                                 "labs": [x.get("fa" if _isfa() else "en") for x in (d.get("labs") or [])][:6]})
                 if len(rows) >= limit:
                     break
             # 2) ICD catalog (with the fa -> en bridge)
@@ -297,6 +299,11 @@ class Handler(BaseHTTPRequestHandler):
             per = min(60, int((qs.get("per", ["40"])[0] or 40)))
             cat = (qs.get("cat", [""])[0] or "")
             self._json({"ok": True, **browse_fda_drugs(page, per, q, cat)})
+            return True
+        if path == "/api/lab/tests":
+            from lab_full import all_tests, LAB_CATEGORIES
+            from i18n import is_fa
+            self._json({"ok": True, "tests": all_tests(is_fa()), "cats": LAB_CATEGORIES})
             return True
         if path == "/api/knowledge/drug-label":
             from knowledge_browser import get_drug_label, fa_drug_name
@@ -532,6 +539,12 @@ class Handler(BaseHTTPRequestHandler):
                     return self._json({"ok": False, "message_fa": tt("No image was sent.", "تصویری ارسال نشد.")}, 400)
                 img_bytes = base64.b64decode(b64.split(",")[-1])
                 return self._json(analyze_image_bytes(img_bytes, note, hint=data.get("hint")))
+            if path == "/api/lab/eval":
+                from lab_full import evaluate
+                from i18n import is_fa
+                key = str(data.get("key") or "")
+                val = data.get("value")
+                return self._json(evaluate(key, val, is_fa()))
             if path == "/api/pubmed":
                 return self._json(self._live_pubmed(str(data.get("q") or "").strip()))
             if path == "/api/trials":

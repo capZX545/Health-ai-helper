@@ -191,6 +191,7 @@ class App:
             (("Diseases database", "بانک بیماری‌ها"), self._panel_diseases),
             (("Drugs database", "بانک داروها"), self._panel_drugs),
             (("Research & articles", "پژوهش و مقالات"), self._panel_research),
+            (("Laboratory", "آزمایشگاه"), self._panel_lab),
             (("Mental health", "سلامت روان"), self._panel_mental),
             (("Sleep analysis", "تحلیل خواب"), self._panel_sleep),
             (("Checkup calendar", "تقویم چکاپ"), self._panel_checkup),
@@ -1017,11 +1018,14 @@ class App:
             for c in (r.get("candidates") or [])[:8]:
                 pct = c.get("percent")
                 pct = f"{pct}٪" if pct not in (None, "") else ""
-                urg = {"emergency": "اورژانس", "urgent": "فوری", "routine": "معمولی"}.get(c.get("urgency"), c.get("urgency", ""))
-                lines.append(f"• {c.get('fa', c.get('name', ''))}  {pct}  [{urg}]")
+                urg = {"emergency": self.L("emergency", "اورژانس"), "urgent": self.L("urgent", "فوری"),
+                       "routine": self.L("routine", "معمولی")}.get(c.get("urgency"), c.get("urgency", ""))
+                from i18n import get_lang as _gl2
+                _nm = c.get("fa", "") if _gl2() == "fa" else c.get("name", c.get("fa", ""))
+                lines.append("• " + str(_nm or c.get("name", "")) + "  " + pct + "  [" + urg + "]")
                 ms = c.get("matched_symptoms") or []
                 if ms:
-                    lines.append("    علائم منطبق: " + "، ".join(str(m) for m in ms[:6]))
+                    lines.append("    " + self.L("matched: ", "علائم منطبق: ") + "، ".join(str(m) for m in ms[:6]))
             lines.append("")
             lines.append(self.L("This is not a definitive diagnosis — a doctor's visit is necessary.",
                                 "این تشخیص قطعی نیست — مراجعه به پزشک لازم است."))
@@ -1097,18 +1101,24 @@ class App:
             lines = [f"◀ {d.get('name', '')}  [{u_fa}]", ""]
             sy = d.get("symptoms") or []
             if sy:
-                lines.append("علائم (با احتمال):")
+                lines.append(self.L("Symptoms (probability):", "علائم (با احتمال):"))
                 for s in sy:
                     lines.append(f"   • {s.get('name','')} — {int(round((s.get('probability') or 0) * 100))}٪")
             lines.append("")
+            labs = d.get("labs") or []
+            if labs:
+                from i18n import get_lang as _gl
+                _fa = _gl() == "fa"
+                _names = [x.get("fa", "") if _fa else x.get("en", "") for x in labs if isinstance(x, dict)]
+                lines.append(self.L("Related lab tests: ", "🧪 آزمایش‌های مرتبط: ") + "، ".join(_names))
             adv = d.get("advice") or []
             if adv:
-                lines.append("توصیه:")
+                lines.append(self.L("Advice:", "توصیه:"))
                 for a in adv:
                     lines.append("   • " + str(a))
             if d.get("doctor_when"):
                 lines.append("")
-                lines.append("⏰ چه زمانی پزشک: " + str(d["doctor_when"]))
+                lines.append(self.L("When to see a doctor: ", "⏰ چه زمانی پزشک: ") + str(d["doctor_when"]))
             lines.append("")
             lines.append(f"(فوریت: {u_fa} | شیوع پایه: {int(round((d.get('prior') or 0) * 1000) / 10)}٪)")
             box.delete("1.0", "end")
@@ -1696,6 +1706,118 @@ class App:
             bar = ent.master
             tk.Button(bar, text="جستجو", command=fn, bg="#0077b6", fg="#021018",
                       font=pick_font(10, True), relief="flat").pack(side="left", padx=(6, 0), ipadx=10)
+
+    def _panel_lab(self):
+        """Laboratory: full test catalog + value interpretation."""
+        import lab_full
+        w, top, inner, bottom = self._win_list(self.L("Laboratory — tests & interpretation", "آزمایشگاه — آزمون‌ها و تفسیر"))
+
+        tk.Label(top, text=self.L(f"{len(lab_full.TESTS)} tests — pick one, enter the value, get an interpretation. "
+                                  f"General adult ranges; your own lab sheet always wins.",
+                                  f"{len(lab_full.TESTS)} آزمون — انتخاب کن، مقدار را وارد کن و تفسیر بگیر. "
+                                  f"بازه‌ها عمومی است و برگه‌ی خودت ملاک است."),
+                 bg=C["panel2"], fg=C["cy"], font=pick_font(9), anchor="e", wraplength=640, justify="right").pack(fill="x", padx=16, pady=(8, 4))
+
+        from i18n import get_lang
+        fa_mode = get_lang() == "fa"
+        name_of = lambda t: t["fa"] if fa_mode else t["en"]
+
+        # فیلتر و جستجو
+        flt_bar = tk.Frame(top, bg=C["panel2"])
+        flt_bar.pack(fill="x", padx=16, pady=(0, 4))
+        cat_box = ttk.Combobox(flt_bar, state="readonly", font=pick_font(9), width=28)
+        _all_c = self.L("— all categories —", "— همه‌ی دسته‌ها —")
+        _cats = lab_full.LAB_CATEGORIES
+        cat_box["values"] = [_all_c] + [(_cats[c][1] if fa_mode else _cats[c][0]) for c in _cats]
+        cat_box.current(0)
+        cat_box.pack(side="right", fill="x", expand=True)
+        sv2 = tk.StringVar(value="")
+        q2 = tk.Entry(flt_bar, textvariable=sv2, bg="#0a1424", fg=C["tx"], relief="flat",
+                      font=pick_font(10), justify="right", insertbackground=C["cy"])
+        q2.pack(side="right", fill="x", expand=True, ipady=3, padx=(6, 0))
+
+        # لیست
+        rows_lab = []
+        def draw():
+            for r_ in rows_lab:
+                r_.destroy()
+            rows_lab.clear()
+            q = sv2.get().strip().lower()
+            ci = cat_box.current() - 1
+            ckey = list(_cats)[ci] if ci >= 0 else ""
+            n = 0
+            for k, t in lab_full.TESTS.items():
+                hay = (t["en"] + " " + t["fa"] + " " + k).lower()
+                if q and q not in hay:
+                    continue
+                if ckey and t["cat"] != ckey:
+                    continue
+                rng = self.L("qualitative", "کیفی") if t["qual"] else f"{t['lo']} – {t['hi']}"
+                b = tk.Button(inner, text=f"{name_of(t)}   [{rng} {'' if t['qual'] else t['unit']}]",
+                              command=lambda kk=k: pick(kk), anchor="e", bg="#101c36", fg=C["tx"],
+                              relief="flat", font=pick_font(9), activebackground="#101c36",
+                              activeforeground=C["cy"], cursor="hand2")
+                b.pack(fill="x", padx=10, pady=1)
+                rows_lab.append(b)
+                n += 1
+                if n >= 200:
+                    break
+        sv2.trace_add("write", lambda *a: draw())
+        cat_box.bind("<<ComboboxSelected>>", lambda e: draw())
+
+        # فرم تفسیر در پایین
+        form = tk.Frame(bottom, bg=C["panel2"])
+        form.pack(fill="x", pady=(6, 0))
+        sel_box = ttk.Combobox(form, state="readonly", font=pick_font(9), width=34)
+        sel_box["values"] = [f"{name_of(t)}  ({k})" for k, t in lab_full.TESTS.items()]
+        sel_box.current(0)
+        sel_box.pack(side="right", fill="x", expand=True, ipady=2)
+        val_e = tk.Entry(form, bg="#0a1424", fg=C["tx"], relief="flat", font=pick_font(10),
+                         justify="center", width=10, insertbackground=C["cy"])
+        val_e.pack(side="right", padx=6, ipady=3)
+        res_lbl = tk.Label(bottom, text="", bg=C["panel2"], fg=C["tx"], font=pick_font(10),
+                           anchor="e", justify="right", wraplength=640)
+        res_lbl.pack(fill="x", padx=16, pady=(4, 8))
+
+        def pick(k):
+            for i, item in enumerate(sel_box["values"]):
+                if item.endswith(f"({k})"):
+                    sel_box.current(i)
+                    break
+            val_e.focus_set()
+
+        def interpret(_e=None):
+            item = sel_box.get()
+            k = item.rsplit("(", 1)[-1].rstrip(")")
+            v = val_e.get().strip()
+            if not v:
+                return
+            r = lab_full.evaluate(k, v, fa_mode)
+            if not r.get("ok"):
+                res_lbl.config(text=self.L(r.get("message_en", ""), r.get("message_fa", "")), fg=C["yl"])
+                return
+            if r.get("qual"):
+                col = C["gr"] if r["status"] == "normal" else C["mg"]
+                txt = f"{r['test']}: {'مثبت' if fa_mode else 'positive' if r['status']=='positive' else ('منفی' if fa_mode else 'negative')}\n{r['note']}"
+            else:
+                st_fa = {"normal": "نرمال", "low": "پایین‌تر از حد", "high": "بالاتر از حد", "very_low": "خیلی پایین",
+                         "very_high": "خیلی بالا", "crit_low": "⚠️ خطرناک — پایین", "crit_high": "⚠️ خطرناک — بالا"}
+                st_en = {"normal": "normal", "low": "below range", "high": "above range", "very_low": "far below",
+                         "very_high": "far above", "crit_low": "CRITICAL LOW", "crit_high": "CRITICAL HIGH"}
+                st = (st_fa if fa_mode else st_en).get(r["status"], r["status"])
+                col = C["gr"] if r["status"] == "normal" else (C["mg"] if r["status"].startswith("crit") else C["yl"])
+                dev = f"  ({r['deviation_pct']}٪)" if r.get("deviation_pct") else ""
+                txt = f"{r['test']}: {r['value']} {r.get('unit','')}  →  {st}{dev}\n"
+                txt += (self.L("reference: ", "بازه‌ی مرجع: ") + r["range"] + "\n")
+                if r.get("note"):
+                    txt += r["note"] + "\n"
+                txt += self.L("(general info — a doctor makes the final call)", "(اطلاعات عمومی — تشخیص نهایی با پزشک)")
+            res_lbl.config(text=txt, fg=col)
+
+        tk.Button(form, text=self.L("Interpret", "تفسیر"), command=interpret, bg="#0077b6",
+                  fg="#021018", font=pick_font(10, True), relief="flat").pack(side="right", padx=6, ipadx=10)
+        val_e.bind("<Return>", interpret)
+        draw()
 
     def _panel_referral(self):
         from doctor_referral import generate

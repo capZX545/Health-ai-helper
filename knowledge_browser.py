@@ -81,6 +81,11 @@ def get_all_diseases() -> list[dict]:
             "advice": d.get("advice" if fa else "advice_en", d.get("advice", [])),
             "doctor_when": d.get("doctor_when" if fa else "doctor_when_en", d.get("doctor_when", "")),
         })
+        try:
+            from lab_full import labs_for_disease
+            out[-1]["labs"] = labs_for_disease(d.get("en", ""), d.get("id", ""))
+        except Exception:
+            pass
     return out
 
 

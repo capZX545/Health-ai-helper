@@ -163,7 +163,7 @@ T.en = {
   nav:[["chat","Talk to Nexus"],["image","Medical image analysis"],["profile","Patient profile"],
        ["vitals","Vitals"],["labs","Lab analysis"],["rx","Prescription scan"],["drugs","Drugs & interactions"],
        ["mental","Mental health"],["sleep","Sleep analysis"],["checkup","Checkup calendar"],
-       ["aid","First aid / CPR"],["referral","Doctor referral report"],["symptoms_browser","Symptoms"],["diseases_browser","Diseases"],["drugs_browser","Drugs"],["research","Research & articles"],["brain","Brain & learning"],
+       ["aid","First aid / CPR"],["referral","Doctor referral report"],["symptoms_browser","Symptoms"],["diseases_browser","Diseases"],["drugs_browser","Drugs"],["research","Research & articles"],["lab","Laboratory"],["brain","Brain & learning"],
        ["gpu","Local AI (Ollama)"],["settings","API settings"]],
   ph:"Describe your symptoms... (Enter = send, Shift+Enter = new line)", send:"Send",
   attach:"Attach a medical image", rmimg:"remove",
@@ -173,7 +173,7 @@ T.en = {
   foot:"NexusMed 2077 is an informational assistant; it does not replace a doctor and gives no definitive diagnosis. Emergency: Iran 115 | Europe/Finland 112",
   p_titles:{settings:"API settings",profile:"Patient profile",vitals:"Vitals",labs:"Lab analysis",rx:"Prescription & lab terms",
     drugs:"Drugs & interactions",mental:"Mental health",sleep:"Sleep analysis",checkup:"Checkup & vaccines",aid:"First aid",
-    referral:"Printable referral report", symptoms_browser:"Symptoms Browser", diseases_browser:"Diseases Database", drugs_browser:"Drugs Database", research:"Research & articles (PubMed + ClinicalTrials)",brain:"Internal brain & learning",gpu:"Local AI (Ollama)",image:"Medical image + text",assess:"Disease likelihood assessment"},
+    referral:"Printable referral report", symptoms_browser:"Symptoms Browser", diseases_browser:"Diseases Database", drugs_browser:"Drugs Database", research:"Research & articles (PubMed + ClinicalTrials)", lab:"Laboratory — tests & interpretation",brain:"Internal brain & learning",gpu:"Local AI (Ollama)",image:"Medical image + text",assess:"Disease likelihood assessment"},
   keys:"API keys", keys_note:"Keys are stored only in a local .env file on your machine. They never enter the code, the ZIP or the installer.",
   getkey:"Get a free key", testconn:"Test connection", savekeys:"Save keys (no restart)", savemodel:"Save model",
   model:"OpenRouter model", model_list:"pick from the free/suggested list", model_manual:"or type a model id manually",
@@ -225,7 +225,7 @@ T.fa = {
   nav:[["chat","گفتگو با نکسوس"],["image","تحلیل تصویر پزشکی"],["profile","پروفایل بیمار"],
        ["vitals","علائم حیاتی"],["labs","تحلیل آزمایش"],["rx","اسکن نسخه"],["drugs","دارو و تداخلات"],
        ["mental","سلامت روان"],["sleep","تحلیل خواب"],["checkup","تقویم چکاپ"],
-       ["aid","کمک‌های اولیه / CPR"],["referral","گزارش ارجاع به پزشک"],["symptoms_browser","علائم"],["diseases_browser","بیماری‌ها"],["drugs_browser","داروها"],["research","پژوهش و مقالات"],["brain","مغز داخلی / یادگیری"],
+       ["aid","کمک‌های اولیه / CPR"],["referral","گزارش ارجاع به پزشک"],["symptoms_browser","علائم"],["diseases_browser","بیماری‌ها"],["drugs_browser","داروها"],["research","پژوهش و مقالات"],["lab","آزمایشگاه"],["brain","مغز داخلی / یادگیری"],
        ["gpu","هوش محلی (Ollama)"],["settings","تنظیمات API"]],
   ph:"علائمت را بنویس... (Enter=ارسال، Shift+Enter=خط جدید)", send:"ارسال",
   attach:"ضمیمه عکس پزشکی", rmimg:"حذف",
@@ -235,7 +235,7 @@ T.fa = {
   foot:"NexusMed 2077 یک دستیار اطلاعاتی است؛ جایگزین پزشک نیست و تشخیص قطعی نمی‌دهد — اورژانس: ایران ۱۱۵ | اروپا/فنلاند ۱۱۲",
   p_titles:{settings:"تنظیمات API",profile:"پروفایل بیمار",vitals:"علائم حیاتی",labs:"تحلیل آزمایش",rx:"اسکن نسخه و اصطلاحات",
     drugs:"دارو و تداخلات دارویی",mental:"سلامت روان",sleep:"تحلیل خواب",checkup:"تقویم چکاپ و واکسن",aid:"کمک‌های اولیه",
-    referral:"گزارش ارجاع قابل چاپ", symptoms_browser:"مرور علائم", diseases_browser:"بانک بیماری‌ها", drugs_browser:"بانک داروها", research:"پژوهش و مقالات (PubMed + کارآزمایی‌ها)",brain:"مغز داخلی و یادگیری",gpu:"هوش مصنوعی محلی (Ollama)",image:"تحلیل تصویر پزشکی",assess:"ارزیابی احتمال بیماری‌ها"},
+    referral:"گزارش ارجاع قابل چاپ", symptoms_browser:"مرور علائم", diseases_browser:"بانک بیماری‌ها", drugs_browser:"بانک داروها", research:"پژوهش و مقالات (PubMed + کارآزمایی‌ها)", lab:"آزمایشگاه — آزمون‌ها و تفسیر نتایج",brain:"مغز داخلی و یادگیری",gpu:"هوش مصنوعی محلی (Ollama)",image:"تحلیل تصویر پزشکی",assess:"ارزیابی احتمال بیماری‌ها"},
   keys:"کلیدهای API", keys_note:"کلیدها فقط در فایل .env روی سیستم خودتان ذخیره می‌شوند و هرگز داخل کد، ZIP یا بسته‌ی نصبی قرار نمی‌گیرند.",
   getkey:"گرفتن کلید رایگان", testconn:"تست اتصال", savekeys:"ذخیره‌ی کلیدها (بدون ری‌استارت)", savemodel:"ذخیره‌ی مدل",
   model:"مدل OpenRouter", model_list:"انتخاب از لیست مدل‌های رایگان/پیشنهادی", model_manual:"یا نوشتن دستی model id",
@@ -396,7 +396,7 @@ var currentPanel="chat";
 function openPanel(k){
   currentPanel=k;if(k==="chat"){closePanel();return}
   $("panel").classList.add("open");$("ptitle").textContent=t("p_titles")[k]||k;
-  var P={settings:uiSettings,profile:uiProfile,vitals:uiVitals,labs:uiLabs,rx:uiRx,drugs:uiDrugs,symptoms_browser:uiSymptomsBrowser,diseases_browser:uiDiseasesBrowser,drugs_browser:uiDrugsBrowser,research:uiResearch,
+  var P={settings:uiSettings,profile:uiProfile,vitals:uiVitals,labs:uiLabs,rx:uiRx,drugs:uiDrugs,symptoms_browser:uiSymptomsBrowser,diseases_browser:uiDiseasesBrowser,drugs_browser:uiDrugsBrowser,research:uiResearch,lab:uiLab,
     mental:uiMental,sleep:uiSleep,checkup:uiCheckup,aid:uiAid,referral:uiReferral,brain:uiBrain,gpu:uiGpu,image:uiImage,assess:uiAssess};
   (P[k]||function(){})();
 }
@@ -858,6 +858,69 @@ async function rxSearch(){
   h+='<small style="color:var(--dim)">'+(LANG==="fa"?"منبع: RxNav / NIH":"Source: RxNav / NIH")+'</small>';
   $("rxres").innerHTML=h;
 }
+var LABT=[];var LABC={};
+async function uiLab(){
+  $("pbody").innerHTML='<div class="card"><h3>'+t("lab")+'</h3><div class="spin"></div></div>';
+  var r=await api("/api/lab/tests");
+  if(!r.ok){$("pbody").innerHTML='<p class=bad>'+esc(r.message_fa||"Error")+'</p>';return}
+  LABT=r.tests;LABC=r.cats||{};
+  var L=LANG==="fa";
+  var cats=Object.keys(LABC);
+  var h='<div class="card"><h3>🧪 '+(L?"کاتالوگ کامل آزمایش‌ها ("+fa(LABT.length)+" آزمون)":"Full test catalog ("+LABT.length+" tests)")+'</h3>';
+  h+='<p style="font-size:11.5px;color:var(--dim)">'+(L?"آزمون را انتخاب کن، مقدار را وارد کن و تفسیر بگیر. محدوده‌های مرجع عمومی است و بازه‌ی روی برگه‌ی خودت ملاک است.":"Pick a test, enter the value, get an interpretation. General adult ranges; your own report's range wins.")+'</p>';
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
+  h+='<select id="labcat" class="f" style="max-width:230px" onchange="drawLabTests()"><option value="">'+(L?"همه‌ی دسته‌ها":"all categories")+'</option>';
+  cats.forEach(function(c){h+='<option value="'+c+'">'+(L?LABC[c][1]:LABC[c][0])+'</option>'});
+  h+='</select>';
+  h+='<input class="f" id="labq" placeholder="'+(L?"جستجو...":"Search...")+'" oninput="drawLabTests()" style="flex:1;min-width:120px"></div>';
+  h+='<div id="lablist" style="margin-top:8px"></div></div>';
+  h+='<div class="card"><h3>🩺 '+(L?"تفسیر نتیجه":"Interpret a result")+'</h3>';
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">';
+  h+='<select id="labsel" class="f" style="flex:2;min-width:180px"></select>';
+  h+='<input class="f" id="labval" placeholder="'+(L?"مقدار (عدد یا مثبت/منفی)":"value (number or pos/neg)")+'" style="flex:1;min-width:110px" onkeydown="if(event.key===\'Enter\')labEval()">';
+  h+='<button class="btn pri" onclick="labEval()">'+(L?"تفسیر":"Interpret")+'</button></div>';
+  h+='<div id="labres" style="margin-top:10px"></div></div>';
+  h+='<div class="card"><small style="color:var(--dim)">'+(L?"متن کامل برگه‌ی آزمایش؟ آن را در ماژول «تحلیل آزمایش» پیست کن.":"Got a full report? Paste it in the 'Lab analysis' module.")+'</small></div>';
+  $("pbody").innerHTML=h;
+  drawLabTests();
+}
+function drawLabTests(){
+  var L=LANG==="fa";
+  var q=($("labq")&&$("labq").value.trim().toLowerCase())||"";
+  var c=($("labcat")&&$("labcat").value)||"";
+  var h="";
+  var opts="";
+  LABT.forEach(function(t2){
+    var hay=(t2.en+" "+t2.fa+" "+t2.key).toLowerCase();
+    var ok=(!q||hay.indexOf(q)>=0)&&(!c||t2.cat===c);
+    if(ok)h+='<div class="q" onclick="pickLab(\''+t2.key+'\')" style="cursor:pointer"><b>'+esc(L?t2.fa:t2.en)+'</b>'+
+      (t2.qual?'':' <small style="color:var(--dim)">'+(t2.lo)+' – '+(t2.hi)+' '+esc(t2.unit||"")+'</small>')+'</div>';
+    opts+='<option value="'+t2.key+'">'+esc((L?t2.fa:t2.en))+'</option>';
+  });
+  $("lablist").innerHTML=h||'<p class=warn>'+(L?"پیدا نشد":"not found")+'</p>';
+  $("labsel").innerHTML=opts;
+}
+function pickLab(k){$("labsel").value=k;$("labval").focus()}
+async function labEval(){
+  var k=$("labsel").value,v=$("labval").value.trim();
+  if(!v){return}
+  $("labres").innerHTML='<div class="spin"></div>';
+  var r=await api("/api/lab/eval",{key:k,value:v});
+  if(!r.ok){$("labres").innerHTML='<p class=warn>'+esc(r.message_fa||r.message_en||"Error")+'</p>';return}
+  var L=LANG==="fa";
+  var col=r.status==="normal"?"#3bff9e":(r.status.indexOf("crit")>=0?"#ff2a6d":"#ffd60a");
+  var S={normal:L?"نرمال":"normal",low:L?"پایین‌تر از حد":"below range",high:L?"بالاتر از حد":"above range",
+         very_low:L?"خیلی پایین":"far below range",very_high:L?"خیلی بالا":"far above range",
+         crit_low:L?"⚠️ خطرناک پایین":"CRITICAL LOW",crit_high:L?"⚠️ خطرناک بالا":"CRITICAL HIGH",
+         positive:L?"مثبت":"positive"};
+  var h='<div class="card" style="border-color:'+col+'"><b style="color:'+col+'">'+esc(r.test)+': '+esc(String(r.value!==undefined?r.value:v))+
+  (r.unit?" "+esc(r.unit):"")+' — '+S[r.status]+'</b>';
+  if(r.range)h+='<br><small style="color:var(--dim)">'+(L?"بازه‌ی مرجع: ":"reference: ")+esc(r.range)+'</small>';
+  if(r.deviation_pct)h+=' <small style="color:'+col+'">('+(L?"انحراف ":"off by ")+fa(r.deviation_pct)+"٪)</small>";
+  if(r.note)h+='<br><small>'+esc(r.note)+'</small>';
+  h+='<br><small style="color:var(--dim)">'+(L?"این تفسیر عمومی است؛ تشخیص نهایی با پزشک است.":"General info only; a doctor makes the final call.")+'</small></div>';
+  $("labres").innerHTML=h;
+}
 var _allT=null;
 function allSearchDebounced(){clearTimeout(_allT);_allT=setTimeout(allSearch,350)}
 async function allSearch(){
@@ -879,6 +942,7 @@ async function allSearch(){
     if(x.def)h+='<br><small style="color:var(--dim)">'+esc(x.def.slice(0,180))+'</small>';
     if(x.sym&&x.sym.length)h+='<br><small style="color:var(--cy)">'+(L?"علائم: ":"symptoms: ")+esc(x.sym.join("، ").slice(0,180))+'</small>';
     if(x.drug&&x.drug.length)h+='<br><small style="color:#3bff9e">'+(L?"داروهای درمان: ":"treated with: ")+esc(x.drug.join("، ").slice(0,180))+'</small>';
+    if(x.labs&&x.labs.length)h+='<br><small style="color:var(--cy)">'+(L?"آزمایش‌های مرتبط: ":"typical labs: ")+esc(x.labs.join("، ").slice(0,140))+'</small>';
     h+='</div>';
   });
   el.innerHTML=h;
@@ -966,6 +1030,7 @@ async function browseDis(delta){
     h+='<div class="q"><b>'+esc(x.name)+'</b>'+(x.fa?' <b style="color:var(--cy)">('+esc(x.fa)+')</b>':'')+
     (x.code?' <span class="tag">'+esc(x.code)+'</span>':'')+' <span class="tag" style="color:var(--dim)">'+esc(x.src)+'</span>';
     if(x.drug&&x.drug.length)h+='<br><small style="color:#3bff9e">'+(L?"داروها: ":"drugs: ")+esc(x.drug.join("، ").slice(0,140))+'</small>';
+    if(x.labs&&x.labs.length)h+='<br><small style="color:var(--cy)">'+(L?"آزمایش‌های مرتبط: ":"typical labs: ")+esc(x.labs.join("، ").slice(0,140))+'</small>';
     if(x.ch_fa)h+='<br><small style="color:var(--dim)">'+(L?"فصل: ":"chapter: ")+esc(x.ch_fa)+(x.cat?" · "+esc(x.cat):"")+'</small>';
     h+='</div>';
   });
