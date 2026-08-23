@@ -100,16 +100,16 @@ def build_doid():
             if not m or n.get("type") != "CLASS" or not n.get("lbl"):
                 continue
             meta = n.get("meta") or {}
+            xref_vals = [str(x.get("val", "")) for x in (meta.get("xrefs") or [])]
             e = {"doid": m.group(1), "name": n["lbl"]}
             dv = (meta.get("definition") or {}).get("val") or ""
             if dv:
                 e["def"] = " ".join(dv.split())[:320]
-            for xr in meta.get("xrefs") or []:
-                xr = str(xr)
+            for xr in xref_vals:
                 if xr.startswith("ICD10CM:") and "icd" not in e:
                     e["icd"] = xr.split("ICD10CM:")[1]
-                elif xr.startswith("MeSH:") and "mesh" not in e:
-                    e["mesh"] = xr.split("MeSH:")[1]
+                elif xr.startswith("MESH:") and "mesh" not in e:
+                    e["mesh"] = xr.split("MESH:")[1]
                 elif xr.startswith("OMIM:") and "omim" not in e:
                     e["omim"] = xr.split("OMIM:")[1].replace("MIM:", "")
             keep = []

@@ -417,6 +417,13 @@ def fa_disease_name(icd: str = "", en: str = "") -> str:
     return ""
 
 
+
+
+def _norm_key(s: str) -> str:
+    """Loose name key: lowercase letters and digits only."""
+    return "".join(ch for ch in (s or "").lower() if ch.isalnum())
+
+
 def fa_disease_full(en: str = "", icd: str = "", doid: str = "", mesh: str = "") -> str:
     """Try every key we have (icd, doid, mesh, en) until a farsi name shows up."""
     v = fa_disease_name(icd=icd, en=en)
@@ -769,6 +776,7 @@ def _build_unified() -> list:
             seen[key] = {"name": d.get("name", ""), "code": "DOID:" + d.get("doid", ""),
                          "src": "doid", "def": d.get("def", ""),
                          "fa": fa_disease_full(en=d.get("name", ""), doid=d.get("doid", ""), mesh=d.get("mesh", "")),
+                         "omim": str(d.get("omim", "") or "").replace("MIM:", ""),
                          "ch": ch.get("key", ""), "ch_fa": ch.get("fa", ""), "ch_en": ch.get("en", ""),
                          "cat": code[:3] if len(code) >= 4 else ""}
     for qid, e in _load_wiki().items():
@@ -834,6 +842,19 @@ def _build_unified() -> list:
             inherited += 1
         if not r.get("sym") and b["sym"]:
             r["sym"] = b["sym"]
+        if not r.get("sym"):
+            _hl = _load_hpo_links()
+            hs = _hl.get((r.get("name") or "").strip().lower())
+            if not hs and _hl:
+                _k = _norm_key(r.get("name") or "")
+                if _k:
+                    hs = _hl.get(_k)
+                    if not hs and len(_k) > 12:
+                        hs = _hl.get(_k[:24])
+            if not hs and r.get("omim"):
+                hs = _hl.get("omim" + str(r["omim"])) or _hl.get(_norm_key("OMIM:" + str(r["omim"])))
+            if hs:
+                r["sym"] = hs[:12]
         if not r.get("drug") and b["drug"]:
             r["drug"] = b["drug"]
 
@@ -1018,6 +1039,26 @@ def explain_disease_entry(name: str, code: str = "", chapter_en: str = "", chapt
             "sym_en": "not recorded", "sym_fa": "ثبت نشده", "family": False}
 
 
+_HPO_LINKS_CACHE: dict | None = None
+
+
+def _load_hpo_links() -> dict:
+    """disease name (lower) -> [symptom names] from official HPO annotations."""
+    global _HPO_LINKS_CACHE
+    if _HPO_LINKS_CACHE is None:
+        import gzip
+        import json as _json
+        import os
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "disease_symptoms_hpo.json.gz")
+        try:
+            with gzip.open(path, "rt", encoding="utf-8") as f:
+                _HPO_LINKS_CACHE = _json.load(f)
+        except Exception as e:
+            print("[knowledge_browser] HPO links not loaded:", e)
+            _HPO_LINKS_CACHE = {}
+    return _HPO_LINKS_CACHE
+
+
 # ---------- symptom -> diseases index (wiki + engine data) ----------
 
 _SYM_DIS_CACHE: dict | None = None
@@ -1039,6 +1080,25 @@ def _sym_index() -> dict:
             ent = idx.setdefault(k, {"en": s, "fa": "", "diseases": []})
             if len(ent["diseases"]) < 15:
                 ent["diseases"].append({"en": e.get("en", ""), "fa": e.get("fa", "")})
+    # جفت‌های HPO (بیماری‌های نادر)
+    from common_2077 import normalize as _n2
+    _seen_dis = set()
+    for dname, syms in _load_hpo_links().items():
+        if dname.startswith("omim") or dname.startswith("orpha") or dname.startswith("decipher"):
+            continue  # کلید خام شناسه، نه نام بیماری
+        pretty = dname.strip()
+        pk = _norm_key(pretty)
+        if not pk or pk in _seen_dis or len(pretty) < 4:
+            continue
+        _seen_dis.add(pk)
+        for s in syms[:14]:
+            k = _n2(s)
+            if not k:
+                continue
+            ent = idx.setdefault(k, {"en": s, "fa": "", "diseases": []})
+            if len(ent["diseases"]) < 12 and {"en": pretty, "fa": ""} not in ent["diseases"]:
+                ent["diseases"].append({"en": pretty, "fa": ""})
+
     # فارسی‌سازی نام علائم wiki از طریق دیکشنری موتور (en -> fa)
     rev_en = {}
     for sid, en in SYMPTOM_NAMES_EN.items():
