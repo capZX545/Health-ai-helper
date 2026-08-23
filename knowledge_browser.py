@@ -503,3 +503,75 @@ def search_hpo(query: str, limit: int = 30) -> list:
             if len(out) >= limit:
                 break
     return out
+
+
+# ---------- unified paged browsing over every bank ----------
+
+_UNIFIED_CACHE: list | None = None
+
+
+def _build_unified() -> list:
+    """One merged, deduplicated, alphabetical list over all disease banks."""
+    global _UNIFIED_CACHE
+    if _UNIFIED_CACHE is not None:
+        return _UNIFIED_CACHE
+    seen: dict[str, dict] = {}
+    import medical_catalog as _mc
+    _mc._load()
+    for c in (_mc._DATA.get("conditions") or []):
+        key = normalize(c.get("name", ""))
+        seen[key] = {"name": c.get("name", ""), "fa": fa_disease_name(icd=c.get("icd10", "")),
+                     "code": c.get("icd10", ""), "src": "icd10"}
+    for d in _load_doid():
+        key = normalize(d.get("name", ""))
+        if key not in seen:
+            seen[key] = {"name": d.get("name", ""), "fa": "", "code": "DOID:" + d.get("doid", ""),
+                         "src": "doid", "def": d.get("def", "")}
+    for qid, e in _load_wiki().items():
+        key = normalize(e.get("en", ""))
+        row = seen.get(key)
+        if row is None:
+            row = seen[key] = {"name": e.get("en", ""), "fa": "", "code": "", "src": "wiki"}
+        if e.get("fa") and not row.get("fa"):
+            row["fa"] = e["fa"]
+        if e.get("sym") and not row.get("sym"):
+            row["sym"] = e["sym"][:10]
+        if e.get("drug") and not row.get("drug"):
+            row["drug"] = e["drug"][:10]
+        if e.get("icd") and not row.get("code"):
+            row["code"] = e["icd"]
+    for d in get_all_diseases():
+        key = normalize(d.get("name", ""))
+        if key not in seen:
+            seen[key] = {"name": d.get("name", ""), "fa": d.get("fa", ""), "code": "",
+                         "src": "engine", "sym": [s.get("name") for s in (d.get("symptoms") or [])][:8]}
+    out = list(seen.values())
+    out.sort(key=lambda r: (r.get("name") or "").lower())
+    _UNIFIED_CACHE = out
+    return out
+
+
+def browse_diseases(src: str = "all", page: int = 1, per: int = 40, q: str = "") -> dict:
+    rows = _build_unified()
+    if src and src != "all":
+        rows = [r for r in rows if r.get("src") == src]
+    if q:
+        nq = normalize(q)
+        rows = [r for r in rows if nq in normalize(r.get("name", "")) or nq in normalize(r.get("fa", ""))]
+    total = len(rows)
+    pages = max(1, (total + per - 1) // per)
+    page = max(1, min(page, pages))
+    return {"total": total, "page": page, "pages": pages, "per": per,
+            "rows": rows[(page - 1) * per: page * per]}
+
+
+def browse_fda_drugs(page: int = 1, per: int = 40, q: str = "") -> dict:
+    rows = _load_fda()
+    if q:
+        nq = normalize(q)
+        rows = [r for r in rows if nq in normalize(r.get("g", ""))]
+    total = len(rows)
+    pages = max(1, (total + per - 1) // per)
+    page = max(1, min(page, pages))
+    return {"total": total, "page": page, "pages": pages, "per": per,
+            "rows": rows[(page - 1) * per: page * per]}

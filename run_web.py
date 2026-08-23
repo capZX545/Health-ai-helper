@@ -274,6 +274,19 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"ok": True, "total": hpo_count(),
                         "terms": (search_hpo(q, limit) if q else [])[:limit]})
             return True
+        if path == "/api/knowledge/diseases-list":
+            from knowledge_browser import browse_diseases
+            src_ = (qs.get("src", ["all"])[0] or "all")
+            page = int((qs.get("page", ["1"])[0] or 1))
+            per = min(60, int((qs.get("per", ["40"])[0] or 40)))
+            self._json({"ok": True, **browse_diseases(src_, page, per, q)})
+            return True
+        if path == "/api/knowledge/drugs-list":
+            from knowledge_browser import browse_fda_drugs
+            page = int((qs.get("page", ["1"])[0] or 1))
+            per = min(60, int((qs.get("per", ["40"])[0] or 40)))
+            self._json({"ok": True, **browse_fda_drugs(page, per, q)})
+            return True
         if path == "/api/knowledge/drug-label":
             from knowledge_browser import get_drug_label, fa_drug_name
             g = (qs.get("g", [""])[0] or q or "").strip()

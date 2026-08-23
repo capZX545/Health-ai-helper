@@ -1199,6 +1199,73 @@ class App:
         if dis:
             show_detail(dis[0])
 
+        # page-by-page browsing over every bank (about 45k diseases)
+        browse_state = {"src": "all", "page": 1}
+        engine_row_widgets = list(rows)
+        def clear_rows():
+            for r_ in cat_rows:
+                r_.destroy()
+            cat_rows.clear()
+            for row_, _t in engine_row_widgets:
+                row_.pack_forget()
+        def restore_rows():
+            clear_rows()
+            for row_, _t in engine_row_widgets:
+                row_.pack(fill="x", padx=10, pady=1)
+        def show_unified_detail(r_):
+            box.delete("1.0", "end")
+            lines = ["◀ " + r_.get("name", "") + (("   [" + r_["code"] + "]") if r_.get("code") else "")]
+            if r_.get("fa"):
+                lines.append("(" + r_["fa"] + ")")
+            lines.append("منبع: " + r_.get("src", ""))
+            if r_.get("def"):
+                lines.append("")
+                lines.append("تعریف: " + r_["def"][:320])
+            if r_.get("sym"):
+                lines.append("")
+                lines.append("علائم: " + "، ".join(str(s) for s in r_["sym"][:12]))
+            if r_.get("drug"):
+                lines.append("")
+                lines.append("داروهای درمان: " + "، ".join(str(d) for d in r_["drug"][:12]))
+            box.insert("1.0", "\n".join(lines))
+            box.tag_add("title", "1.0", "1.0 lineend")
+            box.tag_config("title", foreground=C["cy"], font=pick_font(12, True))
+        def load_browse(delta=0):
+            browse_state["page"] = max(1, browse_state["page"] + delta)
+            clear_rows()
+            from knowledge_browser import browse_diseases
+            r_ = browse_diseases(browse_state["src"], browse_state["page"], 25)
+            browse_state["page"] = r_["page"]
+            pg_lbl.config(text=f"صفحه {r_['page']} از {r_['pages']:,} — {r_['total']:,} بیماری")
+            for e_ in r_["rows"]:
+                row_ = tk.Frame(inner, bg=C["panel2"])
+                title = e_["name"] + (("  (" + e_["fa"] + ")") if e_.get("fa") else "")
+                b_ = tk.Button(row_, text=title,
+                               command=lambda ee=e_: show_unified_detail(ee),
+                               anchor="e", bg="#101c36", fg=C["tx"], relief="flat", font=pick_font(9),
+                               activebackground="#101c36", activeforeground=C["cy"], cursor="hand2")
+                b_.pack(side="right", fill="x", expand=True)
+                if e_.get("code"):
+                    tk.Label(row_, text=e_["code"], bg=C["panel2"], fg=C["dim"], font=pick_font(8)).pack(side="right", padx=(0, 8))
+                row_.pack(fill="x", padx=10, pady=1)
+                cat_rows.append(row_)
+        browse_bar = tk.Frame(top, bg=C["panel2"])
+        browse_bar.pack(fill="x", padx=16, pady=(2, 6))
+        pg_lbl = tk.Label(browse_bar, text="", bg=C["panel2"], fg=C["yl"], font=pick_font(8), anchor="e")
+        pg_lbl.pack(fill="x")
+        btn_bar = tk.Frame(browse_bar, bg=C["panel2"])
+        btn_bar.pack(fill="x")
+        for label, s_ in (("همه", "all"), ("ICD-10", "icd10"), ("DOID", "doid"), ("Wikidata", "wiki"), ("موتور", "engine")):
+            tk.Button(btn_bar, text=label,
+                      command=lambda ss=s_: (browse_state.update(src=ss, page=1), load_browse(0)),
+                      bg="#0d1930", fg=C["tx"], relief="flat", font=pick_font(8)).pack(side="right", padx=2, ipadx=4)
+        tk.Button(btn_bar, text="◀", command=lambda: load_browse(-1), bg="#0d1930", fg=C["cy"],
+                  relief="flat", font=pick_font(9)).pack(side="left", padx=2)
+        tk.Button(btn_bar, text="▶", command=lambda: load_browse(1), bg="#0d1930", fg=C["cy"],
+                  relief="flat", font=pick_font(9)).pack(side="left", padx=2)
+        tk.Button(btn_bar, text="فهرست عادی", command=restore_rows, bg="#0d1930", fg=C["gr"],
+                  relief="flat", font=pick_font(8)).pack(side="left", padx=6)
+
     def _panel_drugs(self):
         """
         Drug database: category, class, side effects/interactions, pregnancy and more.
@@ -1358,6 +1425,56 @@ class App:
         box.pack(fill="both", expand=True, padx=16, pady=(4, 8))
         if drugs:
             show_detail(drugs[0])
+
+        # page-by-page browsing over the whole FDA bank (19k drugs)
+        fb_state = {"page": 1}
+        drug_row_widgets = list(rows)
+        fda_row_widgets: list[tk.Widget] = []
+        def clear_fda():
+            for r_ in fda_row_widgets:
+                r_.destroy()
+            fda_row_widgets.clear()
+            for row_, _t in drug_row_widgets:
+                row_.pack_forget()
+            for r_ in fda_rows:
+                r_.destroy()
+            fda_rows.clear()
+        def restore_drug_rows():
+            clear_fda()
+            for row_, _t in drug_row_widgets:
+                row_.pack(fill="x", padx=10, pady=1)
+        def load_fda_browse(delta=0):
+            fb_state["page"] = max(1, fb_state["page"] + delta)
+            clear_fda()
+            from knowledge_browser import browse_fda_drugs
+            r_ = browse_fda_drugs(fb_state["page"], 25, q=sv.get().strip())
+            fb_state["page"] = r_["page"]
+            fpg_lbl.config(text=f"صفحه {r_['page']} از {r_['pages']:,} — {r_['total']:,} دارو")
+            for d_ in r_["rows"]:
+                row_ = tk.Frame(inner, bg=C["panel2"])
+                brand = (d_.get("brands") or [""])[0]
+                title = d_["g"] + (("  (" + brand + ")") if brand and brand.lower() != d_["g"].lower() else "")
+                b_ = tk.Button(row_, text=title,
+                               command=lambda dd=d_: show_fda_detail(dd),
+                               anchor="e", bg="#101c36", fg=C["tx"], relief="flat", font=pick_font(9),
+                               activebackground="#101c36", activeforeground=C["cy"], cursor="hand2")
+                b_.pack(side="right", fill="x", expand=True)
+                row_.pack(fill="x", padx=10, pady=1)
+                fda_row_widgets.append(row_)
+        fb_bar = tk.Frame(top, bg=C["panel2"])
+        fb_bar.pack(fill="x", padx=16, pady=(2, 6))
+        fpg_lbl = tk.Label(fb_bar, text="", bg=C["panel2"], fg=C["yl"], font=pick_font(8), anchor="e")
+        fpg_lbl.pack(fill="x")
+        fbtn = tk.Frame(fb_bar, bg=C["panel2"])
+        fbtn.pack(fill="x")
+        tk.Button(fbtn, text="مرور بانک FDA", command=lambda: load_fda_browse(0), bg="#0d1930",
+                  fg=C["yl"], relief="flat", font=pick_font(8)).pack(side="right", padx=2, ipadx=6)
+        tk.Button(fbtn, text="◀", command=lambda: load_fda_browse(-1), bg="#0d1930", fg=C["cy"],
+                  relief="flat", font=pick_font(9)).pack(side="left", padx=2)
+        tk.Button(fbtn, text="▶", command=lambda: load_fda_browse(1), bg="#0d1930", fg=C["cy"],
+                  relief="flat", font=pick_font(9)).pack(side="left", padx=2)
+        tk.Button(fbtn, text="فهرست عادی", command=restore_drug_rows, bg="#0d1930", fg=C["gr"],
+                  relief="flat", font=pick_font(8)).pack(side="left", padx=6)
 
     def _panel_research(self):
         """

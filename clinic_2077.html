@@ -893,6 +893,56 @@ async function hpoSearch(){
   });
   el.innerHTML=h;
 }
+var _disState={src:"all",page:1};
+function drawBankTabs(){
+  var L=LANG==="fa";
+  var banks=[["all",L?"همه":"all"],["icd10","ICD-10"],["doid","DOID"],["wiki","Wikidata"],["engine",L?"موتور":"engine"]];
+  var h="";
+  banks.forEach(function(b){
+    var on=_disState.src===b[0];
+    h+='<button class="btn'+(on?" pri":"")+'" style="padding:4px 12px;font-size:12px" onclick="setBank(\''+b[0]+'\')">'+b[1]+'</button>';
+  });
+  $("banktabs").innerHTML=h;
+}
+function setBank(s){_disState.src=s;_disState.page=1;drawBankTabs();browseDis(0)}
+async function browseDis(delta){
+  _disState.page=Math.max(1,_disState.page+delta);
+  var el=$("disbrowse");
+  el.innerHTML='<div class="spin"></div>';
+  var r=await api("/api/knowledge/diseases-list?src="+_disState.src+"&page="+_disState.page+"&per=25");
+  if(!r.ok){el.innerHTML='<p class=bad>Error</p>';return}
+  var L=LANG==="fa";
+  $("dispage").textContent=fa(r.page)+" / "+fa(r.pages)+" ("+fa(r.total)+")";
+  var h="";
+  r.rows.forEach(function(x){
+    h+='<div class="q"><b>'+esc(x.name)+'</b>'+(x.fa?' <b style="color:var(--cy)">('+esc(x.fa)+')</b>':'')+
+    (x.code?' <span class="tag">'+esc(x.code)+'</span>':'')+' <span class="tag" style="color:var(--dim)">'+esc(x.src)+'</span>';
+    if(x.drug&&x.drug.length)h+='<br><small style="color:#3bff9e">'+(L?"داروها: ":"drugs: ")+esc(x.drug.join("، ").slice(0,140))+'</small>';
+    h+='</div>';
+  });
+  el.innerHTML=h||'<p class=warn>'+(L?"خالی":"empty")+'</p>';
+}
+var _fdaState={page:1};
+var _fdaBq=null;
+function fdaBrowseDebounced(){clearTimeout(_fdaBq);_fdaBq=setTimeout(function(){_fdaState.page=1;browseFda(0)},350)}
+async function browseFda(delta){
+  _fdaState.page=Math.max(1,_fdaState.page+delta);
+  var el=$("fdabrowse");
+  el.innerHTML='<div class="spin"></div>';
+  var q=($("fdaBrowseQ")&&$("fdaBrowseQ").value.trim())||"";
+  var r=await api("/api/knowledge/drugs-list?page="+_fdaState.page+"&per=25"+(q?"&q="+encodeURIComponent(q):""));
+  if(!r.ok){el.innerHTML='<p class=bad>Error</p>';return}
+  var L=LANG==="fa";
+  $("fdapage").textContent=fa(r.page)+" / "+fa(r.pages)+" ("+fa(r.total)+")";
+  var h="";
+  r.rows.forEach(function(d){
+    h+='<div class="q"><b>'+esc(d.g)+'</b>';
+    if(d.brands&&d.brands.length)h+=' <small style="color:var(--cy)">'+esc(d.brands.slice(0,3).join("، "))+'</small>';
+    if(d.class&&d.class.length)h+='<br><small>'+esc(d.class.slice(0,2).join("، "))+'</small>';
+    h+=' <small style="color:var(--dim)">('+fa(d.n)+')</small></div>';
+  });
+  el.innerHTML=h||'<p class=warn>'+(L?"خالی":"empty")+'</p>';
+}
 async function showDrugLabel(g){
   var el=$("lbl-"+g.replace(/[^a-z0-9]/gi,""));
   if(!el)return;
@@ -1023,7 +1073,16 @@ async function uiDiseasesBrowser(){
   h+='<p style="font-size:11.5px;color:var(--dim)">'+(LANG==="fa"?"یک‌جا: موتور تشخیص + ICD-10 + Disease Ontology + Wikidata (با علائم و داروهای درمان)":"engine + ICD-10 + Disease Ontology + Wikidata (with symptoms and treatments)")+'</p>';
   h+='<input class="f" id="allq" placeholder="'+(LANG==="fa"?"فارسی یا انگلیسی یا کد — مثل: دیابت، migraine، C08":"fa/en or a code: diabetes, migraine, C08")+'" oninput="allSearchDebounced()">';
   h+='<div id="allres" style="margin-top:8px"></div></div>';
+  h+='<div class="card"><h3>📚 '+(LANG==="fa"?"مرور همه‌ی بیماری‌ها — صفحه به صفحه":"Browse every disease, page by page")+'</h3>';
+  h+='<div id="banktabs" style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0"></div>';
+  h+='<div style="display:flex;gap:6px;align-items:center;margin:6px 0">';
+  h+='<button class="btn" onclick="browseDis(-1)">◀</button>';
+  h+='<span id="dispage" style="color:var(--yl);font-size:12px;min-width:110px;text-align:center"></span>';
+  h+='<button class="btn" onclick="browseDis(1)">▶</button></div>';
+  h+='<div id="disbrowse"></div></div>';
   el.innerHTML=h;
+
+  drawBankTabs();browseDis(0);
 }
 function filterDiseases(q){
   q=q.toLowerCase();
@@ -1080,7 +1139,16 @@ async function uiDrugsBrowser(){
   h+='<p style="font-size:11.5px;color:var(--dim)">'+(LANG==="fa"?"جستجوی زنده در دایرکتوری رسمی NDC سازمان غذا و داروی آمریکا (منبع باز openFDA)":"Live search in the official FDA NDC directory (openFDA open data)")+'</p>';
   h+='<input class="f" id="fdaq" placeholder="'+(LANG==="fa"?"مثلاً: atorvastatin یا Advil یا metformin":"e.g. atorvastatin / Advil / metformin")+'" oninput="fdaSearchDebounced()">';
   h+='<div id="fdares"></div></div>';
+  h+='<div class="card"><h3>📋 '+(LANG==="fa"?"مرور بانک کامل FDA — صفحه به صفحه":"Browse the whole FDA bank")+'</h3>';
+  h+='<div style="display:flex;gap:6px;align-items:center;margin:6px 0;flex-wrap:wrap">';
+  h+='<input class="f" id="fdaBrowseQ" placeholder="'+(LANG==="fa"?"فیلتر (انگلیسی)...":"filter...")+'" style="flex:1;min-width:100px" oninput="fdaBrowseDebounced()">';
+  h+='<button class="btn" onclick="browseFda(-1)">◀</button>';
+  h+='<span id="fdapage" style="color:var(--yl);font-size:12px;min-width:110px;text-align:center"></span>';
+  h+='<button class="btn" onclick="browseFda(1)">▶</button></div>';
+  h+='<div id="fdabrowse"></div></div>';
   el.innerHTML=h;
+
+  browseFda(0);
 }
 var _fdaT=null;
 function fdaSearchDebounced(){
