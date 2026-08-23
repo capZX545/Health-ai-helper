@@ -3,7 +3,7 @@
 
 #define MyAppName "NexusMed 2077"
 #define MyAppNameFa "نکسوس ۲۰۷۷ — دستیار هوشمند پزشکی فارسی"
-#define MyAppVersion "2.2.3"
+#define MyAppVersion "2.3.0"
 #define MyAppPublisher "NexusMed 2077 Project"
 #define MyAppExeName "NexusMed2077.exe"
 
@@ -17,7 +17,7 @@ DefaultDirName={localappdata}\NexusMed2077
 DefaultGroupName=NexusMed 2077
 PrivilegesRequired=lowest
 OutputDir=Output
-OutputBaseFilename=NexusMed_Setup_v2.2.3
+OutputBaseFilename=NexusMed_Setup_v2.3.0
 SetupIconFile=
 Compression=lzma2/max
 SolidCompression=yes
