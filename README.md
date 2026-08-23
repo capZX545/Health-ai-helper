@@ -46,10 +46,14 @@ Things got added over time as I needed them:
 
 - **Talk** — the main chat, with automatic symptom detection
 - **Symptoms** — every symptom in the program as a checklist. Tick what you have,
-  hit Analyze, and it ranks likely conditions with percentages and urgency
-- **Diseases** — the 104 conditions the diagnostic engine knows, plus the full
-  ICD-10-CM catalog (27,168 entries). Persian search works here too - "diabetes" or
-  "high blood pressure" typed in Persian both work, and so does a code like E11
+  hit Analyze, and it ranks likely conditions with percentages and urgency.
+  There's also the full HPO vocabulary here (~19,800 medical signs) for lookup
+- **Diseases** — the 104 conditions the diagnostic engine knows, the full
+  ICD-10-CM catalog (27,168 entries), the Human Disease Ontology (14,762 with
+  definitions) and every Wikidata disease with its Persian name, symptoms and
+  treatments. That's roughly 45k disease records behind one search box.
+  Persian queries work too - "diabetes" or "high blood pressure" typed in
+  Persian both work, and so does a code like E11
 - **Drugs** — 189 curated drugs with interactions in Persian, plus the complete FDA
   bank with 19,149 drugs. Many of them also carry the official FDA label sections
   (indications, warnings, adverse reactions, boxed warning)

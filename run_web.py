@@ -201,6 +201,7 @@ class Handler(BaseHTTPRequestHandler):
         Read-only knowledge routes (GET). Returns False when the path doesn't match.
         """
         from urllib.parse import parse_qs
+        from knowledge_browser import fa_disease_name
         qs = parse_qs(urlparse(self.path).query)
         q = (qs.get("q", [""])[0] or "").strip()
         if path == "/api/knowledge/symptoms":
@@ -223,6 +224,55 @@ class Handler(BaseHTTPRequestHandler):
             limit = int((qs.get("limit", ["40"])[0] or 40))
             results = search_fda_drugs(q, limit) if q else []
             self._json({"ok": True, "total": get_fda_drug_count(), "q": q, "drugs": results})
+            return True
+        if path == "/api/knowledge/diseases-all":
+            from knowledge_browser import (search_doid, search_wiki_diseases,
+                                           get_all_diseases, get_fda_drug_count)
+            from medical_catalog import stats as cat_stats
+            from knowledge_browser import get_catalog_diseases
+            limit = int((qs.get("limit", ["30"])[0] or 30))
+            rows = []
+            nq = __import__("common_2077").normalize(q)
+            # 1) engine diseases
+            for d in get_all_diseases():
+                if q and (nq in __import__("common_2077").normalize(d.get("name", "")) or nq in __import__("common_2077").normalize(d.get("fa", ""))):
+                    rows.append({"src": "engine", "name": d.get("name", ""), "fa": d.get("fa", ""),
+                                 "code": "", "sym": [s.get("name") for s in (d.get("symptoms") or [])][:8]})
+                if len(rows) >= limit:
+                    break
+            # 2) ICD catalog (with the fa -> en bridge)
+            if q and len(rows) < limit:
+                for c in (get_catalog_diseases(q, 10).get("results") or []):
+                    rows.append({"src": "icd10", "name": c.get("name", ""), "fa": c.get("fa", "") or fa_disease_name(icd=c.get("icd10", "")),
+                                 "code": c.get("icd10", ""), "sym": []})
+                    if len(rows) >= limit:
+                        break
+            # 3) DOID
+            if q and len(rows) < limit:
+                for d in search_doid(q, 10):
+                    rows.append({"src": "doid", "name": d.get("name", ""), "fa": fa_disease_name(en=d.get("name", "")),
+                                 "code": "DOID:" + d.get("doid", ""), "def": d.get("def", ""), "sym": []})
+                    if len(rows) >= limit:
+                        break
+            # 4) wikidata (with symptoms/treatments)
+            if q and len(rows) < limit:
+                for e in search_wiki_diseases(q, 10):
+                    rows.append({"src": "wiki", "name": e.get("en", ""), "fa": e.get("fa", ""),
+                                 "code": e.get("icd", "") or e.get("qid", ""), "sym": e.get("sym", [])[:10],
+                                 "drug": e.get("drug", [])[:10]})
+                    if len(rows) >= limit:
+                        break
+            from knowledge_browser import hpo_count, _load_doid, _load_wiki
+            self._json({"ok": True, "q": q, "results": rows,
+                        "counts": {"engine": len(get_all_diseases()), "icd10": cat_stats().get("conditions", 0),
+                                   "doid": len(_load_doid()), "wiki": len(_load_wiki()),
+                                   "hpo": hpo_count()}})
+            return True
+        if path == "/api/knowledge/hpo":
+            from knowledge_browser import search_hpo, hpo_count
+            limit = int((qs.get("limit", ["40"])[0] or 40))
+            self._json({"ok": True, "total": hpo_count(),
+                        "terms": (search_hpo(q, limit) if q else [])[:limit]})
             return True
         if path == "/api/knowledge/drug-label":
             from knowledge_browser import get_drug_label, fa_drug_name

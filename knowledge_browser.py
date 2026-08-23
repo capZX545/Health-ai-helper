@@ -386,3 +386,120 @@ def fa_disease_name(icd: str = "", en: str = "") -> str:
     if en:
         return m.get("disease_en_fa", {}).get(en.strip().lower(), "")
     return ""
+
+
+# ---------- big open banks: DOID / Wikidata / HPO ----------
+
+_DOID_CACHE: list | None = None
+_WIKI_CACHE: dict | None = None
+_HPO_CACHE: list | None = None
+
+
+def _load_doid() -> list:
+    global _DOID_CACHE
+    if _DOID_CACHE is None:
+        import json
+        import os
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "diseases_doid.json")
+        try:
+            _DOID_CACHE = json.load(open(path, encoding="utf-8"))
+        except Exception as e:
+            print("[knowledge_browser] DOID not loaded:", e)
+            _DOID_CACHE = []
+        for i, d in enumerate(_DOID_CACHE):
+            hay = " ".join([d.get("name", "")] + (d.get("syn") or [])).lower()
+            d["_i"], d["_hay"] = i, hay
+    return _DOID_CACHE
+
+
+def search_doid(query: str, limit: int = 15) -> list:
+    q = normalize(query)
+    if not q:
+        return []
+    out = []
+    for d in _load_doid():
+        if q in d["_hay"] or q in d.get("icd", "").lower():
+            out.append(d)
+            if len(out) >= limit:
+                break
+    return out
+
+
+def _load_wiki() -> dict:
+    global _WIKI_CACHE
+    if _WIKI_CACHE is None:
+        import json
+        import os
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "wiki_diseases.json")
+        try:
+            _WIKI_CACHE = json.load(open(path, encoding="utf-8"))
+        except Exception as e:
+            print("[knowledge_browser] wiki diseases not loaded:", e)
+            _WIKI_CACHE = {}
+    return _WIKI_CACHE
+
+
+def search_wiki_diseases(query: str, limit: int = 15) -> list:
+    q = normalize(query)
+    qe = query.strip().lower()
+    if not q:
+        return []
+    out = []
+    for k, e in _load_wiki().items():
+        if (q in normalize(e.get("en", "")) or q in normalize(e.get("fa", ""))
+                or qe == str(e.get("icd", "")).strip().lower()):
+            out.append({"qid": k, **e})
+            if len(out) >= limit:
+                break
+    return out
+
+
+def get_wiki_disease(en: str = "", icd: str = "", doid: str = "") -> dict | None:
+    """Find the wiki entry (with symptoms/treatments) for a disease."""
+    ne = normalize(en or "")
+    code = (icd or "").strip().upper()
+    dnum = str(doid or "").strip()
+    best = None
+    for k, e in _load_wiki().items():
+        if ne and normalize(e.get("en", "")) == ne:
+            return {"qid": k, **e}
+        if code and str(e.get("icd", "")).upper().rstrip(".0123456789") == code.rstrip(".0123456789")[:3]:
+            if e.get("sym") or e.get("drug"):
+                best = best or {"qid": k, **e}
+        if dnum and str(e.get("doid", "")).endswith(dnum):
+            return {"qid": k, **e}
+    return best
+
+
+def _load_hpo() -> list:
+    global _HPO_CACHE
+    if _HPO_CACHE is None:
+        import json
+        import os
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "symptoms_hpo.json")
+        try:
+            _HPO_CACHE = json.load(open(path, encoding="utf-8"))
+        except Exception as e:
+            print("[knowledge_browser] HPO not loaded:", e)
+            _HPO_CACHE = []
+        for i, t in enumerate(_HPO_CACHE):
+            hay = " ".join([t.get("name", "")] + (t.get("syn") or [])).lower()
+            t["_i"], t["_hay"] = i, hay
+    return _HPO_CACHE
+
+
+def hpo_count() -> int:
+    return len(_load_hpo())
+
+
+def search_hpo(query: str, limit: int = 30) -> list:
+    q = normalize(query)
+    if not q:
+        return []
+    out = []
+    for t in _load_hpo():
+        if q in t["_hay"]:
+            out.append(t)
+            if len(out) >= limit:
+                break
+    return out

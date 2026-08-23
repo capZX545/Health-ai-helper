@@ -1002,6 +1002,36 @@ class App:
                   fg=C["tx"], font=pick_font(10), relief="flat").pack(side="right", ipadx=8, ipady=3)
         box.pack(fill="both", expand=True, padx=16, pady=(4, 8))
 
+        # full HPO vocabulary search (about 20k terms)
+        hpo_bar = tk.Frame(bottom, bg=C["panel2"])
+        hpo_bar.pack(fill="x", pady=(6, 0), before=box)
+        hpo_var = tk.StringVar(value="")
+        hpo_entry = tk.Entry(hpo_bar, textvariable=hpo_var, bg="#0a1424", fg=C["tx"], relief="flat",
+                             font=pick_font(10), justify="right", insertbackground=C["cy"])
+        hpo_entry.pack(side="right", fill="both", expand=True, ipady=3, padx=(16, 0))
+        tk.Button(hpo_bar, text="جستجوی HPO", command=lambda: run_hpo(), bg="#0d1930",
+                  fg=C["yl"], font=pick_font(9), relief="flat").pack(side="right", padx=(6, 0), ipadx=6)
+        def run_hpo():
+            q = hpo_var.get().strip()
+            if not q:
+                return
+            try:
+                from knowledge_browser import search_hpo, hpo_count
+                res = search_hpo(q, 40)
+                lines = ["HPO (" + str(hpo_count()) + " اصطلاح) — نتایج «" + q + "»:"]
+                for t in res:
+                    line = "• " + t["name"] + "  [" + t["id"] + "]"
+                    if t.get("syn"):
+                        line += "  — " + "، ".join(t["syn"][:2])
+                    lines.append(line)
+                out = "\n".join(lines) if res else "چیزی پیدا نشد — انگلیسی امتحان کن (مثل headache)."
+            except Exception as ex:
+                out = "خطا: " + str(ex)[:100]
+            box.delete("1.0", "end")
+            box.insert("1.0", out)
+        hpo_entry.bind("<Return>", lambda _e: run_hpo())
+
+
     def _panel_diseases(self):
         """
         Disease database: counts, symptoms with probabilities, urgency, advice.
@@ -1070,6 +1100,22 @@ class App:
         # ----- full ICD-10 catalog search (300ms after typing stops)
         cat_rows: list[tk.Widget] = []
         _deb = {"job": None}
+        def show_bank_detail(name, defn="", code="", syms=None, drugs=None):
+            box.delete("1.0", "end")
+            lines = ["◀ " + name + ("   [" + code + "]" if code else ""), ""]
+            if defn:
+                lines.append("تعریف: " + defn[:350])
+                lines.append("")
+            if syms:
+                lines.append("علائم (Wikidata): " + "، ".join(str(s) for s in syms[:12]))
+            if drugs:
+                lines.append("داروهای درمان (Wikidata): " + "، ".join(str(d) for d in drugs[:12]))
+            lines.append("")
+            lines.append("(منبع: Disease Ontology / Wikidata — داده‌ی آزاد)")
+            box.insert("1.0", "\n".join(lines))
+            box.tag_add("title", "1.0", "1.0 lineend")
+            box.tag_config("title", foreground="#3bff9e", font=pick_font(12, True))
+
         def show_catalog_detail(name, code, chapter, fa_n=""):
             from knowledge_browser import fa_disease_name as _fdn
             fa_n = fa_n or _fdn(icd=code, en=name)
@@ -1105,6 +1151,40 @@ class App:
                 b.pack(side="right", fill="x", expand=True)
                 row.pack(fill="x", padx=10, pady=1)
                 cat_rows.append(row)
+            # DOID + Wikidata banks
+            try:
+                from knowledge_browser import search_doid, search_wiki_diseases
+                doid = search_doid(q, 8)
+                wiki = [e for e in search_wiki_diseases(q, 40) if e.get("fa") or e.get("sym") or e.get("drug")][:8]
+                if doid or wiki:
+                    sep2 = tk.Label(inner, text="— DOID (" + str(len(doid)) + ") + Wikidata (" + str(len(wiki)) + ") —",
+                                    bg="#0e1730", fg="#3bff9e", font=pick_font(9, True), anchor="e")
+                    sep2.pack(fill="x", padx=10, pady=(8, 2))
+                    cat_rows.append(sep2)
+                    for d in doid:
+                        row = tk.Frame(inner, bg=C["panel2"])
+                        b = tk.Button(row, text=d["name"] + "   [DOID:" + d["doid"] + "]",
+                                      command=lambda dd=d: show_bank_detail(dd.get("name", ""), defn=dd.get("def", ""), code="DOID:" + dd.get("doid", "")),
+                                      anchor="e", bg="#101c36", fg=C["tx"], relief="flat", font=pick_font(9),
+                                      activebackground="#101c36", activeforeground=C["cy"], cursor="hand2")
+                        b.pack(side="right", fill="x", expand=True)
+                        row.pack(fill="x", padx=10, pady=1)
+                        cat_rows.append(row)
+                    for e in wiki:
+                        row = tk.Frame(inner, bg=C["panel2"])
+                        title = e.get("en", "")
+                        if e.get("fa"):
+                            title += "  (" + e["fa"] + ")"
+                        b = tk.Button(row, text=title,
+                                      command=lambda ee=e: show_bank_detail(ee.get("en", ""), defn="", code=ee.get("icd", "") or ee.get("qid", ""),
+                                                                             syms=ee.get("sym", []), drugs=ee.get("drug", [])),
+                                      anchor="e", bg="#101c36", fg=C["tx"], relief="flat", font=pick_font(9),
+                                      activebackground="#101c36", activeforeground=C["cy"], cursor="hand2")
+                        b.pack(side="right", fill="x", expand=True)
+                        row.pack(fill="x", padx=10, pady=1)
+                        cat_rows.append(row)
+            except Exception:
+                pass
             # scroll the list down so the results show up
             w._canvas.yview_moveto(1.0)
         def schedule_catalog(*_):

@@ -850,6 +850,49 @@ async function rxSearch(){
   h+='<small style="color:var(--dim)">'+(LANG==="fa"?"منبع: RxNav / NIH":"Source: RxNav / NIH")+'</small>';
   $("rxres").innerHTML=h;
 }
+var _allT=null;
+function allSearchDebounced(){clearTimeout(_allT);_allT=setTimeout(allSearch,350)}
+async function allSearch(){
+  var q=$("allq").value.trim();
+  var el=$("allres");
+  if(!q){el.innerHTML="";return}
+  el.innerHTML='<div class="spin"></div>';
+  var r=await api("/api/knowledge/diseases-all?q="+encodeURIComponent(q)+"&limit=25");
+  if(!r.ok){el.innerHTML='<p class=bad>'+esc(r.message_fa||"Error")+'</p>';return}
+  var c=r.counts||{};
+  var L=LANG==="fa";
+  var SRC={engine:L?"موتور":"engine",icd10:"ICD-10",doid:"DOID",wiki:"Wikidata"};
+  var h='<small style="color:var(--dim)">'+(L?"بانک‌ها: ":"banks: ")+SRC.engine+" "+fa(c.engine||0)+" · ICD-10 "+fa(c.icd10||0)+" · DOID "+fa(c.doid||0)+" · Wikidata "+fa(c.wiki||0)+"</small>";
+  if(!r.results.length)h+='<p class=warn>'+(L?"چیزی پیدا نشد.":"Nothing found.")+'</p>';
+  r.results.forEach(function(x){
+    var col=x.src==="engine"?"#3bff9e":(x.src==="wiki"?"#00f0ff":"#ffd60a");
+    h+='<div class="q"><b>'+esc(x.name)+'</b>'+(x.fa?' <b style="color:var(--cy)">('+esc(x.fa)+')</b>':'')+
+    ' <span class="tag" style="color:'+col+'">'+SRC[x.src]+'</span>'+(x.code?' <span class="tag">'+esc(x.code)+'</span>':'');
+    if(x.def)h+='<br><small style="color:var(--dim)">'+esc(x.def.slice(0,180))+'</small>';
+    if(x.sym&&x.sym.length)h+='<br><small style="color:var(--cy)">'+(L?"علائم: ":"symptoms: ")+esc(x.sym.join("، ").slice(0,180))+'</small>';
+    if(x.drug&&x.drug.length)h+='<br><small style="color:#3bff9e">'+(L?"داروهای درمان: ":"treated with: ")+esc(x.drug.join("، ").slice(0,180))+'</small>';
+    h+='</div>';
+  });
+  el.innerHTML=h;
+}
+var _hpoT=null;
+function hpoSearchDebounced(){clearTimeout(_hpoT);_hpoT=setTimeout(hpoSearch,350)}
+async function hpoSearch(){
+  var q=$("hpoq").value.trim();
+  var el=$("hpores");
+  if(!q){el.innerHTML="";return}
+  el.innerHTML='<div class="spin"></div>';
+  var r=await api("/api/knowledge/hpo?q="+encodeURIComponent(q)+"&limit=40");
+  if(!r.ok){el.innerHTML='<p class=bad>Error</p>';return}
+  var L=LANG==="fa";
+  var h='<small style="color:var(--dim)">'+fa(r.terms.length)+' / '+fa(r.total)+'</small>';
+  if(!r.terms.length)h+='<p class=warn">'+(L?"پیدا نشد — انگلیسی بنویس.":"Nothing found.")+'</p>';
+  r.terms.forEach(function(t){
+    h+='<div class="q"><b>'+esc(t.name)+'</b> <span class="tag">'+esc(t.id)+'</span>'+
+    ((t.syn&&t.syn.length)?'<br><small style="color:var(--dim)">'+esc(t.syn.slice(0,3).join("، "))+'</small>':'')+'</div>';
+  });
+  el.innerHTML=h;
+}
 async function showDrugLabel(g){
   var el=$("lbl-"+g.replace(/[^a-z0-9]/gi,""));
   if(!el)return;
@@ -889,7 +932,12 @@ async function uiSymptomsBrowser(){
     h+='</div>';
   }
   h+='</div></div>';
+  h+='<div class="card"><h3>🧬 '+(LANG==="fa"?"واژگان کامل علائم پزشکی (HPO)":"Full medical symptom vocabulary (HPO)")+'</h3>';
+  h+='<p style="font-size:11.5px;color:var(--dim)">'+(LANG==="fa"?"همه‌ی علائم/نشانه‌های پزشکی شناخته‌شده — "+fa(window._HPO_N||19836)+" اصطلاح":"every known medical sign/symptom")+'</p>';
+  h+='<input class="f" id="hpoq" placeholder="'+(LANG==="fa"?"جستجو... (انگلیسی)":"Search... (english)")+'" oninput="hpoSearchDebounced()">';
+  h+='<div id="hpores" style="margin-top:8px"></div></div>';
   el.innerHTML=h;
+  api("/api/knowledge/hpo?limit=1").then(function(r){window._HPO_N=r.total;var e=$("hpores");});
   syncSymCount();
 }
 function symCk(id){var c=$("ck-"+id);SYMC[id]=c?c.checked:false;syncSymCount()}
@@ -971,6 +1019,10 @@ async function uiDiseasesBrowser(){
   h+='<p style="font-size:11.5px;color:var(--dim)">'+(LANG==="fa"?"کد ICD هم کار می‌کند (مثلاً E11 یا J45). منبع: CMS آمریکا":"ICD codes work too (e.g. E11, J45). Source: US CMS")+'</p>';
   h+='<input class="f" id="catq" placeholder="'+(LANG==="fa"?"مثلاً: دیابت، میگرن، سرطان ریه یا E11":"e.g. diabetes, migraine, E11")+'" onkeydown="if(event.key===\'Enter\')searchCatalog()">';
   h+='<button class="btn pri" onclick="searchCatalog()">'+(LANG==="fa"?"جستجو":"Search")+'</button><div id="catres" style="margin-top:8px"></div></div>';
+  h+='<div class="card"><h3>🌍 '+(LANG==="fa"?"جستجوی همه‌ی بانک‌های بیماری":"Search every disease bank")+'</h3>';
+  h+='<p style="font-size:11.5px;color:var(--dim)">'+(LANG==="fa"?"یک‌جا: موتور تشخیص + ICD-10 + Disease Ontology + Wikidata (با علائم و داروهای درمان)":"engine + ICD-10 + Disease Ontology + Wikidata (with symptoms and treatments)")+'</p>';
+  h+='<input class="f" id="allq" placeholder="'+(LANG==="fa"?"فارسی یا انگلیسی یا کد — مثل: دیابت، migraine، C08":"fa/en or a code: diabetes, migraine, C08")+'" oninput="allSearchDebounced()">';
+  h+='<div id="allres" style="margin-top:8px"></div></div>';
   el.innerHTML=h;
 }
 function filterDiseases(q){
