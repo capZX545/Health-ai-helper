@@ -1108,19 +1108,45 @@ async function uiSymptomsBrowser(){
   var h='<div class="card"><h3>'+(LANG==="fa"?"علائم ("+fa(r.total)+" مورد) — تیک بزن و تحلیل کن":"Symptoms ("+r.total+") — check & analyze")+'</h3>';
   h+='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">';
   h+='<input class="f" id="symq" placeholder="'+(LANG==="fa"?"جستجو...":"Search...")+'" oninput="filterSymptoms(this.value)" style="flex:1;min-width:120px">';
-  h+='<button class="btn pri" onclick="analyzeSymptoms()">'+(LANG==="fa"?"تحلیل علائم":"Analyze")+'</button>';
+  h+='<button class="btn pri" onclick="analyzeSymptoms()">'+(LANG==="fa"?"تحلیل علائم":"Analyze")+'</button>'+
+  '<button class="btn pri" style="background:linear-gradient(135deg,#3bff9e,#00b8d4)" onclick="bankMatch()">'+(LANG==="fa"?"جستجو در همه‌ی بیماری‌ها":"Search all diseases")+'</button>';
   h+='<button class="btn" onclick="clearSymptoms()">'+(LANG==="fa"?"پاک‌کردن":"Clear")+'</button>';
   h+='</div>';
   h+='<div id="symcount" style="font-size:11.5px;color:var(--yl);margin:6px 0"></div>';
   h+='<div id="symlist">';
-  for(var i=0;i<syms.length;i++){
-    var s=syms[i];
-    h+='<div class="q" data-search="'+esc(s.fa+" "+s.en+" "+s.id)+'" style="display:flex;gap:9px;align-items:flex-start">';
-    h+='<input type="checkbox" id="ck-'+esc(s.id)+'" onchange="symCk(\''+esc(s.id)+'\')" style="margin-top:5px;accent-color:#00b8d4;cursor:pointer"'+(SYMC[s.id]?' checked':'')+'>';
-    h+='<div style="flex:1"><label for="ck-'+esc(s.id)+'" style="cursor:pointer"><b>'+esc(LANG==="fa"?s.fa:s.en)+'</b> <small style="color:var(--cy)">'+esc(s.id)+'</small></label>';
-    h+='<br><small style="color:var(--dim)">'+(LANG==="fa"?"بیماری‌های مرتبط":"Related")+": "+s.related_diseases.map(function(d){return esc(d.name)}).join(", ")+'</small></div>';
-    h+='</div>';
-  }
+  var CKB=window._CHECKLIST||[];
+  h+='<div id="bigcheck" style="columns:2;column-gap:18px;margin-top:6px"></div>';
+  // ساخت لیست کامل با js بعد از رندر
+  window._renderBigCheck=function(){
+    var L=LANG==="fa";
+    var box=$("bigcheck"); if(!box)return;
+    var q=($("symq")&&$("symq").value.trim().toLowerCase())||"";
+    var h2="";
+    for(var i=0;i<CKB.length;i++){
+      var s=CKB[i];
+      var hay=(s.en+" "+(s.fa||"")).toLowerCase();
+      if(q&&hay.indexOf(q)<0)continue;
+      var nm=L?(s.fa||s.en):s.en;
+      h2+='<div class="q" data-search="'+esc(hay)+'" style="display:flex;gap:8px;align-items:flex-start;break-inside:avoid">';
+      h2+='<input type="checkbox" id="bc-'+i+'" onchange="SYMCK2('+i+')" style="margin-top:4px;accent-color:#00b8d4;cursor:pointer"'+(window._SYMC2&&window._SYMC2[s.id]?' checked':'')+'>';
+      h2+='<label for="bc-'+i+'" style="cursor:pointer;flex:1">'+esc(nm)+(s.engine?'':' <small style="color:var(--dim)">'+fa(s.count||0)+'</small>')+'</label></div>';
+    }
+    box.innerHTML=h2||'<p class=warn>'+(L?"پیدا نشد":"not found")+'</p>';
+  };
+  window._SYMC2={};
+  window.SYMCK2=function(i){
+    var s=CKB[i];
+    var c=$("bc-"+i);
+    if(c)window._SYMC2[s.id]=c.checked;
+    var n=0;for(var k in window._SYMC2){if(window._SYMC2[k])n++}
+    var el2=$("symcount");if(el2)el2.textContent=fa(n)+" "+(LANG==="fa"?"علامت انتخاب شده":"selected");
+  };
+  // fetch big checklist
+  api("/api/knowledge/symptom-checklist").then(function(r){
+    if(r.ok){window._CHECKLIST=r.symptoms;
+      // علائم موتور را از حالت check جدا نگه می‌داریم
+      window._renderBigCheck();}
+  });
   h+='</div></div>';
   h+='<div class="card"><h3>🔎 '+(LANG==="fa"?"هر علامت چه بیماری‌هایی دارد ("+fa(window._SYMIDX_N||579)+" علامت)":"Which diseases have this symptom ("+(window._SYMIDX_N||579)+" symptoms)")+'</h3>';
   h+='<input class="f" id="symdisq" placeholder="'+(LANG==="fa"?"مثلاً: سردرد یا headache":"e.g. headache")+'" oninput="symDisDebounced()">';
@@ -1179,6 +1205,38 @@ async function analyzeSymptoms(){
   h+='<div class="card"><small style="color:var(--dim)">'+(LANG==="fa"?"این تحلیل تشخیص قطعی نیست — مراجعه به پزشک لازم است.":"Not a definitive diagnosis — see a doctor.")+'</small></div>';
   $("pbody").innerHTML=h;
 }
+async function bankMatch(){
+  var L=LANG==="fa";
+  var picked=[];
+  // از چک‌لیست جدید
+  var CKB=window._CHECKLIST||[];
+  for(var k in (window._SYMC2||{})){
+    if(window._SYMC2[k]){
+      var s=CKB.find(function(x){return x.id===k});
+      if(s)picked.push(L?(s.fa||s.en):s.en);
+    }
+  }
+  // از چک‌لیست قدیمی (موتور)
+  var syms=window._SYMS||[];
+  syms.forEach(function(s){if(SYMC[s.id])picked.push(L?(s.fa||s.en):s.en)});
+  if(!picked.length){alert(L?"اول حداقل یک علامت تیک بزن":"tick at least one symptom");return}
+  var el=$("pbody");
+  el.innerHTML='<div class="card"><h3>'+(L?"در حال جستجوی کل بانک بیماری‌ها…":"Searching the whole disease bank…")+'</h3><div class="spin"></div></div>';
+  var r=await api("/api/knowledge/symptom-match",{symptoms:picked});
+  if(!r.ok){el.innerHTML='<p class=bad>'+esc(r.message_fa||"Error")+'</p>';return}
+  var h='<div class="card"><h3>🧬 '+(L?"نتیجه‌ی جستجو در "+fa(r.matches.length)+" بیماری همخوان":"matched "+r.matches.length+" diseases")+'</h3>';
+  h+='<button class="btn" onclick="uiSymptomsBrowser()">↩ '+(L?"بازگشت":"Back")+'</button></div>';
+  if(!r.matches.length)h+='<div class="card"><p class=warn>'+(L?"بیماری همخوانی پیدا نشد — علامت کمتر یا کلی‌تری امتحان کن.":"No matching disease — try fewer or more general symptoms.")+'</p></div>';
+  r.matches.forEach(function(m){
+    var pct=Math.round(m.score*100);
+    h+='<div class="q"><b>'+esc(L?(m.fa||m.name):m.name)+'</b> <b style="color:var(--cy)">'+fa(pct)+'٪</b>'+
+    ' <span class="tag">'+esc(m.src)+'</span>'+(m.code?' <span class="tag">'+esc(m.code)+'</span>':'')+
+    '<div class="bar"><i style="width:'+pct+'%;background:linear-gradient(90deg,#3bff9e,#00b8d4)"></i></div>'+
+    '<small style="color:var(--dim)">'+(L?"علائم منطبق: ":"matched: ")+esc(m.matched.join("، "))+'</small></div>';
+  });
+  h+='<div class="card"><small style="color:var(--dim)">'+(L?"این تطبیق ساده است (هم‌پوشانی علائم) — تشخیص قطعی نیست و جای پزشک را نمی‌گیرد.":"Simple symptom-overlap matching — not a diagnosis.")+'</small></div>';
+  $("pbody").innerHTML=h;
+}
 function filterSymptoms(q){
   q=q.toLowerCase();
   var items=document.querySelectorAll("#symlist .q");
@@ -1186,6 +1244,7 @@ function filterSymptoms(q){
     var txt=items[i].getAttribute("data-search")||"";
     items[i].style.display=txt.indexOf(q)>=0?"":"none";
   }
+  if(window._renderBigCheck)window._renderBigCheck();
 }
 
 async function uiDiseasesBrowser(){

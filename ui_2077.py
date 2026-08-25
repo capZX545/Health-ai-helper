@@ -979,18 +979,22 @@ class App:
         _fa_s = _gl_s() == "fa"
         def _sym_name(s):
             return s["fa"] if _fa_s else (s.get("en", "") or s["fa"])
-        for s in syms:
+        from knowledge_browser import symptom_checklist
+        all_syms = symptom_checklist(240)
+        _fa_chk = _gl_s() == "fa"
+        for s in all_syms:
             v = tk.BooleanVar(value=False)
             vars_[s["id"]] = v
             row = tk.Frame(inner, bg=C["panel2"])
-            cb = tk.Checkbutton(row, text=_sym_name(s), variable=v, command=upd_cnt,
+            _nm_chk = (s["fa"] or s["en"]) if _fa_chk else s["en"]
+            _sub_chk = (" ✓engine" if s.get("engine") else f"  {s.get('count', 0)}")
+            cb = tk.Checkbutton(row, text=_nm_chk, variable=v, command=upd_cnt,
                                 bg=C["panel2"], fg=C["tx"], selectcolor="#0a1424",
                                 activebackground=C["panel2"], activeforeground=C["cy"],
-                                font=pick_font(11), anchor="e", justify="right", cursor="hand2")
+                                font=pick_font(10), anchor="e", justify="right", cursor="hand2")
             cb.pack(side="right", fill="x", expand=True)
-            rel = "، ".join(d["name"] for d in (s.get("related_diseases") or [])[:3]) or "—"
-            tk.Label(row, text=rel[:70], bg=C["panel2"], fg=C["dim"], font=pick_font(8),
-                     anchor="e", wraplength=300, justify="right").pack(side="right", fill="x", expand=True)
+            tk.Label(row, text=_sub_chk, bg=C["panel2"], fg=C["dim"], font=pick_font(8),
+                     anchor="e").pack(side="right", padx=(0, 6))
             row.pack(fill="x", padx=10, pady=1)
             rows.append((row, (s["fa"] + " " + s["en"]).lower()))
 
@@ -1004,7 +1008,10 @@ class App:
                                         height=10, relief="flat", wrap="word")
 
         def analyze_now():
-            names = [_sym_name(s) for s in syms if vars_[s["id"]].get()]
+            names = []
+            for s2 in all_syms:
+                if vars_.get(s2["id"]) and vars_[s2["id"]].get():
+                    names.append((s2["fa"] or s2["en"]) if _fa_chk else s2["en"])
             box.delete("1.0", "end")
             if not names:
                 box.insert("1.0", self.L("Check at least one symptom first.", "اول حداقل یک علامت تیک بزن."))
@@ -1043,6 +1050,29 @@ class App:
 
         bar2 = tk.Frame(bottom, bg=C["panel2"])
         bar2.pack(fill="x", pady=(6, 0))
+        def bank_match_now():
+            picked = []
+            for s2 in all_syms:
+                if vars_.get(s2["id"]) and vars_[s2["id"]].get():
+                    picked.append((s2["fa"] or s2["en"]) if _fa_chk else s2["en"])
+            box.delete("1.0", "end")
+            if not picked:
+                box.insert("1.0", self.L("Tick at least one symptom first.", "اول حداقل یک علامت تیک بزن."))
+                return
+            from knowledge_browser import match_diseases_by_symptoms
+            res = match_diseases_by_symptoms(picked, 12)
+            _fa_bm = _gl_s() == "fa"
+            lines = [self.L("— matches across the WHOLE disease bank —", "— تطبیق در کل بانک بیماری‌ها —")]
+            for m in res:
+                nm = (m.get("fa") or m["name"]) if _fa_bm else m["name"]
+                lines.append(f"• {nm}  [{int(m['score']*100)}٪]  ({m['src']})")
+                lines.append("    " + self.L("matched: ", "علائم منطبق: ") + "، ".join(m.get("matched", [])[:6]))
+            lines.append("")
+            lines.append(self.L("(simple overlap matching — not a diagnosis)", "(تطبیق ساده‌ی هم‌پوشانی علائم — تشخیص قطعی نیست)"))
+            box.delete("1.0", "end")
+            box.insert("1.0", "\n".join(lines))
+        tk.Button(bar2, text=self.L("Search all diseases", "جستجو در همه‌ی بیماری‌ها"), command=bank_match_now, bg="#0d5a4a",
+                  fg="#c8ffe9", font=pick_font(11, True), relief="flat").pack(side="right", padx=4, ipadx=10, ipady=3)
         tk.Button(bar2, text=self.L("Analyze", "تحلیل علائم"), command=analyze_now, bg="#0077b6",
                   fg="#021018", font=pick_font(11, True), relief="flat").pack(side="right", padx=16, ipadx=14, ipady=3)
         tk.Button(bar2, text=self.L("Clear", "پاک‌کردن"), command=clear_all, bg="#0d1930",

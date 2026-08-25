@@ -315,6 +315,15 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"ok": True, "total": symptom_index_count(),
                         "symptoms": search_symptom_diseases(q, 25) if q else []})
             return True
+        if path == "/api/knowledge/symptom-checklist":
+            from knowledge_browser import symptom_checklist
+            self._json({"ok": True, "symptoms": symptom_checklist(240)})
+            return True
+        if path == "/api/knowledge/symptom-match":
+            from knowledge_browser import match_diseases_by_symptoms
+            syms = data.get("symptoms") or []
+            self._json({"ok": True, "matches": match_diseases_by_symptoms(syms, 12)})
+            return True
         if path == "/api/knowledge/drug-label":
             from knowledge_browser import get_drug_label, fa_drug_name
             g = (qs.get("g", [""])[0] or q or "").strip()

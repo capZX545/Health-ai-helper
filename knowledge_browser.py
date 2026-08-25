@@ -1130,3 +1130,60 @@ def search_symptom_diseases(query: str, limit: int = 25) -> list[dict]:
 
 def symptom_index_count() -> int:
     return len(_sym_index())
+
+
+# ---------- expanded tickable checklist + bank matcher ----------
+
+
+def symptom_checklist(limit: int = 240) -> list[dict]:
+    """Engine symptoms first, then the most common HPO/wiki symptoms."""
+    out = []
+    seen = set()
+    for s in get_all_symptoms():
+        if s["id"] not in seen:
+            seen.add(s["id"])
+            out.append({"id": s["id"], "en": s["en"], "fa": s["fa"], "engine": True})
+    idx = _sym_index()
+    ranked = sorted(idx.items(), key=lambda kv: -len(kv[1]["diseases"]))
+    for k, ent in ranked:
+        if len(out) >= limit:
+            break
+        kk = _norm_key(ent["en"])
+        if kk in seen or not ent.get("en") or len(ent["en"]) < 4:
+            continue
+        low = ent["en"].lower()
+        if any(b in low for b in ("abnormality of", "abnormal ", "morphology", "shape", "size of",
+                                  "position", "pigmentation", "ncg_", "increased circulating",
+                                  "decreased circulating", "abnormal level")):
+            continue
+        seen.add(kk)
+        out.append({"id": "hpo_" + kk[:24], "en": ent["en"], "fa": ent.get("fa", ""),
+                    "engine": False, "count": len(ent["diseases"])})
+    return out
+
+
+def match_diseases_by_symptoms(sym_names: list, limit: int = 12) -> list:
+    """Rank bank diseases by how many of the ticked symptoms they carry."""
+    from common_2077 import normalize
+    want = {normalize(s) for s in sym_names if s}
+    if not want:
+        return []
+    scored = []
+    for r in _build_unified():
+        syms = r.get("sym") or []
+        if not syms:
+            continue
+        keys = {normalize(s) for s in syms}
+        hit = want & keys
+        if not hit:
+            continue
+        cov = len(hit) / max(1, len(keys))
+        strength = len(hit) / max(1, len(want))
+        score = round(strength * 0.65 + cov * 0.35, 3)
+        if score < 0.15:
+            continue
+        scored.append({"name": r.get("name", ""), "fa": r.get("fa", ""), "src": r.get("src", ""),
+                       "code": r.get("code", ""), "score": score, "hits": len(hit),
+                       "matched": [s for s in syms if normalize(s) in hit][:8], "total_syms": len(syms)})
+    scored.sort(key=lambda x: -x["score"])
+    return scored[:limit]
