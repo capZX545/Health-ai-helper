@@ -16,6 +16,16 @@ sys.path.insert(0, APP_DIR)
 os.environ.setdefault("NEXUSMED_MOBILE", "1")
 
 # start the server in a background thread
+# numpy/sklearn fallback for Android
+import sys
+for mod in ("numpy", "sklearn", "scipy"):
+    if mod not in sys.modules:
+        try:
+            __import__(mod)
+        except ImportError:
+            sys.modules[mod] = type(sys)("mock_" + mod)
+            sys.modules[mod].__getattr__ = lambda name: None
+
 import run_web
 from http.server import ThreadingHTTPServer
 
