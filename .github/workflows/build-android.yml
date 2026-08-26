@@ -25,43 +25,29 @@ jobs:
           java-version: "17"
           distribution: "temurin"
 
-      - name: install buildozer
+      - name: install dependencies
         run: |
           pip install buildozer cython==0.29.33
           sudo apt-get update -qq
           sudo apt-get install -qq --no-install-recommends \
             autoconf automake libtool pkg-config \
             libffi-dev libssl-dev libjpeg-dev libpng-dev \
-            zlib1g-dev openjdk-17-jdk unzip wget \
-            cmake ccache
+            zlib1g-dev openjdk-17-jdk unzip wget cmake ccache
 
-      - name: copy all app files to android dir
+      - name: copy app files
         shell: bash
         run: |
           cd android
           # همه‌ی فایل‌های پایتون
-          for f in ../*.py; do
-            [ -f "$f" ] && cp "$f" . || true
-          done
+          for f in ../*.py; do [ -f "$f" ] && cp "$f" .; done
           # داده‌ها
           for f in ../*.json ../*.gz ../*.db ../*.csv ../*.html ../*.js ../*.svg; do
             [ -f "$f" ] && cp "$f" . || true
           done
           # فونت‌ها
-          mkdir -p fonts
-          cp ../fonts/*.ttf fonts/ 2>/dev/null || true
-          # env example
+          mkdir -p fonts && cp ../fonts/*.ttf fonts/ 2>/dev/null || true
           cp ../.env.example . 2>/dev/null || true
-          echo "=== files ==="
-          ls *.py | wc -l
-          echo "Python files"
-          ls *.json *.gz *.db 2>/dev/null | wc -l
-          echo "data files"
-          du -sh .
-
-      - name: create icon
-        shell: bash
-        run: |
+          # icon
           python3 -c "
           import struct, zlib
           def png(w,h,r,g,b):
@@ -71,40 +57,27 @@ jobs:
               raw=b''
               for y in range(h):
                   raw+=b'\x00'+bytes([r,g,b])*w
-              ihdr=struct.pack('>IIBBBBB',w,h,8,2,0,0,0)
-              return b'\x89PNG\r\n\x1a\n'+ch(b'IHDR',ihdr)+ch(b'IDAT',zlib.compress(raw))+ch(b'IEND',b'')
-          open('android/icon.png','wb').write(png(512,512,0,240,255))
-          print('icon created')
+              return b'\x89PNG\r\n\x1a\n'+ch(b'IHDR',struct.pack('>IIBBBBB',w,h,8,2,0,0,0))+ch(b'IDAT',zlib.compress(raw))+ch(b'IEND',b'')
+          open('icon.png','wb').write(png(512,512,0,240,255))
           "
+          echo "=== files ==="
+          echo "py: $(ls *.py | wc -l) | data: $(ls *.json *.gz *.db 2>/dev/null | wc -l) | size: $(du -sh . | cut -f1)"
 
-      - name: build apk with numpy
+      - name: build apk
         shell: bash
         run: |
           cd android
-          export PATH=$PATH:$HOME/.buildozer/android/platform/android-sdk/tools
-          export ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk
-          export ANDROID_NDK_HOME=$HOME/.buildozer/android/platform/android-ndk
-
-          # تلاش برای ساخت با numpy
-          buildozer android debug 2>&1 | tail -60
-
-          # اگر APK ساخته شد
+          # بدون tail تا کل لاگ ببینیم
+          buildozer android debug 2>&1 | tee /tmp/build.log || true
+          # چک کن APK ساخته شد
           if ls bin/*.apk 2>/dev/null; then
-            echo "✅ APK built successfully!"
+            echo "✅ APK built!"
             ls -la bin/
             cp bin/*.apk ../NexusMed-Android.apk
           else
-            echo "::warning::Full build with numpy failed, trying without numpy..."
-            # نسخه‌ی سبک بدون numpy (همه‌چیز جز تحلیل تصویر کار می‌کند)
-            sed -i 's/numpy,//' buildozer.spec
-            buildozer android debug 2>&1 | tail -40
-            if ls bin/*.apk 2>/dev/null; then
-              echo "✅ APK (no numpy) built"
-              cp bin/*.apk ../NexusMed-Android.apk
-            else
-              echo "::error::APK build failed"
-              exit 1
-            fi
+            echo "::error::APK build failed — checking log..."
+            grep -i "error\|fail\|Traceback" /tmp/build.log | tail -20
+            exit 1
           fi
 
       - name: publish to release
