@@ -26,7 +26,7 @@ for mod in ("numpy", "sklearn", "scipy"):
             sys.modules[mod] = type(sys)("mock_" + mod)
             sys.modules[mod].__getattr__ = lambda name: None
 
-for mod in ("numpy", "sklearn", "scipy", "requests"):
+for mod in ("sklearn", "scipy", "requests"):
     if mod not in sys.modules:
         try:
             __import__(mod)
