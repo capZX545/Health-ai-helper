@@ -13,6 +13,10 @@ import tkinter.font as tkfont
 from tkinter import filedialog, messagebox, scrolledtext, ttk
 
 from common_2077 import APP_NAME, APP_VERSION, DATA_DIR, MEDICAL_DISCLAIMER
+import health_tools
+import lab_full
+import synth_desc
+import translit
 
 # ---------------------------------------------------------------- theme
 C = {
