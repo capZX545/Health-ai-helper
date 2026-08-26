@@ -98,6 +98,28 @@ class Handler(BaseHTTPRequestHandler):
             if path in ("/", "/index.html", "/clinic_2077.html"):
                 with open(HTML_FILE, "r", encoding="utf-8") as f:
                     return self._html(f.read())
+            if path == "/manifest.json":
+                with open(os.path.join(DATA_DIR, "manifest.json"), "r", encoding="utf-8") as f:
+                    return self._html(f.read())
+            if path == "/sw.js":
+                body = open(os.path.join(DATA_DIR, "sw.js"), "rb").read()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/javascript")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
+            if path.startswith("/icon-"):
+                fname = os.path.basename(path)
+                fpath = os.path.join(DATA_DIR, fname)
+                if os.path.exists(fpath):
+                    body = open(fpath, "rb").read()
+                    self.send_response(200)
+                    self.send_header("Content-Type", "image/svg+xml")
+                    self.send_header("Content-Length", str(len(body)))
+                    self.end_headers()
+                    self.wfile.write(body)
+                    return
             if path == "/api/status":
                 return self._json(self._status())
             if path == "/api/models":

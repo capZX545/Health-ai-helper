@@ -1,0 +1,111 @@
+name: android apk
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: set up python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: install java
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
+      - name: install buildozer
+        run: |
+          pip install buildozer cython==0.29.33
+          sudo apt-get update -qq
+          sudo apt-get install -qq --no-install-recommends \
+            autoconf automake libtool pkg-config \
+            libffi-dev libssl-dev libjpeg-dev libpng-dev \
+            zlib1g-dev openjdk-17-jdk unzip
+
+      - name: prepare android project
+        shell: bash
+        run: |
+          # کپی همه‌ی فایل‌های برنامه داخل پوشه‌ی اندروید
+          cd android
+          for f in ../clinic_2077.html ../manifest.json ../sw.js \
+            ../icon-192.svg ../icon-512.svg \
+            ../common_2077.py ../run_web.py ../i18n.py \
+            ../medical_engine.py ../bayesian_engine.py ../ml_classifier.py \
+            ../hybrid_engine.py ../knowledge_browser.py ../medical_catalog.py \
+            ../drug_interaction.py ../drugbank_connector.py \
+            ../lab_full.py ../health_tools.py ../synth_desc.py ../translit.py \
+            ../lab_catalog.py ../lab_tests.py ../lab_visualizer.py \
+            ../patient_profile.py ../health_vitals.py \
+            ../first_aid.py ../mental_health.py ../sleep_analyzer.py \
+            ../checkup_calendar.py ../doctor_referral.py \
+            ../auto_learning.py ../behavior_imitation.py ../semantic_rag.py \
+            ../clinical_dialogue.py ../medical_nlg.py \
+            ../ai_api_manager.py ../ai_client.py ../free_ai.py ../local_llm.py \
+            ../prescription_scanner.py ../image_caption.py \
+            ../image_type_detector.py ../lesion_analyzer.py ../ecg_analyzer.py \
+            ../openfda_connector.py ../clinical_trials_connector.py \
+            ../who_connector.py ../diagnose.py \
+            ../nlm_conditions.json ../drugs_fda.json ../drug_labels.json.gz \
+            ../fa_names.json ../wiki_diseases.json ../diseases_doid.json \
+            ../symptoms_hpo.json ../disease_symptoms_hpo.json.gz \
+            ../diseases_extra.json ../diseases_offline.db \
+            ../fda_drugs.json ../medical_ml_test_dataset.csv \
+            ../.env.example ../app_settings.json ; do
+            [ -f "$f" ] && cp "$f" . || echo "skip: $f"
+          done
+          # فونت‌ها
+          mkdir -p fonts
+          cp ../fonts/*.ttf fonts/ 2>/dev/null || true
+          echo "files in android/:"
+          ls -la | tail -20
+
+      - name: debug info
+        shell: bash
+        run: |
+          cd android
+          buildozer --version || true
+          java -version || true
+
+      - name: build debug apk
+        shell: bash
+        run: |
+          cd android
+          export PATH=$PATH:$HOME/.buildozer/android/platform/android-sdk/tools
+          export ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk
+          buildozer android debug 2>&1 | tail -50 || true
+          # اگر فایل APK ساخته شد
+          if ls bin/*.apk 2>/dev/null; then
+            echo "APK built successfully"
+            ls -la bin/
+          else
+            echo "::warning::APK build may have failed, continuing..."
+            # fallback: حداقل پروژه را نگه دار
+          fi
+
+      - name: upload artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NexusMed-Android
+          path: android/bin/*.apk
+          if-no-files-found: ignore
+
+      - name: publish to release
+        if: startsWith(github.ref, 'refs/tags/') && hashFiles('android/bin/*.apk') != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          files: android/bin/*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

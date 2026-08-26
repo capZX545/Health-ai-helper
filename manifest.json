@@ -1,0 +1,14 @@
+{
+  "name": "NexusMed 2077",
+  "short_name": "NexusMed",
+  "description": "Bilingual medical assistant — 45K diseases, 19K drugs, 96 lab tests",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#04060c",
+  "theme_color": "#00f0ff",
+  "icons": [
+    {"src": "/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml"},
+    {"src": "/icon-512.svg", "sizes": "512x512", "type": "image/svg+xml"}
+  ]
+}
