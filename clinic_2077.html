@@ -163,7 +163,7 @@ T.en = {
   nav:[["chat","Talk to Nexus"],["image","Medical image analysis"],["profile","Patient profile"],
        ["vitals","Vitals"],["labs","Lab analysis"],["rx","Prescription scan"],["drugs","Drugs & interactions"],
        ["mental","Mental health"],["sleep","Sleep analysis"],["checkup","Checkup calendar"],
-       ["aid","First aid / CPR"],["referral","Doctor referral report"],["symptoms_browser","Symptoms"],["diseases_browser","Diseases"],["drugs_browser","Drugs"],["research","Research & articles"],["lab","Laboratory"],["brain","Brain & learning"],
+       ["aid","First aid / CPR"],["referral","Doctor referral report"],["symptoms_browser","Symptoms"],["diseases_browser","Diseases"],["drugs_browser","Drugs"],["research","Research & articles"],["lab","Laboratory"],["tools","Health tools"],["brain","Brain & learning"],
        ["gpu","Local AI (Ollama)"],["settings","API settings"]],
   ph:"Describe your symptoms... (Enter = send, Shift+Enter = new line)", send:"Send",
   attach:"Attach a medical image", rmimg:"remove",
@@ -173,7 +173,7 @@ T.en = {
   foot:"NexusMed 2077 is an informational assistant; it does not replace a doctor and gives no definitive diagnosis. Emergency: Iran 115 | Europe/Finland 112",
   p_titles:{settings:"API settings",profile:"Patient profile",vitals:"Vitals",labs:"Lab analysis",rx:"Prescription & lab terms",
     drugs:"Drugs & interactions",mental:"Mental health",sleep:"Sleep analysis",checkup:"Checkup & vaccines",aid:"First aid",
-    referral:"Printable referral report", symptoms_browser:"Symptoms Browser", diseases_browser:"Diseases Database", drugs_browser:"Drugs Database", research:"Research & articles (PubMed + ClinicalTrials)", lab:"Laboratory — tests & interpretation",brain:"Internal brain & learning",gpu:"Local AI (Ollama)",image:"Medical image + text",assess:"Disease likelihood assessment"},
+    referral:"Printable referral report", symptoms_browser:"Symptoms Browser", diseases_browser:"Diseases Database", drugs_browser:"Drugs Database", research:"Research & articles (PubMed + ClinicalTrials)", lab:"Laboratory — tests & interpretation", tools:"Health tools — 10 practical calculators & trackers",brain:"Internal brain & learning",gpu:"Local AI (Ollama)",image:"Medical image + text",assess:"Disease likelihood assessment"},
   keys:"API keys", keys_note:"Keys are stored only in a local .env file on your machine. They never enter the code, the ZIP or the installer.",
   getkey:"Get a free key", testconn:"Test connection", savekeys:"Save keys (no restart)", savemodel:"Save model",
   model:"OpenRouter model", model_list:"pick from the free/suggested list", model_manual:"or type a model id manually",
@@ -225,7 +225,7 @@ T.fa = {
   nav:[["chat","گفتگو با نکسوس"],["image","تحلیل تصویر پزشکی"],["profile","پروفایل بیمار"],
        ["vitals","علائم حیاتی"],["labs","تحلیل آزمایش"],["rx","اسکن نسخه"],["drugs","دارو و تداخلات"],
        ["mental","سلامت روان"],["sleep","تحلیل خواب"],["checkup","تقویم چکاپ"],
-       ["aid","کمک‌های اولیه / CPR"],["referral","گزارش ارجاع به پزشک"],["symptoms_browser","علائم"],["diseases_browser","بیماری‌ها"],["drugs_browser","داروها"],["research","پژوهش و مقالات"],["lab","آزمایشگاه"],["brain","مغز داخلی / یادگیری"],
+       ["aid","کمک‌های اولیه / CPR"],["referral","گزارش ارجاع به پزشک"],["symptoms_browser","علائم"],["diseases_browser","بیماری‌ها"],["drugs_browser","داروها"],["research","پژوهش و مقالات"],["lab","آزمایشگاه"],["tools","ابزار سلامت"],["brain","مغز داخلی / یادگیری"],
        ["gpu","هوش محلی (Ollama)"],["settings","تنظیمات API"]],
   ph:"علائمت را بنویس... (Enter=ارسال، Shift+Enter=خط جدید)", send:"ارسال",
   attach:"ضمیمه عکس پزشکی", rmimg:"حذف",
@@ -235,7 +235,7 @@ T.fa = {
   foot:"NexusMed 2077 یک دستیار اطلاعاتی است؛ جایگزین پزشک نیست و تشخیص قطعی نمی‌دهد — اورژانس: ایران ۱۱۵ | اروپا/فنلاند ۱۱۲",
   p_titles:{settings:"تنظیمات API",profile:"پروفایل بیمار",vitals:"علائم حیاتی",labs:"تحلیل آزمایش",rx:"اسکن نسخه و اصطلاحات",
     drugs:"دارو و تداخلات دارویی",mental:"سلامت روان",sleep:"تحلیل خواب",checkup:"تقویم چکاپ و واکسن",aid:"کمک‌های اولیه",
-    referral:"گزارش ارجاع قابل چاپ", symptoms_browser:"مرور علائم", diseases_browser:"بانک بیماری‌ها", drugs_browser:"بانک داروها", research:"پژوهش و مقالات (PubMed + کارآزمایی‌ها)", lab:"آزمایشگاه — آزمون‌ها و تفسیر نتایج",brain:"مغز داخلی و یادگیری",gpu:"هوش مصنوعی محلی (Ollama)",image:"تحلیل تصویر پزشکی",assess:"ارزیابی احتمال بیماری‌ها"},
+    referral:"گزارش ارجاع قابل چاپ", symptoms_browser:"مرور علائم", diseases_browser:"بانک بیماری‌ها", drugs_browser:"بانک داروها", research:"پژوهش و مقالات (PubMed + کارآزمایی‌ها)", lab:"آزمایشگاه — آزمون‌ها و تفسیر نتایج", tools:"ابزار سلامت — ۱۰ ماشین‌حساب و ابزار کاربردی",brain:"مغز داخلی و یادگیری",gpu:"هوش مصنوعی محلی (Ollama)",image:"تحلیل تصویر پزشکی",assess:"ارزیابی احتمال بیماری‌ها"},
   keys:"کلیدهای API", keys_note:"کلیدها فقط در فایل .env روی سیستم خودتان ذخیره می‌شوند و هرگز داخل کد، ZIP یا بسته‌ی نصبی قرار نمی‌گیرند.",
   getkey:"گرفتن کلید رایگان", testconn:"تست اتصال", savekeys:"ذخیره‌ی کلیدها (بدون ری‌استارت)", savemodel:"ذخیره‌ی مدل",
   model:"مدل OpenRouter", model_list:"انتخاب از لیست مدل‌های رایگان/پیشنهادی", model_manual:"یا نوشتن دستی model id",
@@ -396,7 +396,7 @@ var currentPanel="chat";
 function openPanel(k){
   currentPanel=k;if(k==="chat"){closePanel();return}
   $("panel").classList.add("open");$("ptitle").textContent=t("p_titles")[k]||k;
-  var P={settings:uiSettings,profile:uiProfile,vitals:uiVitals,labs:uiLabs,rx:uiRx,drugs:uiDrugs,symptoms_browser:uiSymptomsBrowser,diseases_browser:uiDiseasesBrowser,drugs_browser:uiDrugsBrowser,research:uiResearch,lab:uiLab,
+  var P={settings:uiSettings,profile:uiProfile,vitals:uiVitals,labs:uiLabs,rx:uiRx,drugs:uiDrugs,symptoms_browser:uiSymptomsBrowser,diseases_browser:uiDiseasesBrowser,drugs_browser:uiDrugsBrowser,research:uiResearch,lab:uiLab,tools:uiTools,
     mental:uiMental,sleep:uiSleep,checkup:uiCheckup,aid:uiAid,referral:uiReferral,brain:uiBrain,gpu:uiGpu,image:uiImage,assess:uiAssess};
   (P[k]||function(){})();
 }
@@ -858,6 +858,201 @@ async function rxSearch(){
   h+='<small style="color:var(--dim)">'+(LANG==="fa"?"منبع: RxNav / NIH":"Source: RxNav / NIH")+'</small>';
   $("rxres").innerHTML=h;
 }
+async function uiTools(){
+  var L=LANG==="fa";
+  var h='<div class="card"><h3>🔄 '+(L?"تبدیل واحد آزمایش":"Unit converter")+'</h3>';
+  h+='<p style="font-size:11.5px;color:var(--dim)">'+(L?"mg/dL ↔ mmol/L ↔ µmol/L":"mg/dL ↔ mmol/L ↔ µmol/L")+'</p>';
+  h+='<div style="display:flex;gap:6px;flex-wrap:wrap">';
+  h+='<select id="ucTest" class="f" style="flex:1;min-width:120px"></select>';
+  h+='<input class="f" id="ucVal" placeholder="132" style="width:80px">';
+  h+='<select id="ucDir" class="f"><option value="mgdl">mg/dL →</option><option value="mmol">→ mg/dL</option></select>';
+  h+='<button class="btn pri" onclick="ucGo()">'+(L?"تبدیل":"Convert")+'</button></div>';
+  h+='<div id="ucRes" style="margin-top:8px"></div></div>';
+
+  h+='<div class="card"><h3>⚖️ '+(L?"دوز دارو بر اساس وزن":"Weight-based dose")+'</h3>';
+  h+='<p style="font-size:11.5px;color:var(--dim)">'+(L?"دوز کودک: mg/kg × وزن":"Child dose: mg/kg × weight")+'</p>';
+  h+='<div style="display:flex;gap:6px;flex-wrap:wrap">';
+  h+='<select id="dcDrug" class="f" style="flex:1;min-width:130px"></select>';
+  h+='<input class="f" id="dcW" placeholder="20" style="width:70px" title="kg">';
+  h+='<button class="btn pri" onclick="dcGo()">'+(L?"محاسبه":"Calculate")+'</button></div>';
+  h+='<div id="dcRes" style="margin-top:8px"></div></div>';
+
+  h+='<div class="card"><h3>🤰 '+(L?"ایمنی دارو در بارداری":"Pregnancy safety")+'</h3>';
+  h+='<p style="font-size:11.5px;color:var(--dim)">A=B=C=D=X</p>';
+  h+='<div style="display:flex;gap:6px;flex-wrap:wrap">';
+  h+='<input class="f" id="psDrug" placeholder="'+(L?"نام دارو":"drug name")+'" style="flex:1;min-width:120px">';
+  h+='<button class="btn pri" onclick="psGo()">'+(L?"بررسی":"Check")+'</button></div>';
+  h+='<div id="psRes" style="margin-top:8px"></div></div>';
+
+  h+='<div class="card"><h3>💊 '+(L?"تداخل چند دارو (۳+)":"Multi-drug interactions")+'</h3>';
+  h+='<textarea class="f" id="mdList" rows="3" placeholder="'+(L?"هر خط یک دارو یا با کاما جدا کن":"one drug per line or comma-separated")+'"></textarea>';
+  h+='<button class="btn pri" onclick="mdGo()">'+(L?"بررسی همه":"Check all")+'</button>';
+  h+='<div id="mdRes" style="margin-top:8px"></div></div>';
+
+  h+='<div class="card"><h3>📅 '+(L?"محاسبه‌گر تاریخ زایمان":"Due date calculator")+'</h3>';
+  h+='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">';
+  h+='<input class="f" id="ddLmp" type="date" style="flex:1;min-width:120px">';
+  h+='<input class="f" id="ddCyc" placeholder="28" style="width:60px" title="cycle">';
+  h+='<button class="btn pri" onclick="ddGo()">'+(L?"محاسبه":"Calculate")+'</button></div>';
+  h+='<div id="ddRes" style="margin-top:8px"></div></div>';
+
+  h+='<div class="card"><h3>📔 '+(L?"دفترچه علائم روزانه":"Symptom diary")+'</h3>';
+  h+='<div style="display:flex;gap:6px;flex-wrap:wrap">';
+  h+='<input class="f" id="sdSym" placeholder="'+(L?"علامت":"symptom")+'" style="flex:1;min-width:100px">';
+  h+='<input class="f" id="sdSev" placeholder="1-10" style="width:60px">';
+  h+='<button class="btn pri" onclick="sdAdd()">'+(L?"ثبت":"Add")+'</button></div>';
+  h+='<div id="sdList" style="margin-top:8px"></div></div>';
+
+  h+='<div class="card"><h3>📏 '+(L?"نمودار رشد کودک":"Child growth chart")+'</h3>';
+  h+='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">';
+  h+='<input class="f" id="gcAge" placeholder="'+(L?"سن (ماه)":"age (mo)")+'" style="width:70px">';
+  h+='<select id="gcSex" class="f"><option value="m">♂</option><option value="f">♀</option></select>';
+  h+='<input class="f" id="gcH" placeholder="cm" style="width:60px">';
+  h+='<input class="f" id="gcW" placeholder="kg" style="width:60px">';
+  h+='<button class="btn pri" onclick="gcGo()">'+(L?"بررسی":"Check")+'</button></div>';
+  h+='<div id="gcRes" style="margin-top:8px"></div></div>';
+
+  h+='<div class="card"><h3>⏰ '+(L?"یادآور دارو":"Medication reminders")+'</h3>';
+  h+='<div style="display:flex;gap:6px;flex-wrap:wrap">';
+  h+='<input class="f" id="mrDrug" placeholder="'+(L?"نام دارو":"drug")+'" style="flex:1;min-width:100px">';
+  h+='<input class="f" id="mrTimes" placeholder="08:00, 20:00" style="flex:1;min-width:100px">';
+  h+='<button class="btn pri" onclick="mrAdd()">'+(L?"افزودن":"Add")+'</button></div>';
+  h+='<div id="mrList" style="margin-top:8px"></div></div>';
+
+  h+='<div class="card"><h3>🔍 '+(L?"جستجو در تاریخچه چت":"Search chat history")+'</h3>';
+  h+='<div style="display:flex;gap:6px;flex-wrap:wrap">';
+  h+='<input class="f" id="csQ" placeholder="'+(L?"عبارت":"query")+'" style="flex:1;min-width:100px">';
+  h+='<button class="btn pri" onclick="csGo()">'+(L?"جستجو":"Search")+'</button></div>';
+  h+='<div id="csRes" style="margin-top:8px"></div></div>';
+
+  h+='<div class="card"><h3>💾 '+(L?"بکاپ / بازیابی":"Backup / restore")+'</h3>';
+  h+='<button class="btn pri" onclick="bkGo()">'+(L?"بکاپ بگیر":"Backup now")+'</button>';
+  h+='<div id="bkRes" style="margin-top:8px"></div></div>';
+
+  h+='<div class="card"><small style="color:var(--dim)">'+(L?"همه‌ی این ابزارها آفلاین کار می‌کنند و اطلاعات فقط روی سیستم خودت ذخیره می‌شود.":"All tools work offline; data stays on your machine only.")+'</small></div>';
+  $("pbody").innerHTML=h;
+  // پر کردن دراپ‌داون‌ها
+  api("/api/tools/unit",{test:"glucose",value:1,from:"mgdl"}).then(function(){
+    var sel=$("ucTest");
+    [["glucose","قند/طGlucose"],["cholesterol","کلسترول/Chol"],["ldl","LDL"],["hdl","HDL"],
+     ["triglyceride","تری‌گلیسرید/TG"],["creatinine","کراتینین/Cr"],["urea","اوره/BUN"],
+     ["uric_acid","اسید اوریک/UA"],["calcium","کلسیم/Ca"],["bilirubin","بیلی‌روبین/Bil"]].forEach(function(t){
+      var o=document.createElement("option");o.value=t[0];o.textContent=t[1];sel.appendChild(o);
+    });
+  });
+  var dsel=$("dcDrug");
+  [["paracetamol","استامینوفن/Acetaminophen"],["ibuprofen","ایبوپروفن/Ibuprofen"],["amoxicillin","آموکسی‌سیلین/Amoxicillin"],
+   ["azithromycin","آزیترومایسین/Azithromycin"],["cefixime","سفیکسیم/Cefixime"],["metformin","متفورمین/Metformin"]].forEach(function(d){
+    var o=document.createElement("option");o.value=d[0];o.textContent=d[1];dsel.appendChild(o);
+  });
+  sdRefresh(); mrRefresh();
+}
+
+async function ucGo(){
+  var r=await api("/api/tools/unit",{test:$("ucTest").value,value:$("ucVal").value,from:$("ucDir").value});
+  if(!r.ok){$("ucRes").innerHTML='<p class=warn>'+esc(r.message_fa||"Error")+'</p>';return}
+  $("ucRes").innerHTML='<div class="card" style="border-color:var(--cy)"><b>'+esc(r.input)+' = '+esc(r.output)+'</b><br><small style="color:var(--dim)">'+esc(r.ref_fa||r.ref)+'</small></div>';
+}
+async function dcGo(){
+  var r=await api("/api/tools/dose",{drug:$("dcDrug").value,weight:$("dcW").value});
+  if(!r.ok){$("dcRes").innerHTML='<p class=warn>'+esc(r.message_fa||"Error")+'</p>';return}
+  var h='<div class="card" style="border-color:var(--gr)"><b>'+esc(r.drug_fa)+' — '+esc(r.single_dose_mg)+' mg</b>';
+  h+='<br><small>'+fa(r.interval_h)+' '+(LANG==="fa"?"ساعت فاصله / ":"h interval / ")+fa(r.doses_per_day)+'× '+(LANG==="fa"?"در روز":"/day")+'</small>';
+  if(r.forms)r.forms.forEach(function(f){h+='<br><small style="color:var(--cy)">• '+esc(f)+'</small>'});
+  h+='<br><small style="color:var(--mg)">'+esc(r.warning_fa||r.warning)+'</small></div>';
+  $("dcRes").innerHTML=h;
+}
+async function psGo(){
+  var r=await api("/api/tools/pregnancy",{drug:$("psDrug").value});
+  if(!r.ok){$("psRes").innerHTML='<p class=warn>Error</p>';return}
+  if(!r.found){$("psRes").innerHTML='<p class=warn>'+esc(r.message_fa||r.message_en)+'</p>';return}
+  var col=r.category=="A"||r.category=="B"?"#3bff9e":(r.category=="X"?"#ff2a6d":"#ffd60a");
+  var h='<div class="card" style="border-color:'+col+'"><b style="color:'+col+';font-size:24px">'+r.category+'</b>';
+  h+='<br>'+esc(r.pregnancy_fa||r.pregnancy_en);
+  h+='<br><small style="color:var(--dim)">🤱 '+esc(r.lactation_fa||r.lactation_en)+'</small></div>';
+  $("psRes").innerHTML=h;
+}
+async function mdGo(){
+  var raw=$("mdList").value.trim();
+  var drugs=raw.split(/[\n,;]+/).map(function(s){return s.trim()}).filter(Boolean);
+  if(drugs.length<2){$("mdRes").innerHTML='<p class=warn>'+(LANG==="fa"?"حداقل ۲ دارو":"need 2+ drugs")+'</p>';return}
+  var r=await api("/api/tools/multidrug",{drugs:drugs});
+  if(!r.ok){$("mdRes").innerHTML='<p class=warn>'+esc(r.message_fa||"Error")+'</p>';return}
+  if(!r.pairs.length){$("mdRes").innerHTML='<div class="card" style="border-color:#3bff9e">✓ '+esc(r.message_fa||r.message_en)+'</div>';return}
+  var h='<small style="color:var(--dim)">'+esc(r.message_fa||r.message_en)+'</small>';
+  r.pairs.forEach(function(p){
+    var col=p.severity=="major"?"#ff2a6d":(p.severity=="moderate"?"#ffd60a":"#3bff9e");
+    h+='<div class="q"><b>'+esc(p.a)+'</b> + <b>'+esc(p.b)+'</b> <span class="tag" style="color:'+col+'">'+esc(p.severity)+'</span>';
+    if(p.detail)h+='<br><small>'+esc(p.detail.slice(0,120))+'</small>';
+    h+='</div>';
+  });
+  $("mdRes").innerHTML=h;
+}
+async function ddGo(){
+  var r=await api("/api/tools/duedate",{lmp:$("ddLmp").value,cycle:$("ddCyc").value||28});
+  if(!r.ok){$("ddRes").innerHTML='<p class=warn>'+esc(r.message_fa||"Error")+'</p>';return}
+  $("ddRes").innerHTML='<div class="card" style="border-color:var(--cy)"><b>📅 '+esc(r.due_date)+'</b><br>'+
+  esc(r.message_fa||r.message_en)+'</div>';
+}
+async function sdAdd(){
+  var r=await api("/api/tools/diary",{action:"add",date:new Date().toISOString().slice(0,10),
+    symptom:$("sdSym").value,severity:$("sdSev").value||5});
+  sdRefresh();
+}
+async function sdRefresh(){
+  var r=await api("/api/tools/diary",{action:"list"});
+  if(!r.ok)return;
+  var h="";
+  (r.entries||[]).slice(-15).reverse().forEach(function(e){
+    var col=e.severity>=7?"#ff2a6d":(e.severity>=4?"#ffd60a":"#3bff9e");
+    h+='<div class="q"><b>'+esc(e.symptom)+'</b> <span class="tag" style="color:'+col+'">'+fa(e.severity)+'/۱۰</span> <small style="color:var(--dim)">'+esc(e.date)+'</small>'+(e.note?'<br><small>'+esc(e.note)+'</small>':'')+'</div>';
+  });
+  $("sdList").innerHTML=h||'<p class=warn>'+(LANG==="fa"?"خالی":"empty")+'</p>';
+}
+async function mrAdd(){
+  var times=$("mrTimes").value.split(",").map(function(s){return s.trim()}).filter(Boolean);
+  var r=await api("/api/tools/reminders",{action:"add",drug:$("mrDrug").value,times:times});
+  mrRefresh();
+}
+async function mrRefresh(){
+  var r=await api("/api/tools/reminders",{action:"list"});
+  if(!r.ok)return;
+  var h="";
+  (r.reminders||[]).forEach(function(m){
+    h+='<div class="q"><b>💊 '+esc(m.drug)+'</b> <span class="tag">'+esc(m.times.join("، "))+'</span>';
+    h+=' <button class="btn" style="padding:2px 8px;font-size:11px;color:#ff2a6d" onclick="mrDel('+m.id+')">✕</button></div>';
+  });
+  $("mrList").innerHTML=h||'<p class=warn>'+(LANG==="fa"?"یادآوری نداری":"no reminders")+'</p>';
+}
+async function mrDel(id){
+  await api("/api/tools/reminders",{action:"remove",id:id});
+  mrRefresh();
+}
+async function gcGo(){
+  var r=await api("/api/tools/growth",{age:$("gcAge").value,sex:$("gcSex").value,height:$("gcH").value,weight:$("gcW").value});
+  if(!r.ok){$("gcRes").innerHTML='<p class=warn>Error</p>';return}
+  var h='<div class="card" style="border-color:var(--cy)">';
+  if(r.height_label)h+='📏 '+esc(String(r.height))+' cm → <b>'+esc(r.height_label)+'</b> percentile<br>';
+  if(r.weight_label)h+='⚖️ '+esc(String(r.weight))+' kg → <b>'+esc(r.weight_label)+'</b> percentile';
+  h+='</div>';
+  $("gcRes").innerHTML=h;
+}
+async function csGo(){
+  var r=await api("/api/tools/chatsearch",{q:$("csQ").value});
+  if(!r.ok){$("csRes").innerHTML='<p class=warn>Error</p>';return}
+  var h="";
+  (r.results||[]).forEach(function(x){
+    var col=x.role==="user"?"var(--yl)":"var(--cy)";
+    h+='<div class="q"><b style="color:'+col+'">'+esc(x.role)+'</b><br><small>'+esc(x.text.slice(0,180))+'</small></div>';
+  });
+  $("csRes").innerHTML=h||'<p class=warn>'+(LANG==="fa"?"پیدا نشد":"not found")+'</p>';
+}
+async function bkGo(){
+  var r=await api("/api/tools/backup",{action:"backup",dest:"backup"});
+  if(!r.ok){$("bkRes").innerHTML='<p class=warn>Error</p>';return}
+  $("bkRes").innerHTML='<div class="card" style="border-color:#3bff9e">✓ '+fa(r.files.length)+' '+(LANG==="fa"?"فایل ذخیره شد در پوشه‌ی backup":"files saved to backup/")+'</div>';
+}
+
 var LABT=[];var LABC={};
 async function uiLab(){
   $("pbody").innerHTML='<div class="card"><h3>'+t("lab")+'</h3><div class="spin"></div></div>';

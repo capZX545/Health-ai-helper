@@ -564,6 +564,52 @@ class Handler(BaseHTTPRequestHandler):
                 key = str(data.get("key") or "")
                 val = data.get("value")
                 return self._json(evaluate(key, val, is_fa()))
+            if path == "/api/tools/unit":
+                from health_tools import convert_unit
+                return self._json(convert_unit(str(data.get("test") or ""), data.get("value"), str(data.get("from") or "mgdl")))
+            if path == "/api/tools/dose":
+                from health_tools import calculate_dose
+                return self._json(calculate_dose(str(data.get("drug") or ""), data.get("weight") or 0))
+            if path == "/api/tools/pregnancy":
+                from health_tools import check_pregnancy
+                return self._json(check_pregnancy(str(data.get("drug") or "")))
+            if path == "/api/tools/multidrug":
+                from health_tools import check_multi_drugs
+                return self._json(check_multi_drugs(data.get("drugs") or []))
+            if path == "/api/tools/duedate":
+                from health_tools import due_date
+                return self._json(due_date(str(data.get("lmp") or ""), data.get("cycle") or 28))
+            if path == "/api/tools/diary":
+                from health_tools import diary_add, diary_list, diary_clear
+                action = data.get("action") or "list"
+                if action == "add":
+                    return self._json(diary_add(str(data.get("date") or ""), str(data.get("symptom") or ""),
+                                                int(data.get("severity") or 5), str(data.get("note") or "")))
+                if action == "clear":
+                    return self._json(diary_clear())
+                return self._json({"ok": True, "entries": diary_list()})
+            if path == "/api/tools/reminders":
+                from health_tools import reminders_add, reminders_list, reminders_remove
+                action = data.get("action") or "list"
+                if action == "add":
+                    return self._json(reminders_add(str(data.get("drug") or ""), data.get("times") or [],
+                                                    str(data.get("days") or "daily")))
+                if action == "remove":
+                    return self._json(reminders_remove(int(data.get("id") or 0)))
+                return self._json({"ok": True, "reminders": reminders_list()})
+            if path == "/api/tools/growth":
+                from health_tools import growth_percentile
+                return self._json(growth_percentile(int(data.get("age") or 0), str(data.get("sex") or "m"),
+                                                    float(data.get("height") or 0), float(data.get("weight") or 0)))
+            if path == "/api/tools/backup":
+                from health_tools import backup_all, restore_all
+                action = data.get("action") or "backup"
+                if action == "backup":
+                    return self._json(backup_all(str(data.get("dest") or "backup")))
+                return self._json(restore_all(str(data.get("src") or "backup")))
+            if path == "/api/tools/chatsearch":
+                from health_tools import search_chat_history
+                return self._json({"ok": True, "results": search_chat_history(str(data.get("q") or ""))})
             if path == "/api/pubmed":
                 return self._json(self._live_pubmed(str(data.get("q") or "").strip()))
             if path == "/api/trials":

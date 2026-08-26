@@ -192,6 +192,7 @@ class App:
             (("Drugs database", "بانک داروها"), self._panel_drugs),
             (("Research & articles", "پژوهش و مقالات"), self._panel_research),
             (("Laboratory", "آزمایشگاه"), self._panel_lab),
+            (("Health tools", "ابزار سلامت"), self._panel_tools),
             (("Mental health", "سلامت روان"), self._panel_mental),
             (("Sleep analysis", "تحلیل خواب"), self._panel_sleep),
             (("Checkup calendar", "تقویم چکاپ"), self._panel_checkup),
@@ -1922,6 +1923,223 @@ class App:
                   fg="#021018", font=pick_font(10, True), relief="flat").pack(side="right", padx=6, ipadx=10)
         val_e.bind("<Return>", interpret)
         draw()
+
+    def _panel_tools(self):
+        """Health tools: unit converter, dose calc, pregnancy, multi-drug, due date, diary, growth, reminders, chat search, backup."""
+        import health_tools as ht
+        w, top, inner, bottom = self._win_list(self.L("Health tools — 10 practical tools", "ابزار سلامت — ۱۰ ابزار کاربردی"))
+        _L = self.L
+        tk.Label(top, text=_L("All offline — data stays on your machine", "همه آفلاین — اطلاعات فقط روی سیستم خودت می‌ماند"),
+                 bg=C["panel2"], fg=C["dim"], font=pick_font(8), anchor="e").pack(fill="x", padx=16, pady=(8, 4))
+
+        box = scrolledtext.ScrolledText(bottom, bg="#070d18", fg=C["tx"], font=pick_font(10), height=10, relief="flat", wrap="word")
+        box.pack(fill="both", expand=True, padx=16, pady=(4, 8))
+
+        def out(txt, color=C["tx"]):
+            box.delete("1.0", "end")
+            box.insert("1.0", txt)
+            box.tag_add("t", "1.0", "1.0 lineend")
+            box.tag_config("t", foreground=color, font=pick_font(11, True))
+
+        # ---------- ۱) تبدیل واحد ----------
+        f1 = tk.Frame(inner, bg=C["panel2"]); f1.pack(fill="x", padx=10, pady=2)
+        tk.Label(f1, text="🔄 " + _L("Unit converter", "تبدیل واحد آزمایش"), bg=C["panel2"], fg=C["cy"],
+                 font=pick_font(10, True), anchor="e").pack(fill="x")
+        bar1 = tk.Frame(f1, bg=C["panel2"]); bar1.pack(fill="x")
+        uc_t = ttk.Combobox(bar1, state="readonly", font=pick_font(8), width=18)
+        uc_t["values"] = [f"{k} ({v['name_fa']})" for k, v in ht.UNITS.items()]
+        uc_t.current(0); uc_t.pack(side="right", padx=2)
+        uc_v = tk.Entry(bar1, bg="#0a1424", fg=C["tx"], relief="flat", font=pick_font(10), width=8, justify="center")
+        uc_v.pack(side="right", padx=2, ipady=2)
+        uc_d = ttk.Combobox(bar1, state="readonly", font=pick_font(8), width=12)
+        uc_d["values"] = ["mg/dL → mmol", "mmol → mg/dL"]; uc_d.current(0); uc_d.pack(side="right", padx=2)
+        def uc_go():
+            key = uc_t.get().split(" (")[0]
+            r = ht.convert_unit(key, uc_v.get() or 0, "mgdl" if uc_d.current() == 0 else "mmol")
+            if r.get("ok"):
+                out(f"{r['input']} = {r['output']}\n{r['ref_fa']}", C["cy"])
+            else:
+                out(r.get("message_fa", "خطا"), C["mg"])
+        tk.Button(bar1, text=_L("Go", "تبدیل"), command=uc_go, bg="#0077b6", fg="#021018",
+                  font=pick_font(9, True), relief="flat").pack(side="right", padx=2, ipadx=8)
+
+        # ---------- ۲) دوز بر اساس وزن ----------
+        f2 = tk.Frame(inner, bg=C["panel2"]); f2.pack(fill="x", padx=10, pady=2)
+        tk.Label(f2, text="⚖️ " + _L("Weight-based dose", "دوز بر اساس وزن (کودک)"), bg=C["panel2"], fg=C["cy"],
+                 font=pick_font(10, True), anchor="e").pack(fill="x")
+        bar2 = tk.Frame(f2, bg=C["panel2"]); bar2.pack(fill="x")
+        dc_t = ttk.Combobox(bar2, state="readonly", font=pick_font(8), width=20)
+        dc_t["values"] = [f"{k} ({v['name_fa']})" for k, v in ht.DOSE_TABLE.items()]
+        dc_t.current(0); dc_t.pack(side="right", padx=2)
+        dc_w = tk.Entry(bar2, bg="#0a1424", fg=C["tx"], relief="flat", font=pick_font(10), width=6, justify="center")
+        dc_w.insert(0, "20"); dc_w.pack(side="right", padx=2, ipady=2)
+        def dc_go():
+            key = dc_t.get().split(" (")[0]
+            r = ht.calculate_dose(key, dc_w.get() or 0)
+            if r.get("ok"):
+                if r.get("note"):
+                    out(f"{r['drug_fa']}: {r['note']}", C["yl"])
+                    return
+                lines = [f"{r['drug_fa']} — {r['single_dose_mg']} mg هر {r['interval_h']} ساعت",
+                         f"({r['doses_per_day']}× در روز | سقف: {r['max_daily_mg']} mg/day)"]
+                for fm in r.get("forms", [])[:3]:
+                    lines.append(f"  • {fm}")
+                lines.append(r["warning_fa"])
+                out("\n".join(lines), C["gr"])
+            else:
+                out(r.get("message_fa", "خطا"), C["mg"])
+        tk.Button(bar2, text=_L("Calc", "محاسبه"), command=dc_go, bg="#0077b6", fg="#021018",
+                  font=pick_font(9, True), relief="flat").pack(side="right", padx=2, ipadx=8)
+
+        # ---------- ۳) بارداری ----------
+        f3 = tk.Frame(inner, bg=C["panel2"]); f3.pack(fill="x", padx=10, pady=2)
+        tk.Label(f3, text="🤰 " + _L("Pregnancy safety (A-X)", "ایمنی بارداری (A-X)"), bg=C["panel2"], fg=C["cy"],
+                 font=pick_font(10, True), anchor="e").pack(fill="x")
+        bar3 = tk.Frame(f3, bg=C["panel2"]); bar3.pack(fill="x")
+        ps_e = tk.Entry(bar3, bg="#0a1424", fg=C["tx"], relief="flat", font=pick_font(10), justify="right")
+        ps_e.pack(side="right", fill="x", expand=True, padx=2, ipady=2)
+        def ps_go():
+            r = ht.check_pregnancy(ps_e.get())
+            if r.get("found"):
+                col = C["gr"] if r["category"] in "AB" else (C["mg"] if r["category"] == "X" else C["yl"])
+                out(f"{r['drug'].upper()} → دسته {r['category']}\n{r['pregnancy_fa']}\n🤱 {r['lactation_fa']}", col)
+            else:
+                out(r["message_fa"], C["yl"])
+        tk.Button(bar3, text=_L("Check", "بررسی"), command=ps_go, bg="#0077b6", fg="#021018",
+                  font=pick_font(9, True), relief="flat").pack(side="right", padx=2, ipadx=8)
+
+        # ---------- ۴) چند دارو ----------
+        f4 = tk.Frame(inner, bg=C["panel2"]); f4.pack(fill="x", padx=10, pady=2)
+        tk.Label(f4, text="💊 " + _L("Multi-drug interaction (3+)", "تداخل چند دارو (۳+)"), bg=C["panel2"], fg=C["cy"],
+                 font=pick_font(10, True), anchor="e").pack(fill="x")
+        md_e = tk.Entry(f4, bg="#0a1424", fg=C["tx"], relief="flat", font=pick_font(10), justify="right")
+        md_e.pack(fill="x", padx=10, ipady=2)
+        def md_go():
+            drugs = [d.strip() for d in md_e.get().replace("،", ",").split(",") if d.strip()]
+            if len(drugs) < 2:
+                out("حداقل ۲ دارو با کاما جدا کن", C["yl"]); return
+            r = ht.check_multi_drugs(drugs)
+            if not r.get("ok"):
+                out(r.get("message_fa", "خطا"), C["mg"]); return
+            if not r["pairs"]:
+                out("✓ تداخل مهمی یافت نشد", C["gr"]); return
+            lines = [f"{r['message_fa']}:"]
+            for p in r["pairs"]:
+                lines.append(f"• {p['a']} + {p['b']} [{p['severity']}]")
+                if p.get("detail"):
+                    lines.append(f"  {p['detail'][:100]}")
+            out("\n".join(lines), C["yl"])
+        tk.Button(f4, text=_L("Check all", "بررسی همه"), command=md_go, bg="#0077b6", fg="#021018",
+                  font=pick_font(9, True), relief="flat").pack(pady=2, ipadx=10)
+
+        # ---------- ۵) تاریخ زایمان ----------
+        f5 = tk.Frame(inner, bg=C["panel2"]); f5.pack(fill="x", padx=10, pady=2)
+        tk.Label(f5, text="📅 " + _L("Due date calculator", "محاسبه‌گر تاریخ زایمان"), bg=C["panel2"], fg=C["cy"],
+                 font=pick_font(10, True), anchor="e").pack(fill="x")
+        bar5 = tk.Frame(f5, bg=C["panel2"]); bar5.pack(fill="x")
+        dd_e = tk.Entry(bar5, bg="#0a1424", fg=C["tx"], relief="flat", font=pick_font(10), justify="center")
+        dd_e.insert(0, "2026-08-01"); dd_e.pack(side="right", padx=2, ipady=2)
+        def dd_go():
+            r = ht.due_date(dd_e.get())
+            if r.get("ok"):
+                out(f"تاریخ زایمان: {r['due_date']}\n{r['message_fa']}", C["cy"])
+            else:
+                out(r["message_fa"], C["mg"])
+        tk.Button(bar5, text=_L("Calc", "محاسبه"), command=dd_go, bg="#0077b6", fg="#021018",
+                  font=pick_font(9, True), relief="flat").pack(side="right", padx=2, ipadx=8)
+
+        # ---------- ۶) دفترچه علائم ----------
+        f6 = tk.Frame(inner, bg=C["panel2"]); f6.pack(fill="x", padx=10, pady=2)
+        tk.Label(f6, text="📔 " + _L("Symptom diary", "دفترچه علائم روزانه"), bg=C["panel2"], fg=C["cy"],
+                 font=pick_font(10, True), anchor="e").pack(fill="x")
+        bar6 = tk.Frame(f6, bg=C["panel2"]); bar6.pack(fill="x")
+        sd_s = tk.Entry(bar6, bg="#0a1424", fg=C["tx"], relief="flat", font=pick_font(10), justify="right")
+        sd_s.pack(side="right", fill="x", expand=True, padx=2, ipady=2)
+        sd_sev = tk.Entry(bar6, bg="#0a1424", fg=C["tx"], relief="flat", font=pick_font(10), width=4, justify="center")
+        sd_sev.insert(0, "5"); sd_sev.pack(side="right", padx=2, ipady=2)
+        def sd_go():
+            from datetime import date as _d
+            ht.diary_add(_d.today().isoformat(), sd_s.get(), int(sd_sev.get() or 5))
+            entries = ht.diary_list(10)
+            lines = [_L("last entries:", "آخرین ثبت‌ها:")]
+            for e in reversed(entries):
+                lines.append(f"  {e['date']} — {e['symptom']} [{e['severity']}/10]")
+            out("\n".join(lines), C["tx"])
+        tk.Button(bar6, text=_L("Add", "ثبت"), command=sd_go, bg="#0077b6", fg="#021018",
+                  font=pick_font(9, True), relief="flat").pack(side="right", padx=2, ipadx=8)
+
+        # ---------- ۷) رشد کودک ----------
+        f7 = tk.Frame(inner, bg=C["panel2"]); f7.pack(fill="x", padx=10, pady=2)
+        tk.Label(f7, text="📏 " + _L("Growth chart (WHO percentiles)", "نمودار رشد (صدک WHO)"), bg=C["panel2"], fg=C["cy"],
+                 font=pick_font(10, True), anchor="e").pack(fill="x")
+        bar7 = tk.Frame(f7, bg=C["panel2"]); bar7.pack(fill="x")
+        gc_age = tk.Entry(bar7, bg="#0a1424", fg=C["tx"], relief="flat", font=pick_font(10), width=5, justify="center")
+        gc_age.insert(0, "12"); gc_age.pack(side="right", padx=1, ipady=2)
+        gc_sex = ttk.Combobox(bar7, state="readonly", width=3, font=pick_font(8))
+        gc_sex["values"] = ["♂", "♀"]; gc_sex.current(0); gc_sex.pack(side="right", padx=1)
+        gc_h = tk.Entry(bar7, bg="#0a1424", fg=C["tx"], relief="flat", font=pick_font(10), width=5, justify="center")
+        gc_h.insert(0, "76"); gc_h.pack(side="right", padx=1, ipady=2)
+        gc_w = tk.Entry(bar7, bg="#0a1424", fg=C["tx"], relief="flat", font=pick_font(10), width=5, justify="center")
+        gc_w.insert(0, "9.8"); gc_w.pack(side="right", padx=1, ipady=2)
+        def gc_go():
+            sex = "m" if gc_sex.current() == 0 else "f"
+            r = ht.growth_percentile(int(gc_age.get() or 0), sex, float(gc_h.get() or 0), float(gc_w.get() or 0))
+            lines = [_L("Growth percentiles (WHO):", "صدک‌های رشد (WHO):")]
+            if "height_label" in r:
+                lines.append(f"  {L('Height','قد')}: {r['height']} cm → {r['height_label']}")
+            if "weight_label" in r:
+                lines.append(f"  {L('Weight','وزن')}: {r['weight']} kg → {r['weight_label']}")
+            out("\n".join(lines), C["cy"])
+        def L(en, fa): return fa if __import__("i18n").get_lang() == "fa" else en
+        tk.Button(bar7, text=_L("Check", "بررسی"), command=gc_go, bg="#0077b6", fg="#021018",
+                  font=pick_font(9, True), relief="flat").pack(side="right", padx=2, ipadx=8)
+
+        # ---------- ۸) یادآور دارو ----------
+        f8 = tk.Frame(inner, bg=C["panel2"]); f8.pack(fill="x", padx=10, pady=2)
+        tk.Label(f8, text="⏰ " + _L("Medication reminders", "یادآور دارو"), bg=C["panel2"], fg=C["cy"],
+                 font=pick_font(10, True), anchor="e").pack(fill="x")
+        bar8 = tk.Frame(f8, bg=C["panel2"]); bar8.pack(fill="x")
+        mr_d = tk.Entry(bar8, bg="#0a1424", fg=C["tx"], relief="flat", font=pick_font(10), justify="right")
+        mr_d.pack(side="right", fill="x", expand=True, padx=2, ipady=2)
+        mr_t = tk.Entry(bar8, bg="#0a1424", fg=C["tx"], relief="flat", font=pick_font(10), width=12, justify="center")
+        mr_t.insert(0, "08:00,20:00"); mr_t.pack(side="right", padx=2, ipady=2)
+        def mr_go():
+            times = [t.strip() for t in mr_t.get().split(",") if t.strip()]
+            ht.reminders_add(mr_d.get(), times)
+            rems = ht.reminders_list()
+            lines = [_L("Active reminders:", "یادآورهای فعال:")]
+            for m in rems:
+                lines.append(f"  💊 {m['drug']} — {', '.join(m['times'])}")
+            out("\n".join(lines), C["tx"])
+        tk.Button(bar8, text=_L("Add", "افزودن"), command=mr_go, bg="#0077b6", fg="#021018",
+                  font=pick_font(9, True), relief="flat").pack(side="right", padx=2, ipadx=8)
+
+        # ---------- ۹) جستجوی چت ----------
+        f9 = tk.Frame(inner, bg=C["panel2"]); f9.pack(fill="x", padx=10, pady=2)
+        tk.Label(f9, text="🔍 " + _L("Search chat history", "جستجو در تاریخچه چت"), bg=C["panel2"], fg=C["cy"],
+                 font=pick_font(10, True), anchor="e").pack(fill="x")
+        cs_e = tk.Entry(f9, bg="#0a1424", fg=C["tx"], relief="flat", font=pick_font(10), justify="right")
+        cs_e.pack(fill="x", padx=10, ipady=2)
+        def cs_go():
+            hits = ht.search_chat_history(cs_e.get())
+            if not hits:
+                out(_L("not found", "پیدا نشد"), C["yl"]); return
+            lines = [f"{len(hits)} hits:"] if len(hits) > 1 else []
+            for h in hits[:10]:
+                lines.append(f"[{h['role']}] {h['text'][:120]}")
+            out("\n".join(lines), C["tx"])
+        tk.Button(f9, text=_L("Search", "جستجو"), command=cs_go, bg="#0077b6", fg="#021018",
+                  font=pick_font(9, True), relief="flat").pack(pady=2, ipadx=10)
+
+        # ---------- ۱۰) بکاپ ----------
+        f10 = tk.Frame(inner, bg=C["panel2"]); f10.pack(fill="x", padx=10, pady=6)
+        tk.Label(f10, text="💾 " + _L("Backup personal data", "بکاپ اطلاعات شخصی"), bg=C["panel2"], fg=C["cy"],
+                 font=pick_font(10, True), anchor="e").pack(fill="x")
+        def bk_go():
+            r = ht.backup_all("backup")
+            out(f"✓ {len(r['files'])} files → backup/", C["gr"])
+        tk.Button(f10, text=_L("Backup now", "بکاپ بگیر"), command=bk_go, bg="#0d5a4a", fg="#c8ffe9",
+                  font=pick_font(9, True), relief="flat").pack(pady=2, ipadx=12)
 
     def _panel_referral(self):
         from doctor_referral import generate
