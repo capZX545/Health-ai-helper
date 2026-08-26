@@ -1,113 +1,128 @@
 # -*- coding: utf-8 -*-
 """
-android/main.py — NexusMed 2077 Android launcher.
-Starts the Python backend server and opens a WebView.
+NexusMed 2077 — Android launcher.
+Starts the full Python backend server (with numpy + all data) and
+replaces the Kivy view with a native Android WebView showing the app.
+Everything is self-contained — no internet needed.
 """
 import os
 import sys
 import threading
 import time
 
-# مسیر داده‌ها روی اندروید
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 os.chdir(APP_DIR)
 sys.path.insert(0, APP_DIR)
+os.environ.setdefault("NEXUSMED_MOBILE", "1")
 
-# data dir for personal files
-DATA_DIR = APP_DIR
-os.environ.setdefault("NEXUSMED_DATA_DIR", DATA_DIR)
+# start the server in a background thread
+import run_web
+from http.server import ThreadingHTTPServer
 
-from kivy.app import App
-from kivy.uix.label import Label
-from kivy.uix.button import Button
-from kivy.uix.boxlayout import BoxLayout
-from kivy.clock import Clock
-
-_server_started = False
-_server_port = 2077
-
+PORT = 8080
+_server = None
 
 def start_server():
-    """Start the NexusMed web server in a background thread."""
-    global _server_started, _server_port
-    if _server_started:
-        return
-    _server_started = True
+    global _server
     try:
-        from run_web import find_free_port
-        from http.server import ThreadingHTTPServer
-        import run_web
-
-        # suppress output
-        import io
-        import contextlib
-
         run_web.HTML_FILE = os.path.join(APP_DIR, "clinic_2077.html")
-
-        # find a free port
-        _server_port = find_free_port(2077, 2097, "127.0.0.1") or 2077
-
         handler = run_web.Handler
-        httpd = ThreadingHTTPServer(("127.0.0.1", _server_port), handler)
-        threading.Thread(target=httpd.serve_forever, daemon=True).start()
-        print(f"[NexusMed] server on port {_server_port}")
+        _server = ThreadingHTTPServer(("127.0.0.1", PORT), handler)
+        threading.Thread(target=_server.serve_forever, daemon=True).start()
+        print(f"[NexusMed] server on :{PORT}")
     except Exception as e:
         print(f"[NexusMed] server error: {e}")
 
+start_server()
 
-def open_webview():
-    """Try to open a WebView using Android's Intent system."""
-    try:
-        from jnius import autoclass
-        Intent = autoclass("android.content.Intent")
-        Uri = autoclass("android.net.Uri")
-        PythonActivity = autoclass("org.kivy.android.PythonActivity")
-        intent = Intent(Intent.ACTION_VIEW, Uri.parse(f"http://127.0.0.1:{_server_port}"))
-        PythonActivity.mActivity.startActivity(intent)
-    except Exception:
+# --- now replace Kivy view with a native Android WebView ---
+from kivy.app import App
+from kivy.uix.label import Label
+from kivy.clock import Clock
+from kivy.core.window import Window
+from kivy.utils import platform
+
+Window.clearcolor = (0.015, 0.02, 0.05, 1)  # #04060c
+
+
+class NexusApp(App):
+    def build(self):
+        self.label = Label(
+            text="NexusMed 2077\nStarting...",
+            font_size="16sp",
+            halign="center",
+            color=(0, 0.94, 1, 1),
+        )
+        # after 0.5s, swap to WebView
+        Clock.schedule_once(self.open_webview, 0.5)
+        return self.label
+
+    def open_webview(self, *args):
+        if platform == "android":
+            try:
+                self._open_android_webview()
+            except Exception as e:
+                print(f"WebView error: {e}")
+                self._open_browser()
+        else:
+            # desktop / test: open browser
+            self._open_browser()
+
+    def _open_android_webview(self):
+        from jnius import autoclass, PythonJavaClass, java_method
+        from android import mActivity
+
+        # get the activity's window
+        LayoutParams = autoclass("android.view.ViewGroup$LayoutParams")
+        LinearLayout = autoclass("android.widget.LinearLayout")
+        WebView = autoclass("android.webkit.WebView")
+        WebSettings = autoclass("android.webkit.WebSettings")
+        WebViewClient = autoclass("android.webkit.WebViewClient")
+        Color = autoclass("android.graphics.Color")
+
+        # create a WebView
+        webview = WebView(mActivity)
+        settings = webview.getSettings()
+        settings.setJavaScriptEnabled(True)
+        settings.setDomStorageEnabled(True)
+        settings.setAllowFileAccess(True)
+        settings.setLoadWithOverviewMode(True)
+        settings.setUseWideViewPort(True)
+        settings.setTextZoom(100)
+        settings.setSupportZoom(False)
+        settings.setCacheMode(WebSettings.LOAD_DEFAULT)
+        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW)
+        webview.setBackgroundColor(Color.parseColor("#04060c"))
+        webview.setWebViewClient(WebViewClient())
+
+        # replace the Kivy view with the WebView
+        content = mActivity.findViewById(0x01020002)  # android.R.id.content
+        if content:
+            content.removeAllViews()
+            content.addView(webview, LayoutParams(
+                LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+
+        # load the app
+        webview.loadUrl(f"http://127.0.0.1:{PORT}/")
+
+        # store reference for back button
+        self._webview = webview
+
+    def _open_browser(self):
+        import webbrowser
+        url = f"http://127.0.0.1:{PORT}/"
         try:
-            import webbrowser
-            webbrowser.open(f"http://127.0.0.1:{_server_port}")
+            webbrowser.open(url)
         except Exception:
             pass
+        self.label.text = f"NexusMed 2077\n\nServer running on {url}\nOpen in browser"
 
+    def on_pause(self):
+        return True  # keep running in background
 
-class NexusMedApp(App):
-    def build(self):
-        layout = BoxLayout(orientation="vertical", padding=20, spacing=10)
-
-        self.label = Label(
-            text="NexusMed 2077\n[b]دستیار پزشکی هوشمند[/b]\n\nStarting server...",
-            markup=True,
-            font_size="18sp",
-            halign="center",
-        )
-        layout.add_widget(self.label)
-
-        self.btn = Button(
-            text="Open NexusMed\nباز کردن برنامه",
-            font_size="16sp",
-            size_hint_y=0.2,
-            background_color=(0, 0.7, 0.8, 1),
-        )
-        self.btn.bind(on_press=lambda x: open_webview())
-        layout.add_widget(self.btn)
-
-        # سرور را شروع کن
-        start_server()
-
-        # بعد از یک ثانیه پیام عوض کن
-        Clock.schedule_once(lambda dt: self.on_ready(), 1.5)
-        return layout
-
-    def on_ready(self):
-        self.label.text = (
-            f"NexusMed 2077\n[b]دستیار پزشکی هوشمند[/b]\n\n"
-            f"Server running on port {_server_port}\n"
-            f"Tap the button below to open\n"
-            f"یا دکمه‌ی زیر را بزن"
-        )
+    def on_resume(self):
+        pass
 
 
 if __name__ == "__main__":
-    NexusMedApp().run()
+    NexusApp().run()

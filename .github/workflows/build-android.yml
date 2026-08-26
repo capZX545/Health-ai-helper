@@ -14,56 +14,97 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: set up python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
       - name: set up java
         uses: actions/setup-java@v4
         with:
           java-version: "17"
           distribution: "temurin"
 
-      - name: set up android sdk
-        uses: android-actions/setup-android@v3
+      - name: install buildozer
+        run: |
+          pip install buildozer cython==0.29.33
+          sudo apt-get update -qq
+          sudo apt-get install -qq --no-install-recommends \
+            autoconf automake libtool pkg-config \
+            libffi-dev libssl-dev libjpeg-dev libpng-dev \
+            zlib1g-dev openjdk-17-jdk unzip wget \
+            cmake ccache
 
-      - name: prepare app assets
+      - name: copy all app files to android dir
         shell: bash
         run: |
-          mkdir -p android/app/src/main/assets/www
-          # فایل‌های اصلی وب — کل برنامه داخل APK
-          cp clinic_2077.html android/app/src/main/assets/www/
-          cp manifest.json android/app/src/main/assets/www/ 2>/dev/null || echo "skip manifest"
-          cp sw.js android/app/src/main/assets/www/ 2>/dev/null || echo "skip sw"
-          cp icon-192.svg android/app/src/main/assets/www/ 2>/dev/null || echo "skip icon"
-          cp icon-512.svg android/app/src/main/assets/www/ 2>/dev/null || echo "skip icon"
-          # data files
-          for f in nlm_conditions.json drugs_fda.json drug_labels.json.gz \
-            fa_names.json wiki_diseases.json diseases_doid.json \
-            symptoms_hpo.json disease_symptoms_hpo.json.gz \
-            diseases_extra.json diseases_offline.db fda_drugs.json; do
-            [ -f "$f" ] && cp "$f" android/app/src/main/assets/www/ || echo "skip: $f"
+          cd android
+          # همه‌ی فایل‌های پایتون
+          for f in ../*.py; do
+            [ -f "$f" ] && cp "$f" . || true
           done
-          echo "=== assets ==="
-          ls -la android/app/src/main/assets/www/
+          # داده‌ها
+          for f in ../*.json ../*.gz ../*.db ../*.csv ../*.html ../*.js ../*.svg; do
+            [ -f "$f" ] && cp "$f" . || true
+          done
+          # فونت‌ها
+          mkdir -p fonts
+          cp ../fonts/*.ttf fonts/ 2>/dev/null || true
+          # env example
+          cp ../.env.example . 2>/dev/null || true
+          echo "=== files ==="
+          ls *.py | wc -l
+          echo "Python files"
+          ls *.json *.gz *.db 2>/dev/null | wc -l
+          echo "data files"
+          du -sh .
 
-      - name: download gradle wrapper jar
+      - name: create icon
+        shell: bash
+        run: |
+          python3 -c "
+          import struct, zlib
+          def png(w,h,r,g,b):
+              def ch(t,d):
+                  c=t+d
+                  return struct.pack('>I',len(d))+c+struct.pack('>I',zlib.crc32(c)&0xffffffff)
+              raw=b''
+              for y in range(h):
+                  raw+=b'\x00'+bytes([r,g,b])*w
+              ihdr=struct.pack('>IIBBBBB',w,h,8,2,0,0,0)
+              return b'\x89PNG\r\n\x1a\n'+ch(b'IHDR',ihdr)+ch(b'IDAT',zlib.compress(raw))+ch(b'IEND',b'')
+          open('android/icon.png','wb').write(png(512,512,0,240,255))
+          print('icon created')
+          "
+
+      - name: build apk with numpy
         shell: bash
         run: |
           cd android
-          curl -sL -o gradle/wrapper/gradle-wrapper.jar \
-            "https://github.com/gradle/gradle/raw/v8.1.0/gradle/wrapper/gradle-wrapper.jar"
-          ls -la gradle/wrapper/gradle-wrapper.jar
+          export PATH=$PATH:$HOME/.buildozer/android/platform/android-sdk/tools
+          export ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk
+          export ANDROID_NDK_HOME=$HOME/.buildozer/android/platform/android-ndk
 
-      - name: build apk
-        shell: bash
-        run: |
-          cd android
-          export ANDROID_HOME=$HOME/android-sdk
-          ./gradlew assembleDebug --no-daemon 2>&1 | tail -40
-          if ls app/build/outputs/apk/debug/*.apk 2>/dev/null; then
-            echo "APK built successfully"
-            cp app/build/outputs/apk/debug/*.apk ../NexusMed-Android.apk
-            ls -la ../NexusMed-Android.apk
+          # تلاش برای ساخت با numpy
+          buildozer android debug 2>&1 | tail -60
+
+          # اگر APK ساخته شد
+          if ls bin/*.apk 2>/dev/null; then
+            echo "✅ APK built successfully!"
+            ls -la bin/
+            cp bin/*.apk ../NexusMed-Android.apk
           else
-            echo "::error::APK build failed"
-            exit 1
+            echo "::warning::Full build with numpy failed, trying without numpy..."
+            # نسخه‌ی سبک بدون numpy (همه‌چیز جز تحلیل تصویر کار می‌کند)
+            sed -i 's/numpy,//' buildozer.spec
+            buildozer android debug 2>&1 | tail -40
+            if ls bin/*.apk 2>/dev/null; then
+              echo "✅ APK (no numpy) built"
+              cp bin/*.apk ../NexusMed-Android.apk
+            else
+              echo "::error::APK build failed"
+              exit 1
+            fi
           fi
 
       - name: publish to release
