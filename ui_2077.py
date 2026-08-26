@@ -288,6 +288,9 @@ class App:
         return self.engine
 
     def _hello(self):
+        ver = f"\n===== NexusMed 2077 v{APP_VERSION} =====\n"
+        new_mods = "\n🆕 NEW MODULES:\n  • Health tools (10 calculators)\n  • Laboratory (96 tests)\n  • Expanded symptoms (240)\n  • Research (PubMed + Trials)\n================================"
+        self._bot(ver + new_mods + "\n\n")
         self._bot(self.L(
             "Hello, I am Nexus, the bilingual medical assistant of NexusMed 2077.\n"
             "Describe your symptoms with details (onset, severity, duration) and we will go through them step by step.\n"
