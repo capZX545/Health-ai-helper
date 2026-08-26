@@ -1,58 +1,168 @@
 package com.nexusmed2077;
 
 import android.app.Activity;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.view.inputmethod.EditorInfo;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.WebSettings;
-import android.os.Handler;
-import android.os.Looper;
-import java.io.*;
-import java.net.*;
-import java.util.concurrent.*;
+import android.widget.*;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.Gravity;
+import android.graphics.Color;
 
 /**
- * NexusMed 2077 — Android launcher.
- * Starts a local HTTP server that serves the bundled web app
- * and opens it in a full-screen WebView.
+ * NexusMed 2077 — Android app.
+ * Connects to the deployed web server (Render.com).
+ * First launch: asks for server URL, then opens full-screen WebView.
+ * ALL features work because the Python backend runs on the server.
  */
 public class MainActivity extends Activity {
 
     private WebView webView;
-    private MiniServer server;
-    private static final int PORT = 8080;
+    private EditText urlInput;
+    private LinearLayout setupView;
+    private String serverUrl;
+    private static final String PREFS = "nexusmed";
+    private static final String KEY_URL = "server_url";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // copy assets to internal storage on first run
-        copyAssetsIfNeeded();
+        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        serverUrl = prefs.getString(KEY_URL, "");
 
-        // start local server
-        server = new MiniServer(PORT);
-        new Thread(server).start();
-
-        // wait a moment for server, then show WebView
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            webView = new WebView(MainActivity.this);
-            WebSettings ws = webView.getSettings();
-            ws.setJavaScriptEnabled(true);
-            ws.setDomStorageEnabled(true);
-            ws.setAllowFileAccess(true);
-            ws.setLoadWithOverviewMode(true);
-            ws.setUseWideViewPort(true);
-            ws.setTextZoom(100);
-            webView.setWebViewClient(new WebViewClient());
-            setContentView(webView);
-            webView.loadUrl("http://127.0.0.1:" + PORT + "/");
-        }, 500);
+        if (serverUrl.isEmpty()) {
+            showSetup();
+        } else {
+            showApp(serverUrl);
+        }
     }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if (server != null) server.stop();
+    private void showSetup() {
+        setupView = new LinearLayout(this);
+        setupView.setOrientation(LinearLayout.VERTICAL);
+        setupView.setGravity(Gravity.CENTER);
+        setupView.setBackgroundColor(Color.parseColor("#04060c"));
+        setupView.setPadding(40, 40, 40, 40);
+
+        // Title
+        TextView title = new TextView(this);
+        title.setText("NexusMed 2077");
+        title.setTextSize(28);
+        title.setTextColor(Color.parseColor("#00f0ff"));
+        title.setGravity(Gravity.CENTER);
+        setupView.addView(title);
+
+        TextView subtitle = new TextView(this);
+        subtitle.setText("دستیار پزشکی هوشمند\n\nEnter your server URL:\nآدرس سرور را وارد کنید:");
+        subtitle.setTextSize(16);
+        subtitle.setTextColor(Color.parseColor("#d7e3ff"));
+        subtitle.setGravity(Gravity.CENTER);
+        subtitle.setPadding(0, 20, 0, 30);
+        setupView.addView(subtitle);
+
+        // URL input
+        urlInput = new EditText(this);
+        urlInput.setHint("https://nexusmed-2077.onrender.com");
+        urlInput.setTextColor(Color.parseColor("#d7e3ff"));
+        urlInput.setHintTextColor(Color.parseColor("#6b7fa3"));
+        urlInput.setBackgroundColor(Color.parseColor("#0a1424"));
+        urlInput.setPadding(20, 15, 20, 15);
+        urlInput.setTextSize(16);
+        urlInput.setSingleLine();
+        urlInput.setImeActionLabel("Connect", EditorInfo.IME_ACTION_GO);
+        urlInput.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_GO) {
+                connect();
+                return true;
+            }
+            return false;
+        });
+        LinearLayout.LayoutParams urlParams = new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        urlInput.setLayoutParams(urlParams);
+        setupView.addView(urlInput);
+
+        // Connect button
+        Button connectBtn = new Button(this);
+        connectBtn.setText("Connect / اتصال");
+        connectBtn.setTextColor(Color.parseColor("#021018"));
+        connectBtn.setBackgroundColor(Color.parseColor("#00b8d4"));
+        connectBtn.setTextSize(18);
+        connectBtn.setPadding(30, 20, 30, 20);
+        connectBtn.setOnClickListener(v -> connect());
+        LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        btnParams.topMargin = 30;
+        connectBtn.setLayoutParams(btnParams);
+        setupView.addView(connectBtn);
+
+        // Instructions
+        TextView help = new TextView(this);
+        help.setText("\n📱 How to get a server URL:\n\n1. Go to render.com (free)\n2. Deploy this GitHub repo\n3. Copy the URL here\n\nبرای دریافت آدرس سرور:\nروی render.com رایگان ثبت کن\nو آدرس را اینجا وارد کن");
+        help.setTextSize(13);
+        help.setTextColor(Color.parseColor("#6b7fa3"));
+        help.setGravity(Gravity.CENTER);
+        help.setPadding(0, 30, 0, 0);
+        setupView.addView(help);
+
+        setContentView(setupView);
+    }
+
+    private void connect() {
+        String url = urlInput.getText().toString().trim();
+        if (url.isEmpty()) {
+            Toast.makeText(this, "Enter a URL / آدرس را وارد کن", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        // normalize
+        if (!url.startsWith("http")) url = "https://" + url;
+        if (url.endsWith("/")) url = url.substring(0, url.length() - 1);
+
+        // save
+        getSharedPreferences(PREFS, MODE_PRIVATE)
+            .edit().putString(KEY_URL, url).apply();
+
+        showApp(url);
+    }
+
+    private void showApp(String url) {
+        webView = new WebView(this);
+        WebSettings ws = webView.getSettings();
+        ws.setJavaScriptEnabled(true);
+        ws.setDomStorageEnabled(true);
+        ws.setAllowFileAccess(true);
+        ws.setLoadWithOverviewMode(true);
+        ws.setUseWideViewPort(true);
+        ws.setTextZoom(100);
+        ws.setSupportZoom(false);
+        ws.setCacheMode(WebSettings.LOAD_DEFAULT);
+
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                // inject mobile CSS tweaks if needed
+                view.evaluateJavascript(
+                    "if(document.querySelector('nav')){document.querySelector('nav').style.position='fixed';" +
+                    "document.querySelector('nav').style.bottom='0';" +
+                    "document.querySelector('nav').style.top='auto';" +
+                    "document.querySelector('nav').style.flexDirection='row';" +
+                    "document.querySelector('nav').style.overflowX='auto';" +
+                    "document.querySelector('nav').style.width='100%';" +
+                    "document.querySelector('nav').style.display='flex';" +
+                    "document.querySelector('nav').style.padding='4px';}", null);
+                super.onPageFinished(view, url);
+            }
+        });
+
+        setContentView(webView);
+        webView.loadUrl(url);
     }
 
     @Override
@@ -64,100 +174,11 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void copyAssetsIfNeeded() {
-        File dataDir = new File(getFilesDir(), "www");
-        if (!dataDir.exists() || dataDir.listFiles().length == 0) {
-            dataDir.mkdirs();
-            try {
-                String[] files = getAssets().list("www");
-                if (files != null) {
-                    for (String f : files) {
-                        copyAsset("www/" + f, new File(dataDir, f));
-                    }
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    private void copyAsset(String assetPath, File dest) throws IOException {
-        try (InputStream is = getAssets().open(assetPath);
-             FileOutputStream fos = new FileOutputStream(dest)) {
-            byte[] buf = new byte[8192];
-            int len;
-            while ((len = is.read(buf)) > 0) fos.write(buf, 0, len);
-        }
-    }
-
-    /**
-     * Minimal HTTP server that serves static files from internal storage.
-     */
-    static class MiniServer implements Runnable {
-        private final int port;
-        private volatile boolean running = true;
-        private ServerSocket serverSocket;
-
-        MiniServer(int port) { this.port = port; }
-
-        @Override
-        public void run() {
-            try {
-                serverSocket = new ServerSocket(port, 10, InetAddress.getByName("127.0.0.1"));
-                while (running) {
-                    Socket client = serverSocket.accept();
-                    handle(client);
-                }
-            } catch (Exception e) {
-                // server stopped
-            }
-        }
-
-        void stop() {
-            running = false;
-            try { if (serverSocket != null) serverSocket.close(); } catch (IOException ignored) {}
-        }
-
-        private void handle(Socket client) {
-            try (BufferedReader in = new BufferedReader(new InputStreamReader(client.getInputStream()));
-                 OutputStream out = client.getOutputStream()) {
-                String line = in.readLine();
-                if (line == null) return;
-                String path = line.split(" ")[1];
-                if (path.equals("/")) path = "/clinic_2077.html";
-
-                // serve from /data/data/com.nexusmed2077/files/www/
-                File wwwDir = new File("/data/data/com.nexusmed2077/files/www");
-                File f = new File(wwwDir, path.substring(1));
-                if (f.exists() && f.isFile()) {
-                    byte[] data = readFile(f);
-                    String mime = getMime(path);
-                    out.write(("HTTP/1.0 200 OK\r\nContent-Type: " + mime + "\r\nContent-Length: " + data.length + "\r\nAccess-Control-Allow-Origin: *\r\n\r\n").getBytes());
-                    out.write(data);
-                } else {
-                    out.write("HTTP/1.0 404 Not Found\r\nContent-Type: text/plain\r\n\r\nNot found".getBytes());
-                }
-            } catch (Exception ignored) {
-            }
-        }
-
-        private byte[] readFile(File f) throws IOException {
-            byte[] data = new byte[(int) f.length()];
-            try (FileInputStream fis = new FileInputStream(f)) {
-                fis.read(data);
-            }
-            return data;
-        }
-
-        private String getMime(String path) {
-            if (path.endsWith(".html")) return "text/html; charset=utf-8";
-            if (path.endsWith(".js")) return "application/javascript";
-            if (path.endsWith(".css")) return "text/css";
-            if (path.endsWith(".json")) return "application/json";
-            if (path.endsWith(".svg")) return "image/svg+xml";
-            if (path.endsWith(".gz")) return "application/gzip";
-            if (path.endsWith(".png")) return "image/png";
-            return "application/octet-stream";
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (webView != null) {
+            webView.destroy();
         }
     }
 }
