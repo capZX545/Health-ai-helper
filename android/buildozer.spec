@@ -5,8 +5,7 @@ package.domain = com.nexusmed2077
 source.dir = .
 source.include_exts = py,json,gz,html,css,js,svg,txt,csv,db,ttf,woff2,png,example,md
 
-version.code = 1
-version.name = 2.5.0
+version = 2.5.0
 
 # همه‌ی کتابخانه‌های علمی داخل APK باندل می‌شوند
 requirements = python3,kivy,numpy,requests,Pillow,setuptools,pyjnius,android
