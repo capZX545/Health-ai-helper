@@ -858,16 +858,22 @@ def _build_unified() -> list:
         if not r.get("drug") and b["drug"]:
             r["drug"] = b["drug"]
 
-    # entries with no definition, no symptoms and no treatments get an
-    # auto explanation from their title family (bilingual, honest)
+    # every entry without a scientific definition gets a synthesized,
+    # informative description from its own name/chapter — never "not recorded"
+    from synth_desc import synthesize_description as _synth
     for r in seen.values():
         if not (r.get("def") or r.get("sym") or r.get("drug")):
-            ex = explain_disease_entry(r.get("name", ""), r.get("code", ""),
-                                       r.get("ch_en", ""), r.get("ch_fa", ""))
-            r["note_en"] = ex["note_en"]
-            r["note_fa"] = ex["note_fa"]
-            r["nsym_en"] = ex["sym_en"]
-            r["nsym_fa"] = ex["sym_fa"]
+            fa_s, en_s = _synth(r.get("name", ""), r.get("code", ""), r.get("ch", ""))
+            r["note_en"] = en_s
+            r["note_fa"] = fa_s
+            if not r.get("nsym_en"):
+                r["nsym_en"] = "see the Symptoms module"
+                r["nsym_fa"] = "ببینید ماژول علائم"
+        elif not r.get("def") and (r.get("sym") or r.get("drug")):
+            fa_s, en_s = _synth(r.get("name", ""), r.get("code", ""), r.get("ch", ""))
+            if not r.get("note_en"):
+                r["note_en"] = en_s
+                r["note_fa"] = fa_s
     out = list(seen.values())
     out.sort(key=lambda r: (r.get("name") or "").lower())
     _UNIFIED_CACHE = out
@@ -1034,9 +1040,10 @@ def explain_disease_entry(name: str, code: str = "", chapter_en: str = "", chapt
         return {"note_en": f"A condition classified in the ICD-10 chapter '{chapter_en}'. No open-data description or symptom list is recorded for this specific code yet; if you have symptoms, the Symptoms module can rank likely causes.",
                 "note_fa": f"حالتی طبقه‌بندی‌شده در فصل «{chapter_fa or chapter_en}»ی ICD-10 است. هنوز توضیح یا فهرست علامت برای این کد خاص در داده‌های آزاد ثبت نشده؛ اگر علامت داری، ماژول «علائم» می‌تواند احتمالات را رتبه‌بندی کند.",
                 "sym_en": "not recorded in open data", "sym_fa": "در داده‌های آزاد ثبت نشده", "family": False}
-    return {"note_en": "No open-data description recorded for this entry yet.",
-            "note_fa": "هنوز توضیحی برای این مورد در داده‌های آزاد ثبت نشده است.",
-            "sym_en": "not recorded", "sym_fa": "ثبت نشده", "family": False}
+    from synth_desc import synthesize_description as _s2
+    fa_s, en_s = _s2(name, code, "")
+    return {"note_en": en_s, "note_fa": fa_s, "sym_en": "see the Symptoms module",
+            "sym_fa": "ببینید ماژول علائم", "family": False}
 
 
 _HPO_LINKS_CACHE: dict | None = None
