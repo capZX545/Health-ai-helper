@@ -738,7 +738,7 @@ def t_builders():
 
 def t_html_i18n():
     html = open("clinic_2077.html", encoding="utf-8").read()
-    js = html.split("<script>")[1].split("</script>")[0]
+    js = html.split("<script>")[-1].split("</script>")[0]
     en_block = js.split("T.en = {")[1].split("\n};")[0]
     fa_block = js.split("T.fa = {")[1].split("\n};")[0]
     vocab_en = set(re.findall(r'([A-Za-z_][A-Za-z_0-9]*):(?=["\'{\[])', en_block)) - {"http"}
