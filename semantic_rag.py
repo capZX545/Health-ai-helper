@@ -147,14 +147,11 @@ def status() -> dict:
 
 
 def _rag_quality_ok(text: str) -> bool:
-    """Reject corrupted entries: too many non-persian words inside farsi text."""
+    """Reject only truly corrupted text: non-english latin gibberish mixed into farsi."""
     import re as _re
     fa_chars = len(_re.findall(r"[\u0600-\u06ff]", text))
-    latin_words = _re.findall(r"[A-Za-z]{3,}", text)
-    allowed = {"mg","dl","mmol","kg","cm","ecg","mri","copd","aids","hiv","cpr",
-               "icd","fda","tsh","fbs","hba1c","ldl","hdl","nsaid","ssri","phq","gad"}
-    bad = [w for w in latin_words if w.lower() not in allowed]
-    # if the text is mostly farsi but has many foreign words -> corrupted
-    if fa_chars > 40 and len(bad) > 4:
+    # words with diacritics/odd chars that no medical text should have
+    gibberish = _re.findall(r"[A-Za-z]*[ąćęłńóśźżáéíóúýčďěňřšťůžâêîôûàèìòù]{2,}[A-Za-z]*", text)
+    if fa_chars > 40 and len(gibberish) > 3:
         return False
     return True
