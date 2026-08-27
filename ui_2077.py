@@ -2302,6 +2302,22 @@ class App:
 
 
 def run_app() -> int:
+    # VERSION STAMP — این فایل همیشه نوشته میشود تا بدانیم کدام نسخه اجرا شده
+    try:
+        from common_2077 import DATA_DIR as _DD
+        import os as _os
+        stamp = _os.path.join(_DD, "VERSION_STAMP.txt")
+        if not _os.path.exists(_DD):
+            _os.makedirs(_DD, exist_ok=True)
+        # fallback: کنار خود برنامه
+        if not _os.path.isdir(_DD):
+            stamp = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "VERSION_STAMP.txt")
+        with open(stamp, "w") as f:
+            f.write(f"NexusMed 2077\nVersion: {APP_VERSION}\nStarted: {__import__('datetime').datetime.now().isoformat()}\n")
+        print(f"[VERSION] {APP_VERSION} — stamp at {stamp}")
+    except Exception as e:
+        print(f"[VERSION] stamp error: {e}")
+
     root = tk.Tk()
     try:
         ttk.Style(root).theme_use("clam")
