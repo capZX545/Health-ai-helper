@@ -61,7 +61,7 @@ def main() -> int:
     cmd = pyinstaller + [
         "--noconfirm", "--clean", "--windowed", "--onedir",
         "--name", APP_NAME,
-        "--collect-submodules", "sklearn",
+        "--paths", ".", "--collect-submodules", "sklearn",
         "--hidden-import", "health_tools",
         "--hidden-import", "lab_full",
         "--hidden-import", "synth_desc",
@@ -91,6 +91,11 @@ def main() -> int:
             os.makedirs(os.path.dirname(os.path.join(dest, f)) or dest, exist_ok=True)
             shutil.copy2(src_path, os.path.join(dest, f))
             print("copied:", f)
+    import glob as _g
+    for pf in _g.glob(os.path.join(BASE, "*.py")):
+        _n = os.path.basename(pf)
+        if not _n.startswith(("_desktop", "_fix", "translate_", "patch_")):
+            shutil.copy2(pf, os.path.join(dest, _n))
     print("exe built: dist/%s/%s.exe" % (APP_NAME, APP_NAME))
     print("next: Create_Setup_Installer.bat -> Output\\NexusMed_Setup.exe")
     return 0
