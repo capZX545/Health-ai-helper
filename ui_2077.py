@@ -1315,62 +1315,66 @@ class App:
             cat_rows.clear()
             if len(q) < 2:
                 return
-            from knowledge_browser import get_catalog_diseases
-            res = get_catalog_diseases(q, 20).get("results") or []
-            if not res:
-                return
-            sep = tk.Label(inner, text=self.L(f"— Full ICD-10 catalog matches ({len(res)}) —",
-                                             f"— نتایج کاتالوگ کامل ICD-10 ({len(res)}) —"),
-                           bg="#0e1730", fg=C["yl"], font=pick_font(9, True), anchor="e")
-            sep.pack(fill="x", padx=10, pady=(8, 2))
-            cat_rows.append(sep)
-            for c in res:
-                row = tk.Frame(inner, bg=C["panel2"])
-                fa_n = c.get("fa") or ""
-                btn_txt = c["name"] + (("  (" + fa_n + ")") if fa_n else "") + "   [" + c["icd10"] + "]"
-                b = tk.Button(row, text=btn_txt,
-                              command=lambda cc=c: show_catalog_detail(cc["name"], cc["icd10"], cc.get("chapter", ""), cc.get("fa", "")),
-                              anchor="e", bg="#101c36", fg=C["tx"], relief="flat", font=pick_font(9),
-                              activebackground="#101c36", activeforeground=C["cy"], cursor="hand2")
-                b.pack(side="right", fill="x", expand=True)
-                row.pack(fill="x", padx=10, pady=1)
-                cat_rows.append(row)
-            # DOID + Wikidata banks
-            try:
-                from knowledge_browser import search_doid, search_wiki_diseases
-                doid = search_doid(q, 8)
-                wiki = [e for e in search_wiki_diseases(q, 40) if e.get("fa") or e.get("sym") or e.get("drug")][:8]
-                if doid or wiki:
-                    sep2 = tk.Label(inner, text="— DOID (" + str(len(doid)) + ") + Wikidata (" + str(len(wiki)) + ") —",
-                                    bg="#0e1730", fg="#3bff9e", font=pick_font(9, True), anchor="e")
-                    sep2.pack(fill="x", padx=10, pady=(8, 2))
-                    cat_rows.append(sep2)
-                    for d in doid:
-                        row = tk.Frame(inner, bg=C["panel2"])
-                        b = tk.Button(row, text=d["name"] + "   [DOID:" + d["doid"] + "]",
-                                      command=lambda dd=d: show_bank_detail(dd.get("name", ""), defn=dd.get("def", ""), code="DOID:" + dd.get("doid", "")),
-                                      anchor="e", bg="#101c36", fg=C["tx"], relief="flat", font=pick_font(9),
-                                      activebackground="#101c36", activeforeground=C["cy"], cursor="hand2")
-                        b.pack(side="right", fill="x", expand=True)
-                        row.pack(fill="x", padx=10, pady=1)
-                        cat_rows.append(row)
-                    for e in wiki:
-                        row = tk.Frame(inner, bg=C["panel2"])
-                        title = e.get("en", "")
-                        if e.get("fa"):
-                            title += "  (" + e["fa"] + ")"
-                        b = tk.Button(row, text=title,
-                                      command=lambda ee=e: show_bank_detail(ee.get("en", ""), defn="", code=ee.get("icd", "") or ee.get("qid", ""),
-                                                                             syms=ee.get("sym", []), drugs=ee.get("drug", [])),
-                                      anchor="e", bg="#101c36", fg=C["tx"], relief="flat", font=pick_font(9),
-                                      activebackground="#101c36", activeforeground=C["cy"], cursor="hand2")
-                        b.pack(side="right", fill="x", expand=True)
-                        row.pack(fill="x", padx=10, pady=1)
-                        cat_rows.append(row)
-            except Exception:
-                pass
-            # scroll the list down so the results show up
+            # search EVERY bank: ICD catalog + DOID + Wikidata
+            from knowledge_browser import get_catalog_diseases, search_doid, search_wiki_diseases
+            res = get_catalog_diseases(q, 15).get("results") or []
+            if res:
+                sep = tk.Label(inner, text=self.L(f"— ICD-10 catalog ({len(res)}) —",
+                                                 f"— نتایج ICD-10 ({len(res)}) —"),
+                               bg="#0e1730", fg=C["yl"], font=pick_font(9, True), anchor="e")
+                sep.pack(fill="x", padx=10, pady=(8, 2))
+                cat_rows.append(sep)
+                for c in res:
+                    row = tk.Frame(inner, bg=C["panel2"])
+                    fa_n = c.get("fa") or ""
+                    btn_txt = c["name"] + (("  (" + fa_n + ")") if fa_n else "") + "   [" + c["icd10"] + "]"
+                    b = tk.Button(row, text=btn_txt,
+                                  command=lambda cc=c: show_catalog_detail(cc["name"], cc["icd10"], cc.get("chapter", ""), cc.get("fa", "")),
+                                  anchor="e", bg="#101c36", fg=C["tx"], relief="flat", font=pick_font(9),
+                                  activebackground="#101c36", activeforeground=C["cy"], cursor="hand2")
+                    b.pack(side="right", fill="x", expand=True)
+                    row.pack(fill="x", padx=10, pady=1)
+                    cat_rows.append(row)
+            doid = search_doid(q, 8)
+            if doid:
+                sep2 = tk.Label(inner, text=self.L(f"— Disease Ontology ({len(doid)}) —",
+                                                  f"— نتایج بانک DOID ({len(doid)}) —"),
+                                bg="#0e1730", fg="#3bff9e", font=pick_font(9, True), anchor="e")
+                sep2.pack(fill="x", padx=10, pady=(8, 2))
+                cat_rows.append(sep2)
+                for d in doid:
+                    row = tk.Frame(inner, bg=C["panel2"])
+                    b = tk.Button(row, text=d["name"] + "   [DOID:" + d["doid"] + "]",
+                                  command=lambda dd=d: show_catalog_detail(dd.get("name", ""), dd.get("icd", "") or ("DOID:" + dd.get("doid", "")), "", dd.get("def", "")),
+                                  anchor="e", bg="#101c36", fg=C["tx"], relief="flat", font=pick_font(9),
+                                  activebackground="#101c36", activeforeground=C["cy"], cursor="hand2")
+                    b.pack(side="right", fill="x", expand=True)
+                    row.pack(fill="x", padx=10, pady=1)
+                    cat_rows.append(row)
+            wiki = search_wiki_diseases(q, 40)[:8]
+            if wiki:
+                sep3 = tk.Label(inner, text=self.L(f"— Wikidata ({len(wiki)}) —",
+                                                  f"— نتایج ویکی‌دیتا ({len(wiki)}) —"),
+                                bg="#0e1730", fg="#00f0ff", font=pick_font(9, True), anchor="e")
+                sep3.pack(fill="x", padx=10, pady=(8, 2))
+                cat_rows.append(sep3)
+                for e in wiki:
+                    row = tk.Frame(inner, bg=C["panel2"])
+                    title = e.get("en", "")
+                    if e.get("fa"):
+                        title += "  (" + e["fa"] + ")"
+                    if e.get("icd"):
+                        title += "   [" + e["icd"] + "]"
+                    b = tk.Button(row, text=title,
+                                  command=lambda ee=e: show_catalog_detail(ee.get("en", ""), ee.get("icd", ""), "", ""),
+                                  anchor="e", bg="#101c36", fg=C["tx"], relief="flat", font=pick_font(9),
+                                  activebackground="#101c36", activeforeground=C["cy"], cursor="hand2")
+                    b.pack(side="right", fill="x", expand=True)
+                    row.pack(fill="x", padx=10, pady=1)
+                    cat_rows.append(row)
+            # scroll to results
             w._canvas.yview_moveto(1.0)
+
         def schedule_catalog(*_):
             if _deb["job"]:
                 try:

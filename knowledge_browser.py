@@ -658,9 +658,11 @@ def search_doid(query: str, limit: int = 15) -> list:
     q = normalize(query)
     if not q:
         return []
+    words = [w for w in q.split() if len(w) > 2]
     out = []
     for d in _load_doid():
-        if q in d["_hay"] or q in d.get("icd", "").lower():
+        hay = d["_hay"] + " " + d.get("icd", "").lower()
+        if q in hay or (words and all(w in hay for w in words)):
             out.append(d)
             if len(out) >= limit:
                 break
@@ -684,12 +686,16 @@ def _load_wiki() -> dict:
 def search_wiki_diseases(query: str, limit: int = 15) -> list:
     q = normalize(query)
     qe = query.strip().lower()
+    words = [w for w in q.split() if len(w) > 2]
     if not q:
         return []
     out = []
     for k, e in _load_wiki().items():
-        if (q in normalize(e.get("en", "")) or q in normalize(e.get("fa", ""))
-                or qe == str(e.get("icd", "")).strip().lower()):
+        _en, _fa = normalize(e.get("en", "")), normalize(e.get("fa", ""))
+        _hay = _en + " " + _fa
+        if ((q in _en or q in _fa
+                or qe == str(e.get("icd", "")).strip().lower())
+                or (words and all(w in _hay for w in words))):
             out.append({"qid": k, **e})
             if len(out) >= limit:
                 break
