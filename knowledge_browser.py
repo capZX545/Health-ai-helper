@@ -1473,6 +1473,7 @@ def full_profile(name: str, code: str = "", ch_key: str = "",
     sym_fallback = _CHAPTER_SYMPTOMS.get(ch) or ("depends on the affected organ — check the Symptoms module", "بسته به اندام درگیر — از ماژول علائم بررسی کن")
     # --- drugs ---
     d_list = [str(d) for d in (drugs or [])][:14]
+    drug_fb_fa, drug_fb_en = chapter_drugs(ch)
     # --- treatment ---
     tr_fa, tr_en = guess_treatment(name)
     ch_clin = _CHAPTER_CLINICAL.get(ch)
@@ -1486,5 +1487,36 @@ def full_profile(name: str, code: str = "", ch_key: str = "",
         "sym_fb_en": sym_fallback[0] if sym_fallback else "",
         "sym_fb_fa": sym_fallback[1] if sym_fallback else "",
         "drugs": d_list,
+        "drug_fb_fa": drug_fb_fa, "drug_fb_en": drug_fb_en,
         "treat_en": tr_en, "treat_fa": tr_fa,
     }
+
+
+# chapter → typical medication classes (fa, en)
+_CHAPTER_DRUGS = {
+    "A00-B99": ("آنتی‌بیوتیک‌ها (مثل آموکسی‌سیلین)، آنتی‌ویروس‌ها، آنتی‌قارچ‌ها بسته به عامل", "antibiotics (e.g. amoxicillin), antivirals or antifungals depending on the organism"),
+    "C00-D49": ("داروهای شیمی‌درمانی، داروهای هدف‌مندی و مسکن‌های اوپیوئید زیر نظر انکولوژیست", "chemotherapy, targeted therapy and opioid pain relief under an oncologist"),
+    "D50-D89": ("مکمل آهن، ویتامین B12، داروهای تحریک‌کننده مغز استخوان", "iron supplements, vitamin B12, bone-marrow stimulating drugs"),
+    "E00-E89": ("متفورمین/انسولین (دیابت)، لووتیروکسین (تیروئید)، هورمون‌ها بسته به غده", "metformin/insulin (diabetes), levothyroxine (thyroid), hormones per gland"),
+    "F01-F99": ("سرترالین/فلوکستین (افسردگی)، بنزودیازپین‌ها کوتاه‌مدت، داروهای ضدروان‌پریشی", "sertraline/fluoxetine (depression), short-term benzodiazepines, antipsychotics"),
+    "G00-G99": ("ضدتشنج‌ها (مثل کاربامازپین)، لوودوپا (پارکینسون)، کورتون (مولتیپل اسکلروزیس)", "antiepileptics (e.g. carbamazepine), levodopa (Parkinson's), steroids (MS)"),
+    "H00-H59": ("قطره‌های چشمی (آنتی‌بیوتیک/استروئید)، داروهای کاهش فشار چشم (گلوکوما)", "eye drops (antibiotic/steroid), pressure-lowering drops (glaucoma)"),
+    "H60-H95": ("قطره‌های گوش آنتی‌بیوتیک‌دار، مسکن‌ها، آنتی‌هیستامین‌ها برای سرگیجه", "antibiotic ear drops, painkillers, antihistamines for dizziness"),
+    "I00-I99": ("آسپرین/استاتین‌ها، بتابلاکرها، مهارکننده‌های ACE، نیترات‌ها، داروهای ادرارآور", "aspirin/statins, beta-blockers, ACE inhibitors, nitrates, diuretics"),
+    "J00-J99": ("اسپری‌های برونکودیلاتور و کورتونی (آسم)، آنتی‌بیوتیک (پنومونی)، اکسیژن", "bronchodilator and steroid inhalers (asthma), antibiotics (pneumonia), oxygen"),
+    "K00-K95": ("مهارکننده‌های پمپ پروتون (امپرازول)، آنتی‌اسیدها، مسکن‌ها، داروهای ضدالتهابی روده", "proton pump inhibitors (omeprazole), antacids, analgesics, IBD drugs"),
+    "L00-L99": ("کرم‌های کورتونی، مرطوب‌کننده‌ها، آنتی‌هیستامین‌ها، رتینوئیدها (آکنه)", "steroid creams, moisturizers, antihistamines, retinoids (acne)"),
+    "M00-M99": ("مسکن‌ها (استامینوفن/ایبوپروفن)، داروهای ضدروماتیزمی (متوترکسات), کلسیم/ویتامین D", "painkillers (paracetamol/ibuprofen), DMARDs (methotrexate), calcium/vitamin D"),
+    "N00-N99": ("آنتی‌بیوتیک‌های ادراری، آلفابلاکرها (پروستات)، داروهای کاهنده اوره اسید", "urinary antibiotics, alpha-blockers (prostate), uric-acid lowering drugs"),
+    "O00-O9A": ("مکمل‌های بارداری (اسید فولیک، آهن)، داروهای تحت نظر متخصص زنان", "pregnancy supplements (folic acid, iron), obstetrician-prescribed drugs"),
+    "P00-P96": ("داروهای تحت نظر نئوناتولوژیست — دوز دقیق نوزادی", "neonatologist-managed medications with precise newborn dosing"),
+    "Q00-Q99": ("داروهای علامتی + جراحی اصلاحی در صورت نیاز", "symptom-directed drugs + corrective surgery when needed"),
+    "R00-R99": ("درمان علت زمینه‌ای — علامت خودش بیماری نیست", "treat the underlying cause — the symptom itself is not a disease"),
+    "S00-T88": ("مسکن‌ها، گچ/بی‌حرکتی، پماد سوختگی، آنتی‌بیوتیک prophylaxis", "painkillers, casting/immobilization, burn ointments, antibiotic prophylaxis"),
+    "Z00-Z99": ("دارو ندارد — کد پیشگیری/سابقه است", "no medication — this is a prevention/history code"),
+}
+
+
+def chapter_drugs(ch_key: str) -> tuple[str, str]:
+    """(fa, en) typical drug classes for the chapter."""
+    return _CHAPTER_DRUGS.get(ch_key, ("داروها بسته به تشخیص دقیق — با پزشک مشورت کن", "medication depends on the exact diagnosis — consult a doctor"))

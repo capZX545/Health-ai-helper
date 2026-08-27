@@ -1,9 +1,9 @@
 ﻿; NexusMed_Installer.iss — Inno Setup 6 script for NexusMed 2077
-; Build: ISCC.exe NexusMed_Installer.iss  →  Output\NexusMed_Setup_v5.4.0exe
+; Build: ISCC.exe NexusMed_Installer.iss  →  Output\NexusMed_Setup_v5.5.0exe
 
 #define MyAppName "NexusMed 2077"
 #define MyAppNameFa "نکسوس ۲۰۷۷ — دستیار هوشمند پزشکی فارسی"
-#define MyAppVersion "5.4.0"
+#define MyAppVersion "5.5.0"
 #define MyAppPublisher "NexusMed 2077 Project"
 #define MyAppExeName "NexusMed2077.exe"
 
@@ -17,7 +17,7 @@ DefaultDirName={localappdata}\NexusMed2077
 DefaultGroupName=NexusMed 2077
 PrivilegesRequired=lowest
 OutputDir=Output
-OutputBaseFilename=NexusMed_Setup_v5.4.0
+OutputBaseFilename=NexusMed_Setup_v5.5.0
 SetupIconFile=
 Compression=lzma2/max
 SolidCompression=yes

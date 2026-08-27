@@ -1296,6 +1296,8 @@ class App:
             lines.append(L("━━━ Medications ━━━", "━━━ داروهای مرتبط ━━━"))
             if drugs:
                 lines.append("  " + sep.join(drugs))
+            elif _p.get("drug_fb_fa"):
+                lines.append("  " + (_p["drug_fb_fa"] if _fa_cd else _p["drug_fb_en"]))
             else:
                 lines.append("  " + L("see the Drugs module", "بانک داروها را ببین"))
             # treatment
@@ -1442,6 +1444,8 @@ class App:
             lines.append(L("━━━ Medications ━━━", "━━━ داروهای مرتبط ━━━"))
             if p["drugs"]:
                 lines.append("  " + sep.join(p["drugs"]))
+            elif p.get("drug_fb_fa"):
+                lines.append("  " + (p["drug_fb_fa"] if _fa else p["drug_fb_en"]))
             else:
                 lines.append("  " + L("see the Drugs module", "بانک داروها را ببین"))
             # treatment
