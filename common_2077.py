@@ -14,7 +14,7 @@ import threading
 from datetime import datetime, timezone
 
 APP_NAME = "NexusMed 2077"
-APP_VERSION = "5.0.1"
+APP_VERSION = "5.1.0"
 DATA_DIR = _BASE = os.path.dirname(os.path.abspath(sys.executable if getattr(sys, "frozen", False) else __file__))
 
 MEDICAL_DISCLAIMER_FA = (
