@@ -57,24 +57,32 @@ def score_disease(d: dict, detected: dict, profile: dict) -> float:
     denied = {s: info for s, info in detected.get("present", {}).items() if info.get("denied")}
     logp = math.log(max(d["prior"] * _age_sex_factor(d, profile), SMOOTH))
     rare = _RARE
+    _n_matches = len([1 for x in present if x in d["symptoms"]])
     for sid, p in d["symptoms"].items():
         if sid in present:
             boost = 1.25 if present[sid]["severity"] == "severe" else 1.0
             logp += math.log(min(p * boost, 0.98))
-            # a rare high-probability symptom beats generic ones like fever
+            # a rare high-probability symptom beats generic ones like fever;
+            # boost fades when multiple other symptoms also match (broader picture)
+            _mult = 1.0 if _n_matches <= 1 else 0.4
             if p >= 0.9 and rare_counts.get(sid, 9) == 1:
-                logp += math.log(3.5)
+                logp += math.log(1 + (3.5 - 1) * _mult)
             elif p >= 0.8 and sid in rare:
-                logp += math.log(2.0)
+                logp += math.log(1 + (2.0 - 1) * _mult)
         elif sid in denied:
             logp += math.log(max(1.0 - p, SMOOTH))
         elif p >= 0.8:
-            # a key symptom that wasn't mentioned softly lowers the score
-            logp += math.log(1.0 - p * 0.5)
+            # a key symptom that wasn't mentioned lowers the score,
+            # but less when several symptoms already match (partial picture)
+            _n_present = len([1 for x in present if x in d["symptoms"]])
+            _penalty = 0.5 if _n_present < 2 else 0.18
+            logp += math.log(1.0 - p * _penalty)
     # coverage penalty: the patient has it but this disease never explains it
+    _overlap_n = len([1 for x in present if x in d["symptoms"]])
+    _cov = 0.7 if _overlap_n < 2 else 0.88
     for sid in present:
         if sid not in d["symptoms"]:
-            logp += math.log(0.7)
+            logp += math.log(_cov)
     # duration: a cold doesn't last 3 weeks; TB/COPD run for months
     dur = detected.get("duration_days")
     if dur is not None:
