@@ -104,6 +104,30 @@ class HybridEngine:
             return {"ok": True, "text": reply, "source": "internal-emergency",
                     "red_flag": True, "reasons": analysis["red_flag_reasons"], "learned": False}
 
+        # 1.5) intent routing: knowledge questions answered from local banks
+        if not image_b64 and not analysis.get("red_flag"):
+            try:
+                from intent_router import classify
+                from knowledge_answer import (answer_greeting, answer_drug_question,
+                                              answer_disease_question, answer_advice_question)
+                intent = classify(user_text)
+                _ans = None
+                if intent == "greeting":
+                    _ans = answer_greeting(user_text)
+                elif intent == "drug_question":
+                    _ans = answer_drug_question(user_text)
+                elif intent == "disease_question":
+                    _ans = answer_disease_question(user_text)
+                elif intent == "advice_question":
+                    _ans = answer_advice_question(user_text)
+                if _ans:
+                    self._remember("user", user_text)
+                    self._remember("assistant", _ans)
+                    return {"ok": True, "text": _ans, "source": "internal-knowledge",
+                            "red_flag": False, "learned": False}
+            except Exception:
+                pass  # fall through to normal flow
+
         # 2) external AI if a key exists - images go here too
         s = get_settings()
         external = None
