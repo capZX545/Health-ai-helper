@@ -35,6 +35,26 @@ jobs:
         shell: pwsh
         run: python build_exe.py
 
+      - name: verify modules in exe
+        shell: pwsh
+        run: |
+          Write-Host "=== Verifying dist contents ==="
+          $distDir = "dist\NexusMed2077"
+          if (Test-Path "$distDir\NexusMed2077.exe") {
+            Write-Host "✅ NexusMed2077.exe exists"
+          } else { Write-Host "❌ exe missing!"; exit 1 }
+          # چک کن فایل‌های داده
+          $dataFiles = @("clinic_2077.html","diseases_doid.json","drugs_fda.json","symptoms_hpo.json","drug_labels.json.gz","fa_names.json","disease_symptoms_hpo.json.gz")
+          foreach ($f in $dataFiles) {
+            if ((Test-Path "$distDir\$f") -or (Test-Path "$distDir\_internal\$f")) {
+              Write-Host "✅ $f"
+            } else { Write-Host "❌ $f MISSING!"; exit 1 }
+          }
+          # چک کن که exe حجم مناسبی دارد
+          $exeSize = (Get-Item "$distDir\NexusMed2077.exe").Length / 1MB
+          Write-Host "EXE size: $([math]::Round($exeSize, 1)) MB"
+          if ($exeSize -lt 2) { Write-Host "❌ exe too small!"; exit 1 }
+
       - name: build the setup with inno setup
         shell: pwsh
         run: |
@@ -46,7 +66,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: Output/NexusMed_Setup_v3.2.0.exe
+          files: Output/NexusMed_Setup_v3.3.0.exe
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -56,4 +76,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: NexusMed-Setup
-          path: Output/NexusMed_Setup_v3.2.0.exe
+          path: Output/NexusMed_Setup_v3.3.0.exe
