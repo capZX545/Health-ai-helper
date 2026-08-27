@@ -1423,8 +1423,36 @@ def full_profile(name: str, code: str = "", ch_key: str = "",
     if not ch and code:
         _c = icd_chapter(code)
         ch = _c.get("key", "")
+    if not ch:
+        # guess chapter from the name itself
+        _low = (name or "").lower()
+        _guess = {
+            "M00-M99": ("arthr", "joint", "muscle", "bone", "fracture", "back pain", "osteopor", "rheuma"),
+            "I00-I99": ("heart", "cardiac", "coronary", "hypertens", "arrhythm", "atrial"),
+            "J00-J99": ("asthma", "lung", "pulmonary", "bronch", "pneumon", "respirat", "copd"),
+            "K00-K95": ("gastr", "ulcer", "colit", "hepat", "liver", "pancrea", "intestin", "esophag", "chole"),
+            "C00-D49": ("cancer", "carcinoma", "neoplasm", "lymphoma", "leukemia", "melanoma", "sarcoma", "tumor", "myeloma"),
+            "G00-G99": ("epilep", "seizure", "neuropathy", "myasthenia", "parkinson", "migraine", "encephal", "mening"),
+            "E00-E89": ("diabet", "thyroid", "obes", "metabolic", "hormone", "adrenal", "pituitary"),
+            "F01-F99": ("depress", "anxiety", "schizophren", "bipolar", "autism", "adhd"),
+            "L00-L99": ("dermat", "eczema", "psoria", "skin", "urticaria", "alopecia"),
+            "N00-N99": ("nephrit", "kidney", "renal", "urinary", "cystit", "prostat"),
+            "H00-H59": ("retin", "cataract", "glaucoma", "conjunctiv", "myopia"),
+            "H60-H95": ("otit", "hearing", "deaf", "tinnitus", "ear"),
+            "D50-D89": ("anemia", "thalass", "hemophil", "leukopen", "thrombocyto"),
+            "A00-B99": ("infect", "sepsis", "abscess", "tubercul", "malaria", "hepatitis"),
+        }
+        for _ck, _words in _guess.items():
+            if any(_w in _low for _w in _words):
+                ch = _ck
+                break
     # --- about ---
     about_en, about_fa = definition, definition
+    if about_en and not any("\u0600" <= _c2 <= "\u06ff" for _c2 in about_en):
+        # definition is english-only: pair it with the chapter's farsi clinical text when available
+        _cl = _CHAPTER_CLINICAL.get(ch)
+        if _cl:
+            about_fa = _cl[1]
     if not about_en:
         a = icd_about(code)
         if a:
