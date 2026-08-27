@@ -259,9 +259,12 @@ class Handler(BaseHTTPRequestHandler):
             for d in get_all_diseases():
                 if q and (nq in __import__("common_2077").normalize(d.get("name", "")) or nq in __import__("common_2077").normalize(d.get("fa", ""))):
                     from i18n import is_fa as _isfa
+                    from knowledge_browser import guess_treatment as _gt2
+                    _tr2 = _gt2(d.get("name", ""))
                     rows.append({"src": "engine", "name": d.get("name", ""), "fa": d.get("fa", ""),
                                  "code": "", "sym": [s.get("name") for s in (d.get("symptoms") or [])][:8],
-                                 "labs": [x.get("fa" if _isfa() else "en") for x in (d.get("labs") or [])][:6]})
+                                 "labs": [x.get("fa" if _isfa() else "en") for x in (d.get("labs") or [])][:6],
+                                 "treat_fa": _tr2[0], "treat_en": _tr2[1]})
                 if len(rows) >= limit:
                     break
             # 2) ICD catalog (with the fa -> en bridge)
@@ -286,9 +289,12 @@ class Handler(BaseHTTPRequestHandler):
             # 4) wikidata (with symptoms/treatments)
             if q and len(rows) < limit:
                 for e in search_wiki_diseases(q, 10):
+                    from knowledge_browser import guess_treatment as _gt
+                    _tr_fa, _tr_en = _gt(e.get("en", ""))
                     rows.append({"src": "wiki", "name": e.get("en", ""), "fa": e.get("fa", ""),
                                  "code": e.get("icd", "") or e.get("qid", ""), "sym": e.get("sym", [])[:10],
-                                 "drug": e.get("drug", [])[:10]})
+                                 "drug": e.get("drug", [])[:10],
+                                 "treat_fa": _tr_fa, "treat_en": _tr_en})
                     if len(rows) >= limit:
                         break
             from knowledge_browser import hpo_count, _load_doid, _load_wiki

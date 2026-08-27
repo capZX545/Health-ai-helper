@@ -697,17 +697,37 @@ def search_wiki_diseases(query: str, limit: int = 15) -> list:
 
 
 def get_wiki_disease(en: str = "", icd: str = "", doid: str = "") -> dict | None:
-    """Find the wiki entry (with symptoms/treatments) for a disease."""
+    """Find the wiki entry (with symptoms/treatments) for a disease.
+
+    Match priority: exact english name > ICD-10 category prefix (e.g. E11)
+    > DOID. The ICD prefix only matches when the wiki entry's own ICD code
+    starts with the same 3-character category (E11 vs E11, not E11 vs E23).
+    """
     ne = normalize(en or "")
     code = (icd or "").strip().upper()
+    # take the ICD category like "E11" (letter + 2 digits)
+    cat = ""
+    if code:
+        c = code[0]
+        digits = "".join(ch for ch in code[1:] if ch.isdigit())[:2]
+        if c.isalpha() and len(digits) == 2:
+            cat = c + digits
     dnum = str(doid or "").strip()
     best = None
     for k, e in _load_wiki().items():
+        # 1) exact name
         if ne and normalize(e.get("en", "")) == ne:
             return {"qid": k, **e}
-        if code and str(e.get("icd", "")).upper().rstrip(".0123456789") == code.rstrip(".0123456789")[:3]:
-            if e.get("sym") or e.get("drug"):
-                best = best or {"qid": k, **e}
+        # 2) ICD category prefix match (both sides same category)
+        if cat:
+            wc = str(e.get("icd", "")).strip().upper()
+            if wc[:3] == cat and (e.get("sym") or e.get("drug")):
+                # prefer entries that also share a word with the query name
+                if best is None:
+                    best = {"qid": k, **e}
+                elif ne and any(w in normalize(e.get("en", "")) for w in ne.split() if len(w) > 4):
+                    best = {"qid": k, **e}
+        # 3) DOID
         if dnum and str(e.get("doid", "")).endswith(dnum):
             return {"qid": k, **e}
     return best
@@ -1194,3 +1214,126 @@ def match_diseases_by_symptoms(sym_names: list, limit: int = 12) -> list:
                        "matched": [s for s in syms if normalize(s) in hit][:8], "total_syms": len(syms)})
     scored.sort(key=lambda x: -x["score"])
     return scored[:limit]
+
+
+# ---------- full bilingual disease profile ----------
+
+_TREATMENT_FA = {
+    "infection": "آنتی‌بیوتیک (با تجویز پزشک)", "viral": "درمان حمایتی و استراحت",
+    "bacterial": "آنتی‌بیوتیک", "fungal": "ضدقارچ", "parasitic": "انگل‌کش",
+    "cancer": "جراحی، شیمی‌درمانی یا پرتودرمانی (توسط متخصص انکولوژی)",
+    "fracture": "گچ‌گیری یا جراحی ارتوپدی", "injury": "استراحت، سرما، بالا نگه‌داشتن و گچ‌بندی در صورت نیاز",
+    "burn": "خنک‌کردن با آب، پماد و پوشش استریل", "poisoning": "شست‌شو و مراقبت اورژانسی فوری",
+    "anemia": "مکمل آهن یا ویتامین B12 بر اساس علت", "diabetes": "رژیم، ورزش، قرص یا انسولین",
+    "hypertension": "تغییر سبک زندگی + داروی ضدفشار خون", "asthma": "اسپری برونکودیلاتور و کورتون استنشاقی",
+    "depression": "روان‌درمانی + داروهای ضدافسردگی", "anxiety": "شناخت‌درمانی و دارو در موارد شدید",
+    "thyroid": "هورمون درمانی (لووتیروکسین) یا داروی ضددریوی",
+    "allergy": "اجتناب از عامل حساسیت + آنتی‌هیستامین",
+    "migraine": "مسکن حمله + داروی پیشگیری در تکرار زیاد",
+    "pregnancy": "مراقبت زنان و ویزیت منظم",
+    "surgery": "جراحی", "congenital": "پیگیری تخصصی و جراحی اصلاحی در صورت نیاز",
+}
+_TREATMENT_EN = {
+    "infection": "antibiotics (as prescribed)", "viral": "supportive care and rest",
+    "bacterial": "antibiotics", "fungal": "antifungals", "parasitic": "antiparasitics",
+    "cancer": "surgery, chemotherapy or radiotherapy (oncologist-led)",
+    "fracture": "casting or orthopedic surgery", "injury": "rest, ice, elevation, immobilization if needed",
+    "burn": "cool with water, ointment and sterile dressing", "poisoning": "emergency decontamination and care",
+    "anemia": "iron or B12 supplementation based on cause", "diabetes": "diet, exercise, tablets or insulin",
+    "hypertension": "lifestyle change + antihypertensive medication", "asthma": "bronchodilator and inhaled steroid inhalers",
+    "depression": "psychotherapy + antidepressants", "anxiety": "CBT and medication if severe",
+    "thyroid": "hormone therapy (levothyroxine) or antithyroid drugs",
+    "allergy": "avoiding the trigger + antihistamines",
+    "migraine": "attack painkillers + preventive drugs if frequent",
+    "pregnancy": "obstetric care and regular visits",
+    "surgery": "surgery", "congenital": "specialist follow-up and corrective surgery when needed",
+}
+_TREAT_KEYWORDS = [
+    ("infection", ("infection", "abscess", "cellulitis", "sepsis", "pneumonia", "UTI", "pyelonephritis")),
+    ("viral", ("viral", "influenza", "common cold", "COVID", "measles", "chickenpox", "herpes", "hepatitis A")),
+    ("bacterial", ("bacterial", "strep", "staph", "tuberculosis", "boreliosis")),
+    ("fungal", ("fungal", "candid", "tinea", "dermatophyt")),
+    ("parasitic", ("parasitic", "malaria", "worm", "helminth", "protozo")),
+    ("cancer", ("cancer", "carcinoma", "neoplasm", "malignant", "lymphoma", "leukemia", "melanoma", "sarcoma", "myeloma", "tumor")),
+    ("fracture", ("fracture", "broken bone", "fissure of")),
+    ("injury", ("injury", "laceration", "contusion", "sprain", "strain", "dislocation", "wound")),
+    ("burn", ("burn", "corrosion", "scald")),
+    ("poisoning", ("poisoning", "toxic", "overdose")),
+    ("anemia", ("anemia", "anemia", "thalassemia", "iron-deficiency")),
+    ("diabetes", ("diabetes", "hyperglycemia", "glyc")),
+    ("hypertension", ("hypertension", "high blood pressure")),
+    ("asthma", ("asthma", "COPD", "bronchitis", "airway")),
+    ("depression", ("depression", "depressive", "dysthymia")),
+    ("anxiety", ("anxiety", "panic", "phobia", "GAD")),
+    ("thyroid", ("thyroid", "goiter", "hyperthyroid", "hypothyroid", "graves", "hashimoto")),
+    ("allergy", ("allergy", "allergic", "rhinitis", "urticaria", "eczema", "atopic")),
+    ("migraine", ("migraine", "headache")),
+    ("pregnancy", ("pregnancy", "delivery", "birth", "obstetric", "labor", "gravid")),
+    ("surgery", ("hernia", "appendicitis", "cholecystitis", "obstruction")),
+    ("congenital", ("congenital", "malformation", "birth defect", "syndrome")),
+]
+
+
+def guess_treatment(name: str) -> tuple[str, str]:
+    """Guess a treatment line (fa, en) from the disease's name."""
+    low = (name or "").lower()
+    for key, words in _TREAT_KEYWORDS:
+        if any(w.lower() in low for w in words):
+            return _TREATMENT_FA.get(key, "مشاوره با پزشک"), _TREATMENT_EN.get(key, "consult a doctor")
+    return "درمان بر اساس تشخیص پزشک", "treatment as determined by a doctor"
+
+
+def disease_profile(row: dict) -> dict:
+    """Full bilingual profile of a disease row from the unified bank."""
+    from i18n import is_fa
+    name = row.get("name", "")
+    fa_name = row.get("fa", "")
+    treat_fa, treat_en = guess_treatment(name)
+    syms = [str(s) for s in (row.get("sym") or [])][:12]
+    drugs = [str(d) for d in (row.get("drug") or [])][:12]
+    definition = row.get("def") or ""
+    note_fa = row.get("note_fa", "")
+    note_en = row.get("note_en", "")
+    ch_fa = row.get("ch_fa", "")
+    ch_en = row.get("ch_en", "")
+    return {
+        "name": name, "fa_name": fa_name, "code": row.get("code", ""),
+        "about": definition or (note_fa if is_fa() else note_en) or "",
+        "symptoms": syms,
+        "signs_fa": row.get("nsym_fa", ""), "signs_en": row.get("nsym_en", ""),
+        "drugs": drugs, "treat_fa": treat_fa, "treat_en": treat_en,
+        "ch_fa": ch_fa, "ch_en": ch_en,
+        "labs": row.get("labs", []),
+    }
+
+
+_ICD_ABOUT = {
+    "E11": ("Type 2 diabetes: a chronic metabolic condition in which the body resists insulin or does not make enough of it, so blood sugar rises. Typical symptoms include thirst, frequent urination, fatigue and blurred vision; many cases have no symptoms for years. Managed with diet, exercise, tablets (metformin) and sometimes insulin.",
+            "دیابت نوع ۲: بیماری مزمن متابولیک که در آن بدن به انسولین مقاوم می‌شود یا انسولین کافی تولید نمی‌کند و قند خون بالا می‌رود. علائم شایع: تشنگی، تکرر ادرار، خستگی و تار دید؛ بسیاری از موارد سال‌ها بدون علامت هستند. کنترل با رژیم، ورزش، قرص (متفورمین) و گاهی انسولین."),
+    "E10": ("Type 1 diabetes: an autoimmune condition where the pancreas stops making insulin, usually starting in childhood or young adulthood. Symptoms come fast: thirst, weight loss, frequent urination, fatigue. Needs lifelong insulin.",
+            "دیابت نوع ۱: بیماری خودایمنی که در آن پانکراس تولید انسولین را متوقف می‌کند، معمولاً از کودکی یا جوانی شروع می‌شود. علائم سریع ظاهر می‌شوند: تشنگی، کاهش وزن، تکرر ادرار، خستگی. نیاز به انسولین مادام‌العمر دارد."),
+    "I10": ("Essential hypertension: persistently raised blood pressure without a single identifiable cause. Usually silent; found on measurement. Over time it raises the risk of heart attack, stroke and kidney disease. Managed with salt reduction, exercise, weight control and medication.",
+            "فشار خون بالا (اساسی): افزایش مداوم فشار خون بدون علت واحد قابل‌شناسایی. معمولاً بی‌علامت است و در اندازه‌گیری کشف می‌شود. با گذشت زمان خطر سکته‌ی قلبی، مغزی و بیماری کلیه را بالا می‌برد. کنترل با کاهش نمک، ورزش، کنترل وزن و دارو."),
+    "J45": ("Asthma: a chronic airway condition with episodes of wheeze, breathlessness, chest tightness and cough, often triggered by exercise, allergens or infections. Treated with reliever and preventer inhalers.",
+            "آسم: بیماری مزمن راه‌های هوایی با حملات خس‌خس، تنگی نفس، فشار سینه و سرفه که اغلب با ورزش، آلرژن یا عفونت تحریک می‌شود. درمان با اسپری تسکین‌دهنده و پیشگیرانه."),
+    "F32": ("Depressive episode: persistent low mood, loss of interest and energy, sleep and appetite changes for at least two weeks. Treated with psychotherapy and, when needed, antidepressants.",
+            "اپیزود افسردگی: خلق پایین مداوم، بی‌علاقگی و کاهش انرژی، تغییر خواب و اشتها برای حداقل دو هفته. درمان با روان‌درمانی و در صورت نیاز ضدافسردگی‌ها."),
+    "K29": ("Gastritis: inflammation of the stomach lining causing upper abdominal pain, nausea and bloating; often related to H. pylori infection, painkillers or alcohol.",
+            "گاستریت: التهاب مخاط معده با درد فوقانی شکم، تهوع و نفخ؛ اغلب مرتبط با عفونت هلیکوباکتر، مسکن‌ها یا الکل."),
+    "N39": ("Urinary tract infection: bacterial infection of the bladder or kidneys causing burning urination, frequency and pelvic pain; kidney involvement brings fever and flank pain. Treated with antibiotics.",
+            "عفونت ادراری: عفونت باکتریایی مثانه یا کلیه با سوزش ادرار، تکرر و درد لگن؛ درگیری کلیه تب و درد پهلو می‌آورد. درمان با آنتی‌بیوتیک."),
+    "M54": ("Dorsalgia (back pain): pain in the back, most often muscular or postural; most cases improve with movement, exercise and simple painkillers. Red flags are leg weakness, numbness or incontinence.",
+            "درد کمر: درد ناحیه‌ی پشت که بیشتر عضلانی یا ناشی از وضعیت بدن است؛ اکثر موارد با حرکت، ورزش و مسکن ساده بهتر می‌شوند. علائم خطر: ضعف پا، بی‌حسی یا بی‌اختیاری."),
+    "R51": ("Headache: pain in the head with many causes from tension and dehydration to migraine. Warning signs are sudden severe onset, fever with stiff neck, or neurological deficits.",
+            "سردرد: درد سر با علل متعدد از تنش و کم‌آبی تا میگرن. علائم هشدار: شروع ناگهانی شدید، تب با سفتی گردن، یا اختلال عصبی."),
+    "J06": ("Acute upper respiratory infection: the common cold and similar viral infections of nose, throat and sinuses with runny nose, sore throat and cough. Supportive care; antibiotics do not help.",
+            "عفونت حاد تنفسی فوقانی: سرماخوردگی و عفونت‌های ویروسی مشابه بینی، گلو و سینوس با آبریزش، گلودرد و سرفه. درمان حمایتی؛ آنتی‌بیوتیک کمکی نمی‌کند."),
+}
+
+
+def icd_about(code: str) -> tuple[str, str] | None:
+    """(en, fa) standard description for a well-known ICD category."""
+    c = (code or "").strip().upper()
+    if len(c) >= 3:
+        return _ICD_ABOUT.get(c[:3])
+    return None

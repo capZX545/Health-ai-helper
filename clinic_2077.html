@@ -1213,8 +1213,9 @@ async function allSearch(){
     if(x.def)h+='<br><small style="color:var(--dim)">'+esc(x.def.slice(0,180))+'</small>';
     else if(x.note_en)h+='<br><small style="color:var(--dim)">'+esc((L?x.note_fa:x.note_en).slice(0,200))+'</small>';
     if(x.sym&&x.sym.length)h+='<br><small style="color:var(--cy)">'+(L?"علائم: ":"symptoms: ")+esc(x.sym.join("، ").slice(0,180))+'</small>';
-    if(x.drug&&x.drug.length)h+='<br><small style="color:#3bff9e">'+(L?"داروهای درمان: ":"treated with: ")+esc(x.drug.join("، ").slice(0,180))+'</small>';
-    if(x.labs&&x.labs.length)h+='<br><small style="color:var(--cy)">'+(L?"آزمایش‌های مرتبط: ":"typical labs: ")+esc(x.labs.join("، ").slice(0,140))+'</small>';
+    if(x.drug&&x.drug.length)h+='<br><small style="color:#3bff9e">'+(L?"💊 داروهای درمان: ":"💊 medications: ")+esc(x.drug.join("، ").slice(0,180))+'</small>';
+    if(x.treat_fa||x.treat_en)h+='<br><small style="color:#ffd60a">'+(L?"🏥 درمان: ":"🏥 treatment: ")+esc(L?(x.treat_fa||x.treat_en):(x.treat_en||x.treat_fa))+'</small>';
+    if(x.labs&&x.labs.length)h+='<br><small style="color:var(--cy)">'+(L?"🧪 آزمایش‌های مرتبط: ":"🧪 typical labs: ")+esc(x.labs.join("، ").slice(0,140))+'</small>';
     h+='</div>';
   });
   el.innerHTML=h;

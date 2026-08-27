@@ -1180,6 +1180,12 @@ class App:
                 for s in sy:
                     lines.append(f"   • {s.get('name','')} — {int(round((s.get('probability') or 0) * 100))}" + self.L("%", "٪"))
             lines.append("")
+            # full bilingual treatment block
+            from knowledge_browser import guess_treatment
+            _tr_fa, _tr_en = guess_treatment(d.get("name", "") or d.get("en", ""))
+            from i18n import get_lang as _gl_td
+            lines.append(self.L("Treatment: ", "درمان: ") + ((_tr_fa if _gl_td() == "fa" else _tr_en)))
+            lines.append("")
             labs = d.get("labs") or []
             if labs:
                 from i18n import get_lang as _gl
@@ -1242,15 +1248,74 @@ class App:
 
         from knowledge_browser import ICD_CHAPTERS as _CHS
         _CH_EN = {fa: en for _r, en, fa in _CHS}
+        def normalize_name(s):
+            from common_2077 import normalize as _nz
+            return _nz(s)
+
         def show_catalog_detail(name, code, chapter, fa_n=""):
             from knowledge_browser import fa_disease_name as _fdn
+            from knowledge_browser import guess_treatment, get_wiki_disease
+            from i18n import get_lang as _gl
             fa_n = fa_n or _fdn(icd=code, en=name)
             box.delete("1.0", "end")
-            _fa_cd = __import__("i18n").get_lang() == "fa"
-            from knowledge_browser import explain_disease_entry as _expl
-            _ex = _expl(name, code, chapter, chapter)
-            _show_fa = fa_n and __import__("i18n").get_lang() == "fa"
-            box.insert("1.0", f"◀ {name}" + (f" ({fa_n})" if _show_fa else "") + "\n" + self.L("ICD-10 code: ", "کد ICD-10: ") + str(code) + "\n" + self.L("chapter: ", "فصل: ") + str(chapter if _fa_cd else _CH_EN.get(chapter, chapter)) + "\n\n" + (_ex['note_fa'] if _fa_cd else _ex['note_en']) + "\n\n" + self.L("typical signs: ", "نشانه‌های معمول: ") + (_ex['sym_fa'] if _fa_cd else _ex['sym_en']))
+            _fa_cd = _gl() == "fa"
+            L = self.L
+            # wiki data (real symptoms + drugs)
+            wk = get_wiki_disease(en=name, icd=code) or {}
+            syms = [str(s) for s in (wk.get("sym") or [])][:12]
+            drugs = [str(d) for d in (wk.get("drug") or [])][:12]
+            tr_fa, tr_en = guess_treatment(name)
+            sep = "، " if _fa_cd else ", "
+            head = (fa_n if _fa_cd and fa_n else name)
+            if _fa_cd and fa_n and fa_n != name:
+                head += "  (" + name + ")"
+            lines = ["◀ " + head]
+            lines.append(L("ICD-10 code: ", "کد ICD-10: ") + str(code))
+            from knowledge_browser import icd_chapter as _ich
+            _ch_en = _ich(str(code)).get("en", "") or _CH_EN.get(chapter, chapter)
+            lines.append(L("chapter: ", "فصل: ") + str((chapter if _fa_cd else _ch_en)))
+            # about
+            lines.append("")
+            lines.append(L("━━━ About ━━━", "━━━ درباره‌ی بیماری ━━━"))
+            from knowledge_browser import icd_about
+            _about = icd_about(code)
+            if _about:
+                lines.append((_about[1] if _fa_cd else _about[0]))
+            elif wk.get("sym") or wk.get("drug"):
+                from synth_desc import synthesize_description
+                fa_s, en_s = synthesize_description(name, code, "")
+                lines.append((fa_s if _fa_cd else en_s)[:350])
+                if wk.get("en") and normalize_name(wk.get("en","")) != normalize_name(name):
+                    lines.append("")
+                    lines.append(L("Related entry: ", "ورودی مرتبط: ") + wk.get("en", ""))
+            else:
+                from synth_desc import synthesize_description
+                fa_s, en_s = synthesize_description(name, code, "")
+                lines.append((fa_s if _fa_cd else en_s)[:400])
+            if _about and (wk.get("sym") or wk.get("drug")):
+                pass  # icd_about already used
+            # symptoms
+            lines.append("")
+            lines.append(L("━━━ Symptoms ━━━", "━━━ علائم ━━━"))
+            if syms:
+                for s in syms:
+                    lines.append("  • " + s)
+            else:
+                lines.append("  " + L("check the Symptoms module for a full check", "برای بررسی کامل از ماژول علائم استفاده کن"))
+            # drugs
+            lines.append("")
+            lines.append(L("━━━ Medications ━━━", "━━━ داروهای مرتبط ━━━"))
+            if drugs:
+                lines.append("  " + sep.join(drugs))
+            else:
+                lines.append("  " + L("see the Drugs module", "بانک داروها را ببین"))
+            # treatment
+            lines.append("")
+            lines.append(L("━━━ Treatment ━━━", "━━━ درمان ━━━"))
+            lines.append("  " + (tr_fa if _fa_cd else tr_en))
+            lines.append("")
+            lines.append(L("See a doctor for confirmation. Emergency: 115/112.", "تشخیص نهایی با پزشک است. اورژانس: ۱۱۵/۱۱۲."))
+            box.insert("1.0", "\n".join(lines))
             box.tag_add("title", "1.0", "1.0 lineend")
             box.tag_config("title", foreground=C["cy"], font=pick_font(12, True))
         def run_catalog_search():
@@ -1343,25 +1408,59 @@ class App:
             for row_, _t in engine_row_widgets:
                 row_.pack(fill="x", padx=10, pady=1)
         def show_unified_detail(r_):
+            from knowledge_browser import disease_profile
+            from i18n import get_lang as _gl
+            _fa = _gl() == "fa"
+            p = disease_profile(r_)
             box.delete("1.0", "end")
-            lines = ["◀ " + r_.get("name", "") + (("   [" + r_["code"] + "]") if r_.get("code") else "")]
-            if r_.get("fa") and __import__("i18n").get_lang() == "fa":
-                lines.append("(" + r_["fa"] + ")")
-            lines.append(self.L("Source: ", "منبع: ") + r_.get("src", ""))
-            if r_.get("def"):
-                lines.append("")
-                lines.append(self.L("Definition: ", "تعریف: ") + r_["def"][:320])
-            if r_.get("sym"):
-                lines.append("")
-                lines.append(self.L("Symptoms: ", "علائم: ") + "، ".join(str(s) for s in r_["sym"][:12]))
-            elif r_.get("note_en"):
-                _fa_nd = __import__("i18n").get_lang() == "fa"
-                lines.append("")
-                lines.append(r_.get("note_fa") if _fa_nd else r_.get("note_en"))
-                lines.append(self.L("Typical signs: ", "نشانه‌های معمول: ") + (r_.get("nsym_fa") if _fa_nd else r_.get("nsym_en")))
-            if r_.get("drug"):
-                lines.append("")
-                lines.append(self.L("Treated with: ", "داروهای درمان: ") + "، ".join(str(d) for d in r_["drug"][:12]))
+            L = self.L
+            sep = "، " if _fa else ", "
+            lines = []
+            # heading
+            head = p["name"] if not _fa else (p["fa_name"] or p["name"])
+            if _fa and p["fa_name"] and p["fa_name"] != p["name"]:
+                head += "  (" + p["name"] + ")"
+            if p["code"]:
+                head += "   [" + p["code"] + "]"
+            lines.append("◀ " + head)
+            # chapter
+            if p["ch_fa"]:
+                lines.append(L("Chapter: ", "فصل: ") + ((p["ch_fa"] if _fa else (p["ch_en"] or p["ch_fa"]))))
+            # about
+            lines.append("")
+            lines.append(L("━━━ About this condition ━━━", "━━━ درباره‌ی این بیماری ━━━"))
+            about = p["about"]
+            if not about and p["signs_fa"] or p["signs_en"]:
+                about = (p["signs_fa"] if _fa else p["signs_en"]) or ""
+            if about:
+                lines.append(about[:500])
+            else:
+                from synth_desc import synthesize_description
+                fa_s, en_s = synthesize_description(p["name"], p["code"], "")
+                lines.append((fa_s if _fa else en_s)[:500])
+            # symptoms
+            lines.append("")
+            lines.append(L("━━━ Symptoms ━━━", "━━━ علائم ━━━"))
+            if p["symptoms"]:
+                for s in p["symptoms"]:
+                    lines.append("  • " + s)
+            else:
+                lines.append("  " + ((p["signs_fa"] if _fa else p["signs_en"]) or L("see the Symptoms module for a full check", "برای بررسی کامل از ماژول علائم استفاده کن")))
+            # drugs
+            lines.append("")
+            lines.append(L("━━━ Medications ━━━", "━━━ داروهای مرتبط ━━━"))
+            if p["drugs"]:
+                lines.append("  " + sep.join(p["drugs"]))
+            else:
+                lines.append("  " + L("recorded in the drug bank when available", "در بانک دارو ثبت نشده — بانک داروها را ببین"))
+            # treatment
+            lines.append("")
+            lines.append(L("━━━ Treatment ━━━", "━━━ درمان ━━━"))
+            lines.append("  " + (p["treat_fa"] if _fa else p["treat_en"]))
+            # when to see doctor
+            lines.append("")
+            lines.append(L("If symptoms are severe or worsening, see a doctor. In an emergency call 115/112.",
+                           "اگر علائم شدید یا پیش‌رونده است به پزشک مراجعه کن. در اورژانس با ۱۱۵/۱۱۲ تماس بگیر."))
             box.insert("1.0", "\n".join(lines))
             box.tag_add("title", "1.0", "1.0 lineend")
             box.tag_config("title", foreground=C["cy"], font=pick_font(12, True))
