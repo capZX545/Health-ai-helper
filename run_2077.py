@@ -10,6 +10,49 @@ from __future__ import annotations
 import argparse
 import sys
 
+# ALL MODULES — PyInstaller needs these top-level to bundle everything
+import common_2077
+import i18n
+import medical_engine
+import bayesian_engine
+import ml_classifier
+import hybrid_engine
+import knowledge_browser
+import medical_catalog
+import drugbank_connector
+import drug_interaction
+import lab_full
+import lab_catalog
+import lab_tests
+import lab_visualizer
+import health_tools
+import synth_desc
+import translit
+import patient_profile
+import health_vitals
+import first_aid
+import mental_health
+import sleep_analyzer
+import checkup_calendar
+import doctor_referral
+import auto_learning
+import behavior_imitation
+import semantic_rag
+import clinical_dialogue
+import medical_nlg
+import ai_api_manager
+import ai_client
+import free_ai
+import local_llm
+import prescription_scanner
+import image_caption
+import image_type_detector
+import lesion_analyzer
+import ecg_analyzer
+import openfda_connector
+import clinical_trials_connector
+import who_connector
+
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="NexusMed 2077 — دستیار هوشمند پزشکی فارسی")
