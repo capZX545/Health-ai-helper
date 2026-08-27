@@ -81,7 +81,9 @@ def _split_sections(text: str) -> list[dict[str, str]]:
 _BAD_OPENER_MARKS = ("offline", "تحلیل تصویر", "offline image", "emergency", "هشدار اورژانسی", "image type", "نوع تصویر")
 
 
-def _valid_opener(s: str) -> bool:
+def _valid_opener(s) -> bool:
+    if isinstance(s, dict):
+        s = str(s.get("fa") or s.get("en") or "")
     s = (s or "").strip()
     if not (15 <= len(s) <= 160):
         return False
@@ -154,7 +156,7 @@ def load_profile() -> dict[str, Any]:
     merged["openers"] = [o for o in merged.get("openers", []) if _valid_opener(o)]
     merged["closers"] = [c for c in merged.get("closers", []) if _valid_opener(c)]
     merged["sections"] = [s for s in merged.get("sections", [])
-                          if isinstance(s, dict) and s.get("key") and s.get("header") and _valid_opener(s["header"])]
+                          if isinstance(s, dict) and s.get("key") and s.get("header") and _valid_opener(dict(s["header"]) if isinstance(s["header"], dict) else s["header"])]
     if not merged["openers"]:
         merged["openers"] = list(DEFAULT_STYLE["openers"])
     if not merged["closers"]:
@@ -176,11 +178,7 @@ def apply_style(sections: dict[str, list[str] | str], opener: str | None = None)
     order = [s for s in prof["sections"]] if prof.get("sections") else DEFAULT_STYLE["sections"]
     seen = set()
     blocks: list[str] = []
-    if prof.get("samples") and prof.get("openers"):
-        op = opener or prof["openers"][0]
-    else:
-        op = opener or tt("I hear you. Let's work through this step by step.",
-                          "درکت می‌کنم؛ بذار مرحله‌به‌مرحله بررسی کنیم.")
+    op = ""  # opener disabled: repetitive across turns
     parts_out: list[str] = []
     # avoid repetition: if the empathy section equals the opener keep just one
     emp = sections.get("empathy")
@@ -217,9 +215,8 @@ def apply_style(sections: dict[str, list[str] | str], opener: str | None = None)
             content = sections[k]
             body = content if isinstance(content, str) else "\n".join(f"• {c}" for c in content)
             blocks.append(body.strip())
-    if prof.get("samples") and prof.get("closers"):
-        closer = prof["closers"][0]
-    else:
+    closer = ""  # closer disabled: disclaimer at footer already covers it
+    if False:
         closer = tt("If anything gets worse, do see a doctor.",
                     "اگر علائم بدتر شد، حتماً به پزشک مراجعه کن.")
     parts_out.append(op)

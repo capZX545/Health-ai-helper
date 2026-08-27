@@ -59,6 +59,24 @@ def _dedupe_signature(user_text: str, ai_text: str) -> str:
     return f"{hash(user_text.strip()[:200])}:{hash(ai_text.strip()[:200])}"
 
 
+
+
+def _reply_quality_ok(text: str) -> bool:
+    """Reject corrupted AI replies (foreign words polluting farsi)."""
+    import re as _re
+    if not text or len(text) < 30:
+        return False
+    fa_chars = len(_re.findall(r"[\u0600-\u06ff]", text))
+    latin_words = _re.findall(r"[A-Za-z]{3,}", text)
+    allowed = {"mg","dl","mmol","kg","cm","ecg","mri","copd","aids","hiv","cpr",
+               "icd","fda","tsh","fbs","hba1c","ldl","hdl","nsaid","ssri","phq","gad"}
+    bad = [w for w in latin_words if w.lower() not in allowed]
+    # farsi-heavy text with many foreign words = corrupted model output
+    if fa_chars > 60 and len(bad) > 6:
+        return False
+    return True
+
+
 def learn_from_exchange(user_text: str, ai_text: str, provider: str = "", model: str = "",
                         red_flag: bool = False, meta: dict | None = None) -> dict[str, Any] | None:
     """

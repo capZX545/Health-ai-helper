@@ -108,6 +108,8 @@ def search(query: str, k: int = 4) -> list[dict[str, Any]]:
         for i in order:
             if sims[i] > 0.05:
                 d = _cache["docs"][int(i)]
+                if not _rag_quality_ok(str(d.get("text", ""))):
+                    continue
                 out.append({"text": d["text"][:400], "source": d["source"], "title": d["title"],
                             "score": round(float(sims[i]), 3)})
         return out
@@ -142,3 +144,17 @@ def status() -> dict:
     _ensure_index()
     with _lock:
         return {"indexed_docs": len(_cache["docs"]), "vectorizer": "tfidf_char_wb" if _cache["vec"] is not None else "keyword_fallback"}
+
+
+def _rag_quality_ok(text: str) -> bool:
+    """Reject corrupted entries: too many non-persian words inside farsi text."""
+    import re as _re
+    fa_chars = len(_re.findall(r"[\u0600-\u06ff]", text))
+    latin_words = _re.findall(r"[A-Za-z]{3,}", text)
+    allowed = {"mg","dl","mmol","kg","cm","ecg","mri","copd","aids","hiv","cpr",
+               "icd","fda","tsh","fbs","hba1c","ldl","hdl","nsaid","ssri","phq","gad"}
+    bad = [w for w in latin_words if w.lower() not in allowed]
+    # if the text is mostly farsi but has many foreign words -> corrupted
+    if fa_chars > 40 and len(bad) > 4:
+        return False
+    return True

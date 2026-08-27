@@ -64,7 +64,7 @@ def score_disease(d: dict, detected: dict, profile: dict) -> float:
             logp += math.log(min(p * boost, 0.98))
             # a rare high-probability symptom beats generic ones like fever;
             # boost fades when multiple other symptoms also match (broader picture)
-            _mult = 1.0 if _n_matches <= 1 else 0.4
+            _mult = 1.0 if _n_matches <= 1 else 0.0
             if p >= 0.9 and rare_counts.get(sid, 9) == 1:
                 logp += math.log(1 + (3.5 - 1) * _mult)
             elif p >= 0.8 and sid in rare:
@@ -79,7 +79,10 @@ def score_disease(d: dict, detected: dict, profile: dict) -> float:
             logp += math.log(1.0 - p * _penalty)
     # coverage penalty: the patient has it but this disease never explains it
     _overlap_n = len([1 for x in present if x in d["symptoms"]])
-    _cov = 0.7 if _overlap_n < 2 else 0.88
+    _total_n = max(1, len(present))
+    _frac = _overlap_n / _total_n
+    # covering only 1 of 5 symptoms should hurt more than 4 of 5
+    _cov = 0.45 + 0.45 * _frac  # 1/5 → 0.54; 4/5 → 0.81; 5/5 → 0.9
     for sid in present:
         if sid not in d["symptoms"]:
             logp += math.log(_cov)

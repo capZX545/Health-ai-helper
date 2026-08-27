@@ -55,7 +55,9 @@ def compose_offline_answer(analysis: dict[str, Any], dialogue_summary: dict[str,
     # ---- findings: short, no repetition ----
     findings: list[str] = []
     if syms:
-        findings.append(("علائم: " if fa else "Symptoms: ") + ("، ".join(syms[:8]) if fa else ", ".join(syms[:8])))
+        _s = [_clean_fa(str(x)) if fa else str(x) for x in syms[:8]]
+        _s = [x for x in _s if x.strip()]
+        findings.append(("علائم: " if fa else "Symptoms: ") + ("، ".join(_s) if fa else ", ".join(_s)))
     if denied:
         findings.append(("ردشده: " if fa else "Ruled out: ") + ("، ".join(denied[:4]) if fa else ", ".join(denied[:4])))
     bits = []
@@ -86,12 +88,17 @@ def compose_offline_answer(analysis: dict[str, Any], dialogue_summary: dict[str,
     # ---- advice: max 2 items ----
     advice: list[str] = []
     seen: set[str] = set()
+    # advice comes from the TOP candidate first, then the second
     for c in cands[:2]:
         for a in c.get("advice", [])[:2]:
             k = a.strip()[:50]
             if k not in seen and len(advice) < 2:
                 seen.add(k)
                 advice.append(a)
+        if advice:
+            break  # top candidate's advice is enough
+    advice = [_clean_fa(a) if fa else a for a in advice]
+    advice = [a for a in advice if a.strip()]
     if not advice:
         advice = ["استراحت و آب کافی" if fa else "Rest and hydrate"]
     sections["advice"] = advice
@@ -117,3 +124,21 @@ def compose_offline_answer(analysis: dict[str, Any], dialogue_summary: dict[str,
         sections["followup"] = "علامت دیگری هم داری؟" if fa else "Any other symptoms?"
 
     return sections
+
+
+def _clean_fa(text: str) -> str:
+    """Strip obviously corrupted segments (foreign words mixed into farsi)."""
+    import re as _re
+    # remove latin words of 3+ letters that are not known medical terms
+    keep = {"mg", "dl", "mmol", "kg", "cm", "ph", "ecg", "mri", "ct", "copd", "aids",
+            "hiv", "cpr", "icd", "who", "fda", "hpo", "doid", "tsh", "fbs", "hba1c",
+            "ldl", "hdl", "nsaid", "ssri", "acei", "arb", "pPI", "utI", "bp", "bmi"}
+    def _sub(m):
+        w = m.group(0)
+        return w if w.lower() in keep else ""
+    cleaned = _re.sub(r"[A-Za-z]{3,}", _sub, text)
+    # collapse double spaces / orphan punctuation
+    cleaned = _re.sub(r"\s{2,}", " ", cleaned)
+    cleaned = _re.sub(r"\(\s*", "(", cleaned)
+    cleaned = _re.sub(r"\s*\)", ")", cleaned)
+    return cleaned.strip()

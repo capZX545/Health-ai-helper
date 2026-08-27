@@ -228,6 +228,11 @@ class HybridEngine:
             analysis["denied"] = [sym_name(s) for s in dlg.denied]
         cand_ids = [c["id"] for c in analysis.get("candidates", [])]
         followup = self.dialogue.next_question(cand_ids)
+        # 3+ symptoms and a clear top candidate -> skip further questions
+        if followup and len(self.dialogue.mentioned) >= 3:
+            top_pct = (analysis.get("candidates") or [{}])[0].get("percent", 0)
+            if top_pct >= 25:
+                followup = None
         # nothing recorded yet -> ask a concrete screening question
         if not followup and not self.dialogue.mentioned:
             from i18n import tt
