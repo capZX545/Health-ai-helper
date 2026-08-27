@@ -9,6 +9,9 @@ from __future__ import annotations
 
 import argparse
 import sys
+import os
+# make sure sibling .py files are importable (frozen exe or source run)
+sys.path.insert(0, os.path.dirname(os.path.abspath(sys.executable if getattr(sys, 'frozen', False) else __file__)))
 
 # ALL MODULES — PyInstaller needs these top-level to bundle everything
 import common_2077
