@@ -31,6 +31,8 @@ _DISEASE_Q = [
 ]
 _ADVICE_Q = [
     r"(چیکار|چه کنم|چکار|توصیه|درمان|بهترین راه|راه حل|what should|how to|treatment|remedy)",
+    r"(خسته|خستگی|بی‌حال|tired|fatigue)",
+    r"(ویتامین|چقدر بخورم|دوز|vitamin|dose|dosage)",
 ]
 _SYMP = [
     r"(درد|سردرد|دل‌درد|دل درد|تب|سرفه|خارش|تورم|سرگیجه|تهوع|استفراغ|اسهال|یبوست|تنگی|سوزش|خستگی|بی‌خوابی|ضعف|کرختی|بی‌حسی|pain|fever|cough|itch|swell|dizzy|nausea)",
