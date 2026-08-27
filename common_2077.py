@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Shared helpers for NexusMed 2077.
 Zero external dependencies, stdlib only.
@@ -18,13 +17,10 @@ APP_VERSION = "6.3.0"
 DATA_DIR = _BASE = os.path.dirname(os.path.abspath(sys.executable if getattr(sys, "frozen", False) else __file__))
 
 MEDICAL_DISCLAIMER_FA = (
-    "این نرم‌افزار یک دستیار اطلاعاتی است، جایگزین پزشک نیست و تشخیص قطعی نمی‌دهد. "
-    "در موارد اورژانسی فوراً با اورژانس تماس بگیرید (ایران: ۱۱۵ — اروپا: ۱۱۲)."
+    "این نرم‌افزار یک دستیار اطلاعاتی است، جایگزین پزشک نیست و تشخیص قطعی نمی‌دهد. " "در موارد اورژانسی فوراً با اورژانس تماس بگیرید (ایران: ۱۱۵ — اروپا: ۱۱۲)."
 )
 MEDICAL_DISCLAIMER_EN = (
-    "This software is an informational assistant. It is not a substitute for a doctor "
-    "and it does not give definitive diagnoses. In an emergency, call for help "
-    "immediately (Iran: 115 - Europe: 112)."
+    "This software is an informational assistant. It is not a substitute for a doctor " "and it does not give definitive diagnoses. In an emergency, call for help " "immediately (Iran: 115 - Europe: 112)."
 )
 
 
@@ -39,7 +35,6 @@ EMERGENCY_NUMBERS = {
 
 _ENGINES_LOCK = threading.RLock()
 
-# ---------------------------------------------------------------- date/time
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
@@ -51,7 +46,6 @@ def fa_digits(text) -> str:
     s = str(text)
     return s.translate(str.maketrans("0123456789.", "۰۱۲۳۴۵۶۷۸۹٫"))
 
-# ---------------------------------------------------------- farsi normalization
 
 _AR_TO_FA = str.maketrans({"ي": "ی", "ك": "ک", "ۀ": "ه", "ة": "ه", "أ": "ا", "إ": "ا", "آ": "ا", "\u200c": ""})
 _FA_DIGIT_TO_EN = str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789")
@@ -72,7 +66,6 @@ def normalize(text: str) -> str:
     t = re.sub(r"\s+", " ", t)
     return t.strip()
 
-# ------------------------------------------------------------------ JSON IO
 
 def read_json(path: str, default=None):
     try:
@@ -94,7 +87,6 @@ def write_json(path: str, data) -> bool:
     except Exception:
         return False
 
-# -------------------------------------------------------------------- .env
 
 def load_env(path: str | None = None) -> dict:
     """
@@ -168,10 +160,9 @@ def mask_secret(key: str) -> str:
         return key[:3] + "••••"
     return key[:6] + "••••••••"+ key[-4:]
 
-# ----------------------------------------------------------------- text
 
 def first_sentences(text: str, n: int = 2, max_chars: int = 320) -> str:
-    parts = re.split(r"(?<=[.!؟?])\s+", (text or "").strip())
+    parts = re.split(r"(?<=[.؟?])\s+", (text or "").strip())
     out = " ".join(parts[:n]).strip()
     return out[:max_chars]
 

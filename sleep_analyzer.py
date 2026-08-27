@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 sleep_analyzer.py — bilingual sleep screening: STOP-BANG (obstructive sleep
 apnea risk) and a simplified PSQI (screening only).

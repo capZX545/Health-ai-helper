@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 first_aid.py — bilingual first aid guides: CPR with a 110 bpm metronome,
 stroke (FAST), choking, burns, heart attack, seizure, bleeding.

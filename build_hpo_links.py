@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Builds disease_symptoms_hpo.json.gz from the official HPO annotations
 (phenotype.hpoa): disease name -> list of symptom names, ready to merge
@@ -29,7 +28,7 @@ def main() -> None:
             continue
         db_id, dname, qualifier, hpo_id = parts[0], parts[1], parts[2], parts[3]
         if qualifier or parts[10] != "P":
-            continue  # negated or non-phenotypic
+            continue
         name = hp_names.get(hpo_id)
         if not name or not dname:
             continue

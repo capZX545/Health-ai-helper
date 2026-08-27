@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Learns from every external AI reply, even while the offline brain is off.
 Writes learned_knowledge.json, updates ai_behavior_profile.json, clears the RAG cache.
@@ -59,8 +58,6 @@ def _dedupe_signature(user_text: str, ai_text: str) -> str:
     return f"{hash(user_text.strip()[:200])}:{hash(ai_text.strip()[:200])}"
 
 
-
-
 def _reply_quality_ok(text: str) -> bool:
     """Reject corrupted AI replies (foreign words polluting farsi)."""
     import re as _re
@@ -71,7 +68,6 @@ def _reply_quality_ok(text: str) -> bool:
     allowed = {"mg","dl","mmol","kg","cm","ecg","mri","copd","aids","hiv","cpr",
                "icd","fda","tsh","fbs","hba1c","ldl","hdl","nsaid","ssri","phq","gad"}
     bad = [w for w in latin_words if w.lower() not in allowed]
-    # farsi-heavy text with many foreign words = corrupted model output
     if fa_chars > 60 and len(bad) > 6:
         return False
     return True
@@ -111,14 +107,12 @@ def learn_from_exchange(user_text: str, ai_text: str, provider: str = "", model:
             data["entries"] = data["entries"][-MAX_ENTRIES:]
         data["updated_at"] = now_iso()
         write_json(LEARNED_PATH, data)
-    # style imitation (tone/structure only) - never applied to emergency answers
     try:
         if not red_flag:
             from behavior_imitation import update_profile
             update_profile(ai_text)
     except Exception:
         pass
-    # clear the RAG cache so new knowledge is usable right away
     try:
         from semantic_rag import invalidate
         invalidate()

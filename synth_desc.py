@@ -1,5 +1,3 @@
-# synthesize a real, informative description for every disease entry
-# (bilingual, built from the entry's own name/code/chapter — never "not recorded")
 import re
 
 BODY = {
@@ -88,7 +86,6 @@ def synthesize_description(name: str, code: str = "", ch_key: str = ""):
     def fa_body(x): return x or "بدن"
     def en_body(x): return x or "the body"
 
-    # ---------- بدخیمی ----------
     if re.search(r"\b(malignant neoplasm|carcinoma|cancer|lymphoma|leukemia|melanoma|sarcoma|myeloma)\b", low):
         fa = f"سرطان مربوط به {fa_body(bfa)}. سرطان یعنی رشد کنترل‌نشده‌ی سلول‌ها که اگر درمان نشد می‌تواند به بافت‌های اطراف و سایر اندام‌ها سرایت کند."
         if bfa:
@@ -99,7 +96,6 @@ def synthesize_description(name: str, code: str = "", ch_key: str = ""):
         fa = f"توده‌ی خوش‌خیم در {fa_body(bfa)}؛ غیرسرطانی است، به سایر نقاط بدن سرایت نمی‌کند اما بسته به اندازه و محلش ممکن است علائم ایجاد کند یا نیاز به پیگیری داشته باشد."
         en = f"A benign (non-cancerous) growth in {en_body(ben)}; it does not spread but may cause symptoms or need follow-up depending on size and location."
         return fa, en
-    # ---------- شکستگی/آسیب ----------
     if "fracture" in low:
         fa = f"شکستگی استخوان در ناحیه‌ی {fa_body(bfa)}. معمولاً بر اثر ضربه یا زمین‌خوردن رخ می‌دهد؛ درد، تورم و ناتوانی حرکتی می‌آورد و نیاز به تصویربرداری و مراقبت ارتوپدی دارد."
         en = f"A bone fracture in the area of {en_body(ben)}, usually from trauma or a fall; it causes pain, swelling and loss of function and needs imaging and orthopedic care."
@@ -116,7 +112,6 @@ def synthesize_description(name: str, code: str = "", ch_key: str = ""):
         fa = "مسمومیت با دارو یا ماده‌ی شیمیایی؛ بسته به ماده می‌تواند تهوع، استفراغ، گیجی یا اختلال تنفس بدهد و در موارد شدید اورژانسی است (۱۱۵/۱۱۲)."
         en = "Poisoning by a drug or chemical; depending on the substance it can cause nausea, vomiting, confusion or breathing problems and may be an emergency."
         return fa, en
-    # ---------- سابقه/غربالگری/ویزیت ----------
     if "family history of" in low:
         x = re.split(r"family history of", n, flags=re.I)[-1].strip() or "این وضعیت"
         fa = f"یعنی یکی از بستگان نزدیک «{x}» را داشته است. شما این بیماری را ندارید؛ فقط احتمال بروز آن کمی بالاتر است و پزشک ممکن است غربالگری زودتر توصیه کند."
@@ -135,7 +130,6 @@ def synthesize_description(name: str, code: str = "", ch_key: str = ""):
         fa = "کدی برای ثبت دلیل مراجعه به مراکز درمانی (ویزیت، واکسیناسیون، پیگیری یا مشاوره)؛ خودش بیماری نیست."
         en = "A code recording the reason for a healthcare visit (consultation, vaccination, follow-up or counseling); not a disease itself."
         return fa, en
-    # ---------- یافته‌ها ----------
     if re.search(r"abnormal (cytological|histological)", low):
         fa = "یافته‌ی آزمایشگاهی: در نمونه‌ی گرفته‌شده (سیتولوژی/بافت) سلول‌های غیرطبیعی دیده شده. خودش بیماری نیست؛ پزشک با تکرار آزمایش یا بیوپسی علت آن (التهاب، عفونت، توده) را مشخص می‌کند."
         en = "A laboratory finding: abnormal cells were seen in the taken sample (cytology/tissue). Not a disease by itself; a doctor clarifies the cause (inflammation, infection, growth) with repeat tests or biopsy."
@@ -144,7 +138,6 @@ def synthesize_description(name: str, code: str = "", ch_key: str = ""):
         fa = "یافته‌ی غیرطبیعی در آزمایش یا معاینه؛ یک «نتیجه» است نه تشخیص. معنایش کاملاً به نوع آزمایش بستگی دارد و پزشک آن را همراه علائم شما تفسیر می‌کند."
         en = "An abnormal finding on a test or exam; it is a result, not a diagnosis. Its meaning depends on which test, and a doctor interprets it together with your symptoms."
         return fa, en
-    # ---------- نام‌های توصیفی ----------
     m = re.search(r"^(.*?),?\s*type\s*(i{1,3}|\d+|[12]b|a|b)\b", low)
     if "unspecified" in low or ", unspecified" in low:
         core = re.sub(r",?\s*unspecified", "", n)
@@ -165,7 +158,6 @@ def synthesize_description(name: str, code: str = "", ch_key: str = ""):
         en = f"A congenital anomaly involving {en_body(ben)} present from birth; some are found on ultrasound or newborn screening and often need specialist follow-up."
         return fa, en
 
-    # ---------- پیش‌فرض هوشمند: نام + فصل ----------
     core = re.sub(r"^(other|unspecified)\s+", "", n, flags=re.I).strip(" ,;") or n
     if ch_fa_d:
         fa = f"«{core}» یک وضعیت پزشکی در حوزه‌ی {ch_fa_d} است"

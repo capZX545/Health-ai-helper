@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Local web version of NexusMed 2077.
 Default address: http://localhost:2077 - if taken, ports 2078..2087 are tried.
@@ -19,7 +18,7 @@ from urllib.parse import urlparse
 from common_2077 import APP_NAME, APP_VERSION, DATA_DIR
 
 HTML_FILE = os.path.join(DATA_DIR, "clinic_2077.html")
-MAX_BODY = 15 * 1024 * 1024  # 15 MB max (images)
+MAX_BODY = 15 * 1024 * 1024
 
 _engine = None
 _engine_lock = threading.Lock()
@@ -49,7 +48,6 @@ def find_free_port(start: int = 2077, end: int = 2087, host: str = "127.0.0.1") 
 class Handler(BaseHTTPRequestHandler):
     server_version = f"NexusMed2077/{APP_VERSION}"
 
-    # ------------------------------------------------------------- helpers
     def _json(self, obj, code: int = 200):
         try:
             body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
@@ -81,7 +79,7 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             return {}
 
-    def log_message(self, fmt, *args):  # keep logs small
+    def log_message(self, fmt, *args):
         sys.stderr.write("•")
 
     def do_OPTIONS(self):
@@ -91,7 +89,6 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
 
-    # --------------------------------------------------------------- GET
     def do_GET(self):
         path = urlparse(self.path).path
         try:
@@ -172,7 +169,6 @@ class Handler(BaseHTTPRequestHandler):
                     "brain_on": st.get("settings", {}).get("brain_enabled", True),
                     "learning_active": True})
             if path == "/api/settings/full":
-                # same code lives in do_POST but the UI needs GET
                 from ai_api_manager import get_settings, masked_keys, has_any_external
                 from local_llm import get_config as llm_config
                 from auto_learning import stats as learn_stats
@@ -255,7 +251,6 @@ class Handler(BaseHTTPRequestHandler):
             limit = int((qs.get("limit", ["30"])[0] or 30))
             rows = []
             nq = __import__("common_2077").normalize(q)
-            # 1) engine diseases
             for d in get_all_diseases():
                 if q and (nq in __import__("common_2077").normalize(d.get("name", "")) or nq in __import__("common_2077").normalize(d.get("fa", ""))):
                     from i18n import is_fa as _isfa
@@ -267,7 +262,6 @@ class Handler(BaseHTTPRequestHandler):
                                  "treat_fa": _tr2[0], "treat_en": _tr2[1]})
                 if len(rows) >= limit:
                     break
-            # 2) ICD catalog (with the fa -> en bridge)
             if q and len(rows) < limit:
                 from knowledge_browser import explain_disease_entry as _expl, full_profile as _fp
                 for c in (get_catalog_diseases(q, 10).get("results") or []):
@@ -280,14 +274,12 @@ class Handler(BaseHTTPRequestHandler):
                                  "treat_en": _p["treat_en"], "treat_fa": _p["treat_fa"]})
                     if len(rows) >= limit:
                         break
-            # 3) DOID
             if q and len(rows) < limit:
                 for d in search_doid(q, 10):
                     rows.append({"src": "doid", "name": d.get("name", ""), "fa": fa_disease_name(en=d.get("name", "")),
                                  "code": "DOID:" + d.get("doid", ""), "def": d.get("def", ""), "sym": []})
                     if len(rows) >= limit:
                         break
-            # 4) wikidata (with symptoms/treatments)
             if q and len(rows) < limit:
                 for e in search_wiki_diseases(q, 10):
                     from knowledge_browser import guess_treatment as _gt
@@ -365,7 +357,6 @@ class Handler(BaseHTTPRequestHandler):
             return True
         return False
 
-    # ------------------------------------------------------- live connectors
     def _http_json(self, url: str, timeout: int = 15):
         import requests
         r = requests.get(url, timeout=timeout,
@@ -474,7 +465,6 @@ class Handler(BaseHTTPRequestHandler):
             st["rag"] = {}
         return {"ok": True, **st}
 
-    # -------------------------------------------------------------- POST
     def do_POST(self):
         path = urlparse(self.path).path
         data = self._body()
@@ -672,7 +662,6 @@ class Handler(BaseHTTPRequestHandler):
                     rag = [h.get("title") for h in search(text, k=3) if h.get("title")]
                 except Exception:
                     pass
-                # triage level from the urgency of the top candidates
                 urgencies = [c.get("urgency") for c in a["candidates"][:3]]
                 from i18n import is_fa
                 if "emergency" in urgencies:
@@ -694,7 +683,6 @@ class Handler(BaseHTTPRequestHandler):
                                    "candidates": a["candidates"], "ml": ml, "rag": rag,
                                    "triage": triage})
             if path == "/api/doctor_mode":
-                # doctor mode: special prompt + external AI or the offline brain
                 text = str(data.get("text") or "").strip()
                 if not text:
                     from i18n import tt
@@ -703,7 +691,6 @@ class Handler(BaseHTTPRequestHandler):
                 from common_2077 import now_iso
                 from patient_profile import load_profile
                 s = get_settings()
-                # build the 'a doctor answers' prompt «
                 dlg = get_engine().dialogue.summary()
                 prof = load_profile()
                 scenario_prompt = f"""You are now in DOCTOR MODE. The user describes a patient scenario and you respond as an experienced physician explaining the differential diagnosis to a colleague. Be clinical, structured and specific. Use medical terminology but explain each term briefly in Farsi.
@@ -722,7 +709,6 @@ Structure your answer as:
 6. Red flags to watch for (علائم خطر)
 
 Answer in Farsi. Be specific about medications (name them) but always note prescription requirement."""
-                # try the external AI
                 ext_res = None
                 for p in [x for x in s["provider_order"] if x != "local" and get_api_key(x)]:
                     from ai_client import chat as ext_chat
@@ -734,7 +720,6 @@ Answer in Farsi. Be specific about medications (name them) but always note presc
                         ext_res = r
                         break
                 if ext_res:
-                    # auto-learning
                     try:
                         from auto_learning import learn_from_exchange
                         learn_from_exchange(f"[doctor-mode] {text[:200]}", ext_res["text"],
@@ -743,7 +728,6 @@ Answer in Farsi. Be specific about medications (name them) but always note presc
                     except Exception:
                         pass
                     return self._json({"ok": True, "text": ext_res["text"], "source": f"doctor:{ext_res.get('provider','?')}", "learned": True})
-                # fallback: offline brain
                 from medical_engine import analyze
                 a = analyze(text, load_profile())
                 if a["red_flag"]:
@@ -846,13 +830,11 @@ Answer in Farsi. Be specific about medications (name them) but always note presc
                 from ai_api_manager import save_settings, set_api_key
                 from local_llm import save_config
                 changed = []
-                # API keys
                 for provider, field in (("openrouter","openrouter_key"),("openai","openai_key"),("deepseek","deepseek_key")):
                     v = data.get(field)
                     if v and str(v).strip() and len(str(v).strip()) >= 10:
                         set_api_key(provider, str(v).strip())
                         changed.append(provider)
-                # general settings
                 updates = {}
                 for key in ("language","brain_enabled","openrouter_model","reasoning_enabled"):
                     if key in data:
@@ -860,7 +842,6 @@ Answer in Farsi. Be specific about medications (name them) but always note presc
                 if updates:
                     save_settings(updates)
                     changed.extend(updates.keys())
-                # Ollama
                 llm_updates = {}
                 for key in ("enabled","model","base_url"):
                     if key in data:
@@ -947,7 +928,6 @@ Answer in Farsi. Be specific about medications (name them) but always note presc
                     "brain_on": st.get("settings", {}).get("brain_enabled", True),
                     "learning_active": True})
             if path == "/api/settings/full":
-# same code lives in do_POST but the UI needs GET
                 from ai_api_manager import get_settings, masked_keys, has_any_external
                 from local_llm import get_config as llm_config
                 from auto_learning import stats as learn_stats
@@ -985,7 +965,6 @@ Answer in Farsi. Be specific about medications (name them) but always note presc
                 hist_path = _os.path.join(DATA_DIR, "conversation_history.json")
                 hist = read_json(hist_path, default=[]) or []
                 if self.command == "POST":
-                    # save the current conversation before starting a new one
                     eng = get_engine()
                     dlg = eng.dialogue.summary()
                     if dlg.get("turns", 0) > 0 and (eng.memory or []):
@@ -996,9 +975,8 @@ Answer in Farsi. Be specific about medications (name them) but always note presc
                             "messages": [{"role": m["role"], "content": m["content"][:500]} for m in eng.memory[-20:]],
                         }
                         hist.insert(0, conv)
-                        hist = hist[:50]  # last 50 conversations
+                        hist = hist[:50]
                         write_json(hist_path, hist)
-                    # conversation reset
                     eng.dialogue.reset()
                     eng.memory = []
                     from auto_learning import stats as learn_stats
@@ -1025,7 +1003,6 @@ def main() -> int:
     httpd = ThreadingHTTPServer((args.host, port), Handler)
 
     def _warmup():
-        # warm up the ML model and RAG index so the first chat feels fast
         try:
             from ml_classifier import is_ready
             is_ready()

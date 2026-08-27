@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Generates the synthetic medical_ml_test_dataset.csv (1000 rows).
 For testing ML pipelines only - not for any real medical use.

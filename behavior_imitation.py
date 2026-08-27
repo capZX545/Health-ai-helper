@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Learns the external AI's answer 'style' and imitates tone/structure only
 (never the medical content). Writes ai_behavior_profile.json
@@ -33,7 +32,6 @@ DEFAULT_STYLE: dict[str, Any] = {
     "avg_questions": 2,
 }
 
-# detect section type from heading keywords, fa and en, no emoji dependency
 HEADER_HINTS: list[tuple[str, tuple[str, ...]]] = [
     ("warning", ("هشدار", "خطر", "قرمز", "اورژانس", "warning", "danger", "red flag", "emergency")),
     ("probables", ("احتمال", "تشخیص", "افتراقی", "possib", "likehood", "likely", "differential", "could be")),
@@ -102,7 +100,6 @@ def update_profile(ai_text: str) -> dict[str, Any]:
         return prof
     n = prof.get("samples", 0) + 1
     secs = _split_sections(ai_text)
-    # the intro is stored as the opener, not as a section
     opener = ""
     if secs and not secs[0]["header"]:
         body = " ".join(secs[0]["body"]).strip()
@@ -152,7 +149,6 @@ def load_profile() -> dict[str, Any]:
         return copy.deepcopy(DEFAULT_STYLE)
     merged = dict(DEFAULT_STYLE)
     merged.update(data)
-    # sanitize on load so old poisoned files heal themselves
     merged["openers"] = [o for o in merged.get("openers", []) if _valid_opener(o)]
     merged["closers"] = [c for c in merged.get("closers", []) if _valid_opener(c)]
     merged["sections"] = [s for s in merged.get("sections", [])
@@ -178,9 +174,8 @@ def apply_style(sections: dict[str, list[str] | str], opener: str | None = None)
     order = [s for s in prof["sections"]] if prof.get("sections") else DEFAULT_STYLE["sections"]
     seen = set()
     blocks: list[str] = []
-    op = ""  # opener disabled: repetitive across turns
+    op = ""
     parts_out: list[str] = []
-    # avoid repetition: if the empathy section equals the opener keep just one
     emp = sections.get("empathy")
     if isinstance(emp, str) and normalize(emp) == normalize(op):
         sections = dict(sections)
@@ -188,7 +183,7 @@ def apply_style(sections: dict[str, list[str] | str], opener: str | None = None)
     op_norm = normalize(op)
     for s in order:
         if normalize(s.get("header") or "") == op_norm:
-            continue  # don't repeat a heading that is just the opening line
+            continue
         key = s.get("key") or "note"
         if key not in sections:
             continue
@@ -209,13 +204,13 @@ def apply_style(sections: dict[str, list[str] | str], opener: str | None = None)
             blocks.append(f"{header_text}:\n{body}".strip())
         else:
             blocks.append(body.strip())
-    for k in sections:  # keys outside the learned template
+    for k in sections:
         val2 = sections[k]
         if k not in seen and val2 and not (isinstance(val2, list) and all(not str(x).strip() for x in val2)) and val2 != "":
             content = sections[k]
             body = content if isinstance(content, str) else "\n".join(f"• {c}" for c in content)
             blocks.append(body.strip())
-    closer = ""  # closer disabled: disclaimer at footer already covers it
+    closer = ""
     if False:
         closer = tt("If anything gets worse, do see a doctor.",
                     "اگر علائم بدتر شد، حتماً به پزشک مراجعه کن.")

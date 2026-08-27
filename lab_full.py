@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Full laboratory catalog: ~130 tests with bilingual names, units, adult
 reference ranges, critical limits and short "what high/low means" notes.
@@ -25,9 +24,7 @@ LAB_CATEGORIES = {
     "misc": ("Other tests", "سایر"),
 }
 
-# key: (en, fa, unit, lo, hi, crit_lo, crit_hi, hi_note, lo_note, aliases)
 _T = [
-    # ---------- CBC ----------
     ("wbc", "White blood cells (WBC)", "گویچه‌های سفید", "×10³/µL", 4.5, 11.0, 2.0, 30.0,
      "Often infection, inflammation or stress; very high values can mean leukemia.", "Can point to viral illness, marrow suppression or drug effect.",
      ["wbc", "leukocyte", "لکوسیت", "گویچه سفید"]),
@@ -72,7 +69,6 @@ _T = [
     ("retic", "Reticulocytes", "رتیکولوسیت", "%", 0.5, 2.5, None, None,
      "Marrow responding well to anemia or bleeding.", "Marrow not producing enough (aplastic, deficiency).",
      ["retic", "رتیکولوسیت"]),
-    # ---------- metabolic ----------
     ("fbs", "Fasting blood sugar (FBS)", "قند خون ناشتا", "mg/dL", 70.0, 99.0, 50.0, 250.0,
      "100-125 = prediabetes; ≥126 (twice) = diabetes. See a doctor.", "Below 70 is hypoglycemia — eat fast carbs; below 50 is dangerous.",
      ["fbs", "glucose fasting", "قند ناشتا", "گلوکز ناشتا"]),
@@ -86,7 +82,6 @@ _T = [
     ("insulin_f", "Fasting insulin", "انسولین ناشتا", "µIU/mL", 2.0, 25.0, None, None,
      "Insulin resistance, obesity, early diabetes.", "Low insulin production (type 1 diabetes).",
      ["insulin", "انسولین"]),
-    # ---------- electrolytes ----------
     ("na", "Sodium (Na)", "سدیم", "mEq/L", 135.0, 145.0, 120.0, 160.0,
      "Hypernatremia — usually dehydration.", "Hyponatremia — water excess, drugs, adrenal issues; below 120 is dangerous.",
      ["na", "sodium", "سدیم"]),
@@ -107,7 +102,6 @@ _T = [
      "Kidney failure, low parathyroid.", "Malnutrition, alcoholism, refeeding.", ["p", "phosphorus", "فسفر"]),
     ("mg", "Magnesium", "منیزیم", "mg/dL", 1.7, 2.2, 1.0, 4.0,
      "Kidney failure, excess intake.", "Diarrhea, PPI drugs, alcohol — cramps, arrhythmias.", ["mg", "منیزیم"]),
-    # ---------- kidney ----------
     ("bun", "Blood urea nitrogen (BUN)", "ازوت اوره خون", "mg/dL", 7.0, 20.0, None, 80.0,
      "Dehydration, high protein, kidney problem, bleeding in gut.", "Liver disease, malnutrition.",
      ["bun", "اوره", "یوره"]),
@@ -119,7 +113,6 @@ _T = [
     ("ua", "Uric acid", "اسید اوریک", "mg/dL", 3.5, 7.2, None, 12.0,
      "Gout risk, kidney stones, diuretics, purine-rich diet.", "Rare; some liver or kidney tubule issues.",
      ["uric acid", "اسید اوریک"]),
-    # ---------- liver ----------
     ("ast", "AST (SGOT)", "آسپارتات آمینوترانسفراز", "U/L", 0.0, 40.0, None, 300.0,
      "Liver or muscle injury; hepatitis, alcohol, drugs, exercise.", "Usually not meaningful.",
      ["ast", "sgot"]),
@@ -141,7 +134,6 @@ _T = [
      ["albumin", "آلبومین"]),
     ("tpr", "Total protein", "پروتئین تام", "g/dL", 6.4, 8.3, None, None,
      "Dehydration, myeloma (with abnormal fractions).", "Malnutrition, liver or kidney loss.", ["total protein", "پروتئین تام"]),
-    # ---------- lipids ----------
     ("tchol", "Total cholesterol", "کلسترول تام", "mg/dL", 0.0, 200.0, None, None,
      "Cardiovascular risk rises above 200; diet, genetics, thyroid.", "Usually fine; very low with malnutrition.",
      ["chol", "کلسترول"]),
@@ -156,7 +148,6 @@ _T = [
      ["tg", "triglyceride", "تری گلیسرید"]),
     ("nonhdl", "Non-HDL cholesterol", "کلسترول غیر-HDL", "mg/dL", 0.0, 130.0, None, None,
      "Total minus HDL; good overall risk marker.", "Usually good.", ["non-hdl"]),
-    # ---------- thyroid ----------
     ("tsh", "TSH", "هورمون محرک تیروئید", "mIU/L", 0.4, 4.5, 0.01, 50.0,
      "Usually means UNDERACTIVE thyroid (hypothyroidism).", "Usually means OVERACTIVE thyroid (hyperthyroidism).",
      ["tsh", "تی اس اچ"]),
@@ -166,7 +157,6 @@ _T = [
      "Hyperthyroidism.", "Hypothyroidism or severe illness.", ["ft3", "t3"]),
     ("tpo", "Anti-TPO antibody", "آنتی‌بادی ضد تیروئید", "IU/mL", 0.0, 35.0, None, None,
      "Autoimmune thyroid disease (Hashimoto).", "Negative is normal.", ["anti-tpo", "تی پی او"]),
-    # ---------- hormones ----------
     ("cort_am", "Cortisol (morning)", "کورتیزول صبحگاهی", "µg/dL", 6.2, 19.4, None, None,
      "Stress, steroids, Cushing syndrome (needs proper testing).", "Adrenal insufficiency — needs doctor.",
      ["cortisol", "کورتیزول"]),
@@ -186,7 +176,6 @@ _T = [
     ("bhcg_t", "Beta-hCG (quantitative)", "بتا-hCG کمی", "mIU/mL", 0.0, 5.0, None, None,
      "Pregnancy (or rare tumors) — date from last period matters.", "Not pregnant (or very early).",
      ["beta hcg", "ب ه سی جی"]),
-    # ---------- vitamins & iron ----------
     ("vitd", "Vitamin D (25-OH)", "ویتامین D", "ng/mL", 30.0, 100.0, 5.0, 200.0,
      "Excess supplementation is harmful.", "Very common deficiency — bone pain, fatigue; supplement per doctor.",
      ["vitamin d", "25-oh"]),
@@ -204,14 +193,12 @@ _T = [
      "Iron deficiency (body wants more iron).", "Malnutrition, inflammation, iron overload.", ["tibc"]),
     ("tsat", "Transferrin saturation (TSAT)", "اشباع ترانسفرین", "%", 20.0, 45.0, None, None,
      "Iron overload.", "Iron deficiency.", ["tsat"]),
-    # ---------- inflammation ----------
     ("crp", "CRP", "پروتئین واکنشی C", "mg/L", 0.0, 5.0, None, 200.0,
      "Active inflammation/infection; extent matters.", "Normal.", ["crp", "سی آر پی"]),
     ("hscrp", "hs-CRP", "CRP فوق‌حساس", "mg/L", 0.0, 1.0, None, None,
      "1-3: moderate cardiovascular risk; >3: high risk / inflammation.", "Low cardiovascular risk.", ["hs-crp"]),
     ("esr", "ESR (sed rate)", "سرعت رسوب گویچه‌ها", "mm/h", 0.0, 20.0, None, 100.0,
      "Chronic inflammation, infection, autoimmune disease.", "Normal.", ["esr", "سرعت ته‌نشینی"]),
-    # ---------- cardiac ----------
     ("trop", "Troponin I", "تروپونین I", "ng/mL", 0.0, 0.04, None, 0.1,
      "≥0.1 suggests heart muscle damage — EMERGENCY, call 115/112 now.", "Normal.",
      ["troponin", "تروپونین"]),
@@ -221,7 +208,6 @@ _T = [
      "Heart muscle involvement when high with troponin.", "Normal.", ["ck-mb"]),
     ("bnp", "BNP / NT-proBNP", "پپتید ناتریورتیک مغزی", "pg/mL", 0.0, 100.0, None, None,
      "Heart failure — higher means more strain.", "Heart failure unlikely.", ["bnp", "nt-probnp"]),
-    # ---------- coagulation ----------
     ("pt", "Prothrombin time (PT)", "زمان پروترومبین", "sec", 11.0, 13.5, None, 30.0,
      "Slow clotting — liver disease, vitamin K lack, warfarin.", "Usually nothing.", ["pt"]),
     ("inr", "INR", "INR (نسبت نرمال‌شده بین‌المللی)", "—", 0.8, 1.2, None, 5.0,
@@ -233,7 +219,6 @@ _T = [
      "Possible clot (DVT/PE) — needs urgent imaging if symptoms.", "Clot unlikely.", ["d-dimer", "دی دایمر"]),
     ("fib", "Fibrinogen", "فیبرینوژن", "mg/dL", 200.0, 400.0, None, None,
      "Inflammation, pregnancy, stroke risk.", "Liver failure, DIC — bleeding risk.", ["fibrinogen"]),
-    # ---------- urine ----------
     ("u_sg", "Urine specific gravity", "وزن مخصوص ادرار", "—", 1.005, 1.030, None, None,
      "Dehydration.", "Over-hydration or kidney concentration problem.", ["specific gravity"]),
     ("u_ph", "Urine pH", "pH ادرار", "—", 4.5, 8.0, None, None,
@@ -252,7 +237,6 @@ _T = [
      "Fasting, keto diet, vomiting; in diabetics = DKA warning.", "Normal.", ["ketone", "کتون"]),
     ("u_alb_cr", "Urine albumin/creatinine ratio", "نسبت آلبومین به کراتینین ادرار", "mg/g", 0.0, 30.0, None, None,
      "Early kidney damage, especially in diabetes/hypertension.", "Normal.", ["acr", "albumin creatinine"]),
-    # ---------- serology (qualitative) ----------
     ("hbsag", "HBsAg (hepatitis B surface antigen)", "آنتی‌ژن سطحی هپاتیت B", "qual", 0, 0, None, None,
      "POSITIVE = active hepatitis B infection — see a doctor.", "NEGATIVE = no active infection.",
      ["hbsag", "هپاتیت ب"]),
@@ -262,7 +246,6 @@ _T = [
     ("hivab", "HIV 4th-generation test", "آزمایش HIV نسل چهارم", "qual", 0, 0, None, None,
      "POSITIVE must be confirmed by a lab; early treatment works.", "NEGATIVE = no infection detected (after window period).",
      ["hiv"]),
-    # ---------- tumor markers ----------
     ("psa", "PSA", "آنتی‌ژن اختصاصی پروستات", "ng/mL", 0.0, 4.0, None, 20.0,
      "Prostate enlargement or cancer (age matters); some drugs lower it.", "Normal.",
      ["psa", "پی اس ای"]),
@@ -276,11 +259,9 @@ _T = [
      "Breast cancer follow-up marker (not for screening).", "Normal.", ["ca 15-3"]),
     ("ca199", "CA 19-9", "نشانگر لوزالمعده", "U/mL", 0.0, 37.0, None, None,
      "Pancreatic/biliary marker; benign duct blockage also raises it.", "Normal.", ["ca 19-9"]),
-    # ---------- misc ----------
-    ("tsh_full", "Thyroid panel note", "", "", 0, 0, None, None, "", "", []),  # placeholder removed below
+    ("tsh_full", "Thyroid panel note", "", "", 0, 0, None, None, "", "", []),
 ]
 
-# placeholder حذف شود
 _T = [t for t in _T if t[1] != "Thyroid panel note"]
 
 CAT_OF = {}
@@ -383,7 +364,6 @@ def evaluate(key: str, value: float | str, lang_fa: bool = True) -> dict:
             "range": f"{lo} – {hi}", "status": status, "deviation_pct": dev, "note": note}
 
 
-# diseases -> tests that typically get ordered / show changes
 DISEASE_LABS = {
     "diabetes": ["fbs", "hba1c", "ogtt2", "u_glu", "u_ket"],
     "hyperglycemia": ["fbs", "hba1c", "u_glu"],

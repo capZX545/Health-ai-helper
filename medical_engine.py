@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 medical_engine.py — offline medical engine: bilingual (en/fa) symptom lexicon,
 red flag screening (checked before anything else) and the internal knowledge
@@ -11,9 +10,6 @@ from typing import Any
 
 from common_2077 import normalize
 
-# ============================================================================
-# 1) Symptom lexicon — id -> Persian + English keywords
-# ============================================================================
 
 SYMPTOM_NAMES_FA: dict[str, str] = {
     "fever": "تب", "cough": "سرفه", "sore_throat": "گلودرد", "runny_nose": "آبریزش بینی",
@@ -180,7 +176,6 @@ def _is_denied(window: str) -> bool:
         if neg in window:
             return True
     w = ' ' + window.strip() + ' '
-    # Phrases where 'not' is NOT a negation of the symptom
     import re as _re
     _not_negin = _re.compile(
         r'\bnot\s+(helped|only|just|really|very|so|too|that|this|even|always|all|both|each|every|never|improving|getting|going|working|responding|controlled|reduced|worse|better|tolerated|worth)',
@@ -192,9 +187,6 @@ def _is_denied(window: str) -> bool:
             return True
     return False
 
-# ============================================================================
-# 2) Red flags — checked before any assessment
-# ============================================================================
 
 RED_FLAGS: list[dict[str, Any]] = [
     {"id": "chest_pain", "any": ["درد قفسه سینه", "درد قفسه صدری", "درد سینه", "قفسه سینه ام درد", "فشار روی سینه", "سینه ام فشار",
@@ -236,10 +228,6 @@ DURATION_RE = re.compile(_NUM + r"\s*(روز|هفته|شب|ماه|سال|ساع�
 TEMP_RE = re.compile(r"(?:تب|حرارت|fever|temperature|temp)\s*" + _NUM)
 FEVER_RE = re.compile(r"(?:تب|fever|temp)\s*(\d{2,3}(?:[.,]\d)?)")
 
-# ============================================================================
-# 3) Internal knowledge base — p = rough P(symptom | condition) for Bayes.
-#    Output is always presented as "possible", never as a diagnosis.
-# ============================================================================
 
 DISEASES: list[dict[str, Any]] = [
     {"id": "common_cold", "fa": "سرماخوردگی", "en": "Common cold", "prior": 0.16, "urgency": "routine",
@@ -630,19 +618,14 @@ DISEASES: list[dict[str, Any]] = [
 ]
 
 
-# ============================================================================
-# 4) Symptom detection from free text (en/fa)
-# ============================================================================
-
 def detect_symptoms(text: str) -> dict[str, Any]:
     """Returns {present: {sid: {count, severity, denied}}, duration_days, temp_c}.
     Negation is checked inside the same clause so 'no fever' does not leak
     onto earlier symptoms."""
-    # 'but/however' marks the negation boundary: "no fever but I do sneeze": «
     _txt = (text or "")
     _txt = re.sub(r"\s(ولی|اما)\s", "، ", _txt)
     _txt = re.sub(r"\s(but|however|though)\s", ", ", _txt, flags=re.IGNORECASE)
-    clauses = [normalize(c) for c in re.split(r"[،؛,.!؟?!\n]", _txt)]
+    clauses = [normalize(c) for c in re.split(r"[،؛,.؟?\n]", _txt)]
     clauses = [c for c in clauses if c]
     present: dict[str, dict] = {}
     for sid, kws in SYMPTOM_KEYWORDS.items():
@@ -674,7 +657,6 @@ def detect_symptoms(text: str) -> dict[str, Any]:
                 entry["severity"] = "mild"
             break
     t = " ".join(clauses)
-    # keep digits and the decimal point; normalize() would eat the dot (39.5 -> 39 5): normalize
     t_digits = (text or "").translate(str.maketrans("۰۱۲۳۴۵۶۷۸۹٫", "0123456789.")).lower()
     duration_days = None
     for m in DURATION_RE.finditer(t_digits):
@@ -707,32 +689,26 @@ def check_red_flags(text: str, detected: dict | None = None) -> dict[str, Any]:
         if any(normalize(k) in t for k in rf["any"]):
             reasons.append(rf["fa"] if is_fa() else rf["en"])
             hits.append(rf["id"])
-    # combined pattern: pain/pressure ... chest, even split by another word
     if "chest_pain" not in hits and ("قفسه سینه" in t or "chest" in t) and any(
             w in t for w in ("درد", "فشار", "سوزش", "pain", "pressure", "tight", "burning", "burn")):
         reasons.append("درد قفسه سینه" if is_fa() else "chest pain")
         hits.append("chest_pain")
-    # numeric fever >= 40
     if detected and detected.get("temp_c") and detected["temp_c"] >= 40:
         reasons.append("تب بسیار شدید (۴۰ درجه یا بالاتر)" if is_fa() else "very high fever (40 C or above)")
         hits.append("high_fever")
-    # FAST cluster: at least 2 of weakness/speech/face
     s = set(hits)
     fast = {"sudden_weakness", "speech", "face_droop"} & s
     if len(fast) >= 2:
         reasons.append("علائم مطرح برای سکته‌ی مغزی" if is_fa() else "signs suggesting a stroke")
         hits.append("stroke_cluster")
-    # chest pain + sweat/left arm
     if "chest_pain" in s and any(k in t for k in ("عرق", "بازوی چپ", "دست چپ", "فک", "تهوع", "sweat", "left arm", "jaw", "nausea", "clammy")):
         reasons.append("علائم مطرح برای حمله‌ی قلبی" if is_fa() else "signs suggesting a heart attack")
         hits.append("heart_attack")
-    # meningitis cluster: stiff neck + fever or headache
     if detected:
         pres = {s for s, i in detected.get("present", {}).items() if not i.get("denied")}
         if "stiff_neck" in pres and ({"fever", "headache", "photophobia", "confusion"} & pres):
             reasons.append("سفتی گردن با تب/سردرد — مطرح برای مننژیت" if is_fa() else "neck stiffness with fever/headache - possible meningitis")
             hits.append("meningitis_cluster")
-    # severity of key symptoms
     if detected:
         for sid, info in detected["present"].items():
             if sid in ("chest_pain", "shortness_of_breath", "abdominal_pain") and info["severity"] == "severe" and not info.get("denied"):

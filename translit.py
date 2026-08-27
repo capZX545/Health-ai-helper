@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Pharma-style english -> persian transliteration for drug names
 (Amoxicillin -> آموکسی‌سیلین). Deterministic and fast; used as a fallback
@@ -35,10 +34,8 @@ def translit(name: str) -> str:
     i = 0
     prev_cons = True
     while i < len(n):
-        # numbers/punct pass through
         if not n[i].isalpha():
             out.append(n[i]); i += 1; continue
-        # digraphs
         hit = False
         for d, fa in DIGRAPHS:
             if n.startswith(d, i):
@@ -50,28 +47,24 @@ def translit(name: str) -> str:
             fa = "س" if (i + 1 < len(n) and n[i + 1] in "eiy") else "ک"
             out.append(fa); prev_cons = True
         elif ch in "aeiou":
-            # حرف صدادار فقط وقتی ابتدای کلمه یا بعد از حرف صدادار بیاید صدای کامل دارد
             if i == 0:
                 out.append("آ" if ch in "ao" else ("ای" if ch == "i" else ("ا" if ch == "a" else "او")))
             elif not prev_cons:
-                pass  # صداخوش: بین دو حرف صدادار چیزی اضافه نکن
-            # else: بعد از صامت، صداخوش است و نوشته نمی‌شود
+                pass
             prev_cons = False
         elif ch == "e" and i == len(n) - 1:
-            pass  # e آخر بی‌صدا
+            pass
         else:
             fa = CONS.get(ch, ch)
-            # صدادار بلند «ا» بعد از صامت‌های خاص
             out.append(fa)
             prev_cons = True
         i += 1
     s = "".join(out)
-    # حروف تکراری یکی شوند (mm -> م) و ZWNJ قبل از پسوندهای رایج
     import re
     s = re.sub(r"(.)\1+", r"\1", s) if s else s
     for suf, fa_suf in (("cillin", "سیلین"), ("mycin", "مایسین"), ("dipine", "دیپین"), ("pril", "پریل"), ("olol", "ولول"), ("statin", "استاتین"), ("azole", "ازول")):
         if n.endswith(suf) and not s.endswith(fa_suf):
-            s = s  # قواعد بالا خودشان می‌سازند؛ فقط جلوگیری از دوبار
+            s = s
     return s.strip(" ‌")
 
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Visual lab results: an RTL-friendly HTML bar chart plus text output,
 no external dependencies.
@@ -24,7 +23,7 @@ def STATUS_FA() -> dict:
     return _pick({"en": {"low": "low", "normal": "normal", "high": "high", "critical": "critical"},
                   "fa": {"low": "پایین", "normal": "نرمال", "high": "بالا", "critical": "بحرانی"}})
 
-_HTML_HEAD = """<!DOCTYPE html><html lang="fa"dir="rtl"><head><meta charset="utf-8">
+_HTML_HEAD = """<DOCTYPE html><html lang="fa"dir="rtl"><head><meta charset="utf-8">
 <title>NexusMed 2077 — گزارش آزمایش</title><style>
 body{font-family:Tahoma,'Segoe UI',sans-serif;background:#0b1220;color:#d7e3ff;margin:0;padding:24px}
 h1{color:#00f0ff;font-size:20px}.card{background:#111a2e;border:1px solid #1e2c4d;border-radius:12px;padding:14px;margin:10px 0}

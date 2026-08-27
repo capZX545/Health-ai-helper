@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Patient profile: name, age, sex, weight, height, conditions, allergies.
 Stored in patient_profile.json (personal data - never goes into ZIP/Setup).

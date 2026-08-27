@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 List of free/suggested OpenRouter models plus fallback picking.
 """

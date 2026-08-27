@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Pulls the official drug labels from openFDA and keeps only the useful
 sections: indications, warnings, adverse reactions and the boxed warning.
@@ -74,7 +73,7 @@ def download(part: int) -> str | None:
     name = f"part{part:02d}.zip"
     path = os.path.join(TMP, name)
     if os.path.exists(path) and os.path.getsize(path) > 10_000_000:
-        return path  # already downloaded
+        return path
     url = f"https://download.open.fda.gov/drug/label/drug-label-{part:04d}-of-{N_PARTS:04d}.json.zip"
     for attempt in range(4):
         try:
@@ -83,7 +82,7 @@ def download(part: int) -> str | None:
                 f.write(r.read())
             if os.path.getsize(path) > 10_000_000:
                 return path
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             print(f"  تلاش {attempt+1} ناموفق: {e}")
             time.sleep(25)
     return None
@@ -106,7 +105,6 @@ def main() -> None:
             pass
         print(f"part{part:02d}: {n} لیبل پردازش شد (مجموع {len(acc)} دارو)")
         time.sleep(12)
-    # keep only drugs that got at least one section
     acc = {k: v for k, v in acc.items() if v["ind"] or v["warn"] or v["adv"] or v["box"]}
     save_acc(acc)
     print(f"پایان: {len(acc)} دارو با لیبل کامل")

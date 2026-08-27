@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Desktop smoke test.
 Runs the App and every panel with a fake tkinter display to catch
@@ -165,7 +164,6 @@ def main():
             failures.append((name, repr(e)[:150]))
             print("FAIL ", name, "->", repr(e)[:150])
 
-    # chat: sending a text message spawns a thread; test the inner function directly instead
     try:
         app._user("test")
         app._bot("test", "bot", "meta")
@@ -175,7 +173,6 @@ def main():
         failures.append(("chat helpers", repr(e)))
         print("FAIL  chat helpers ->", repr(e)[:120])
 
-    # launch_web only creates a thread, skip it here
     try:
         app.set_lang("fa")
         app.set_lang("en")

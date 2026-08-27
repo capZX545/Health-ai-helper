@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Clinical trial search against ClinicalTrials.gov.
 API: https://clinicaltrials.gov/api/v2/studies

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 intent_router.py — classifies what the user wants before answering.
 
@@ -13,7 +12,6 @@ from typing import Any
 
 from common_2077 import normalize
 
-# ---- patterns (fa + en) ----
 _GREET = [
     r"^(سلام|درود|هی|های|hello|hi|hey)\b",
     r"(چطوری|خوبی|حالت چطوره|how are you)",

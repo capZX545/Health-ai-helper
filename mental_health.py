@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 mental_health.py — bilingual mental health module: PHQ-9, GAD-7, breathing
 exercise, and a hard crisis path for self-harm thoughts.

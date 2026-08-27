@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 test_all_modules.py — full per-module test suite for NexusMed 2077.
 Run:  python test_all_modules.py
@@ -44,8 +43,8 @@ def run_module(name, fn):
         RESULTS.append((name, True, str(info)))
         print(f"PASS  {name}" + (f"  ({info})" if info else ""))
     except Exception as e:
-        RESULTS.append((name, False, f"{e!r}"[:200]))
-        print(f"FAIL  {name}  -> {e!r}"[:200])
+        RESULTS.append((name, False, f"{e}"[:200]))
+        print(f"FAIL  {name}  -> {e}"[:200])
         if os.environ.get("TEST_VERBOSE"):
             traceback.print_exc()
 
@@ -87,9 +86,6 @@ def offline_keys(fn):
     return wrapper
 
 
-
-
-
 def png_bytes(im):
     b = io.BytesIO()
     im.save(b, format="PNG")
@@ -99,8 +95,6 @@ def png_bytes(im):
 def png_b64(im):
     return base64.b64encode(png_bytes(im)).decode()
 
-
-# ---------------------------------------------------------------- helpers
 
 def synth_images():
     imgs = {}
@@ -144,8 +138,6 @@ def synth_images():
     imgs["mole"] = png_bytes(mole)
     return imgs
 
-
-# ================================================================ tests
 
 def t_common():
     from common_2077 import normalize, fa_digits, read_json, write_json, mask_secret, first_sentences, clamp
@@ -193,7 +185,7 @@ def t_ai_api_manager():
     for _k in ("OPENROUTER_API_KEY", "OPENAI_API_KEY", "DEEPSEEK_API_KEY"):
         _os.environ.pop(_k, None)
     r = test_connection("openrouter")
-    expect(not r["ok"] or r["ok"], "test result returned")  # نتیجه به وجود کلید وابسته است
+    expect(not r["ok"] or r["ok"], "test result returned")
     expect(isinstance(has_any_external(), bool))
     return "7 checks"
 
@@ -244,7 +236,6 @@ def t_ai_client_and_mock():
         expect(not r["ok"] and "نامعتبر" in r["error_fa"], r.get("error_fa"))
         r = chat("openrouter", [{"role": "user", "content": "hi"}], model="m1")
         expect(not r["ok"] and "محدودیت" in r["error_fa"], r.get("error_fa"))
-        # reasoning فعال → موفق → ذخیره → درخواست بعدی شامل reasoning_details
         r = chat("openrouter", [{"role": "user", "content": "hi"}], model="m1", reasoning_enabled=True)
         expect(r["ok"] and r["text"].startswith("mock"), r)
         expect(get_saved_reasoning("m1"), "reasoning saved")
@@ -253,7 +244,6 @@ def t_ai_client_and_mock():
         expect(any(m.get("reasoning_details") for m in msgs), "reasoning resent unchanged")
         clear_reasoning("m1")
         expect(get_saved_reasoning("m1") is None)
-        # آدرس غیرقابل‌دسترس → پیام قطعی اینترنت
         os.environ["OPENROUTER_BASE_URL"] = "http://127.0.0.1:1/nope"
         r = chat("openrouter", [{"role": "user", "content": "x"}], model="m")
         expect(not r["ok"] and ("اینترنت" in r["error_fa"] or "در دسترس" in r["error_fa"]), r.get("error_fa"))
@@ -366,7 +356,7 @@ def t_clinical_dialogue():
     st.process("no nausea")
     expect("nausea" in st.denied)
     q1 = st.next_question()
-    expect(q1 and q1 != st.next_question() or True)  # دو سوال متوالی نباید یکسان باشند
+    expect(q1 and q1 != st.next_question() or True)
     q2 = st.next_question()
     asked = st.summary()
     expect(asked["symptoms"] and asked["turns"] == 2)
@@ -515,7 +505,7 @@ def t_patient_profile():
     expect(p["age"] == "" and p["name"] == "X" and p["weight_kg"] == 80.0)
     expect("X" in summary_for_prompt())
     expect(abs(bmi()["value"] - 24.7) < 0.1, "bmi from profile")
-    clear_profile()  # bmi قبل از این خط محاسبه شد
+    clear_profile()
     expect(load_profile() == {} or not load_profile().get("name"))
     return "validation + clear"
 
@@ -685,7 +675,6 @@ def t_doctor_referral():
     return "bilingual printable report"
 
 
-
 @offline_keys
 def t_hybrid_engine():
     import i18n
@@ -697,19 +686,15 @@ def t_hybrid_engine():
         eng = hybrid_engine.HybridEngine()
         r1 = eng.chat("I have a fever and headache since yesterday" if lang == "en" else "دیروز از شب تب و سردرد دارم")
         expect(r1["ok"] and r1["source"] == "internal" and not _EMOJI.search(r1["text"]))
-        # حافظه‌ی چندنوبته
         r2 = eng.chat("also burning when I urinate" if lang == "en" else "همچنین سوزش ادرار دارم")
         txt2 = r2["text"]
         expect(("UTI" in txt2) or ("ادراری" in txt2), txt2[:200])
-        # اورژانسی
         r3 = eng.chat("severe chest pain and cold sweat" if lang == "en" else "درد شدید قفسه سینه و عرق سرد")
         expect(r3["red_flag"] and r3["source"] == "internal-emergency")
-        # تصویر
         imgs = synth_images()
         r4 = eng.chat("", image_b64=base64.b64encode(imgs["skin"]).decode(),
                       image_note="itchy rash" if lang == "en" else "خارش و کهیر")
         expect(r4["ok"] and r4["image_type"]["type"] == "skin_photo")
-        # مغز خاموش → یادگیری پس‌زمینه همچنان فعال (تست با موک در t_ai_client)
         st = eng.status()
         expect(st["external_available"] is False and "settings" in st)
     i18n.set_override(None)
@@ -732,8 +717,6 @@ def t_builders():
     con.close()
     expect(n >= 50, n)
     return "compile + dataset + db"
-
-
 
 
 def t_html_i18n():
@@ -779,13 +762,11 @@ def t_misc_infra():
     s.bind(("127.0.0.1", 2078))
     s.listen(1)
     p = find_free_port(2077, 2087, "127.0.0.1") if os.path.exists("/proc/net/tcp") else None
-    # 2077 ممکن است آزاد باشد در محیط تست؛ فقط بررسی بازه معتبر
     expect(p is None or 2077 <= p <= 2087, p)
     s.close()
     if sys.platform != "win32":
         r = subprocess.run([sys.executable, "build_exe.py"], capture_output=True, text=True, timeout=90)
         expect(r.returncode == 1 and ("ویندوز" in r.stdout or "Windows" in r.stdout))
-    # تولید مجدد داده‌ها
     subprocess.run([sys.executable, "generate_dataset.py"], capture_output=True, timeout=120)
     rows = list(_csv.DictReader(open("medical_ml_test_dataset.csv", encoding="utf-8-sig")))
     expect(len(rows) == 1000)
@@ -796,8 +777,6 @@ def t_misc_infra():
     expect(n >= 50, n)
     return "ports/build_exe/dataset/db"
 
-
-# ================================================================ main
 
 def main():
     clean()

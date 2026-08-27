@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Entry point of NexusMed 2077.
 Run:
@@ -10,10 +9,8 @@ from __future__ import annotations
 import argparse
 import sys
 import os
-# make sure sibling .py files are importable (frozen exe or source run)
 sys.path.insert(0, os.path.dirname(os.path.abspath(sys.executable if getattr(sys, 'frozen', False) else __file__)))
 
-# ALL MODULES — PyInstaller needs these top-level to bundle everything
 import common_2077
 import i18n
 import medical_engine
@@ -72,7 +69,6 @@ def main() -> int:
             sys.argv.append("--no-browser")
         return web_main()
 
-    # tkinter check - if missing just error out, no fallback
     try:
         import tkinter
         root_test = tkinter.Tk()

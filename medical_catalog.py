@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Catalog of conditions (NIH/NLM) and drugs (FDA), built from free official
 US government APIs:
@@ -54,13 +53,10 @@ def search_conditions(query: str, limit: int = 20) -> list[dict]:
     if not nq:
         return []
     results = []
-    # exact match
     if nq in _DATA["conditions_by_name"]:
         results.append(_DATA["conditions_by_name"][nq])
-    # ICD lookup
     if query.upper() in _DATA["conditions_by_icd"]:
         results.append(_DATA["conditions_by_icd"][query.upper()])
-    # substring match
     for c in _DATA["conditions"]:
         if len(results) >= limit:
             break
@@ -105,7 +101,6 @@ def stats() -> dict:
     return {"conditions": len(_DATA["conditions"]), "drugs": len(_DATA["drugs"])}
 
 
-# ICD-10 letter -> persian chapter label
 ICD10_CHAPTERS = {
     "A": "عفونی و انگلی",
     "B": "عفونی و انگلی",

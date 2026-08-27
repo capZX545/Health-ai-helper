@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 lab_answer.py — answers lab-value and lifestyle questions GPT-style.
 Uses lab_full for interpretation and a small food/exercise knowledge base.
@@ -11,9 +10,7 @@ def _is_fa() -> bool:
     return is_fa()
 
 
-# lab test aliases for extraction
 _LAB_PATTERNS = [
-    # (fa keywords, en keywords, test_key)
     (["قند ناشتا", "قند خون ناشتا", "فس", "fbs", "fasting glucose", "fasting blood sugar"], "fbs"),
     (["قند خون", "قند", "گلوکز", "glucose", "blood sugar"], "fbs"),
     (["ایوانک", "هموگلوبین گلیکوزیله", "hba1c", "a1c", "glycated"], "hba1c"),
@@ -52,7 +49,6 @@ def extract_lab_value(message: str):
     from common_2077 import normalize
     low = message.lower()
     norm = normalize(message)
-    # find a number (persian or latin digits)
     persian = "۰۱۲۳۴۵۶۷۸۹"
     m = re.search(r"[\d.,]+", message.translate(str.maketrans(persian, "0123456789")))
     if not m:
@@ -64,7 +60,6 @@ def extract_lab_value(message: str):
         return None
     if not (0.01 <= val <= 100000):
         return None
-    # find the test
     for keys, tk in _LAB_PATTERNS:
         for k in keys:
             if k in low or k in norm or k.lower() in low:
@@ -86,14 +81,14 @@ def answer_lab_question(message: str) -> str | None:
     t = TESTS.get(key, {})
     name = t.get("fa", "") if fa else t.get("en", "")
     lines = []
-    lines.append(f"🧪 {name}: {ev['value']} {ev.get('unit','')}")
+    lines.append(f" {name}: {ev['value']} {ev.get('unit','')}")
     lines.append("")
-    status_fa = {"normal": "نرمال ✅", "low": "پایین‌تر از حد ⚠️", "high": "بالاتر از حد ⚠️",
-                 "very_low": "خیلی پایین 🔴", "very_high": "خیلی بالا 🔴",
-                 "crit_low": "خطرناک پایین ‼️", "crit_high": "خطرناک بالا ‼️"}
-    status_en = {"normal": "normal ✅", "low": "below range ⚠️", "high": "above range ⚠️",
-                 "very_low": "far below 🔴", "very_high": "far above 🔴",
-                 "crit_low": "CRITICAL LOW ‼️", "crit_high": "CRITICAL HIGH ‼️"}
+    status_fa = {"normal": "نرمال ", "low": "پایین‌تر از حد ", "high": "بالاتر از حد ",
+                 "very_low": "خیلی پایین ", "very_high": "خیلی بالا ",
+                 "crit_low": "خطرناک پایین ", "crit_high": "خطرناک بالا "}
+    status_en = {"normal": "normal ", "low": "below range ", "high": "above range ",
+                 "very_low": "far below ", "very_high": "far above ",
+                 "crit_low": "CRITICAL LOW ", "crit_high": "CRITICAL HIGH "}
     st = (status_fa if fa else status_en).get(ev["status"], ev["status"])
     lines.append(f"  {st}")
     lines.append(f"  {'بازه‌ی مرجع' if fa else 'Reference'}: {ev['range']}")
@@ -103,12 +98,11 @@ def answer_lab_question(message: str) -> str | None:
         lines.append("")
         lines.append(f"  {ev['note'][:200]}")
     lines.append("")
-    lines.append(("⚠️ این تفسیر عمومی است — ملاک، بازه‌ی روی برگه‌ی آزمایش خودت و نظر پزشک است." if fa
+    lines.append((" این تفسیر عمومی است — ملاک، بازه‌ی روی برگه‌ی آزمایش خودت و نظر پزشک است." if fa
                  else "General info — your own lab sheet's range and your doctor's judgment apply."))
     return "\n".join(lines)
 
 
-# ---------- lifestyle / food / exercise ----------
 _FOOD_TIPS = {
     "hypertension": (
         ["نمک را کم کن (زیر ۵ گرم در روز)", "سبزیجات و میوه‌ی تازه بیشتر", "ماهی ۲ بار در هفته",
@@ -137,7 +131,6 @@ def answer_lifestyle_question(message: str) -> str | None:
     wants_ex = any(k in low for k in ("ورزش", "ورزشی", "exercise", "sport", "workout"))
     if not (wants_food or wants_ex):
         return None
-    # find the condition
     cond = None
     if any(k in low for k in ("فشار خون", "hypertens", "پرفشاری")):
         cond = "hypertension"
@@ -149,20 +142,8 @@ def answer_lifestyle_question(message: str) -> str | None:
         cond = "high_cholesterol"
     elif any(k in low for k in ("آسم", "asthma")):
         if wants_ex:
-            return ("🏃 **ورزش با آسم:**\n\n"
-                    "• بله، ورزش مجاز و حتی مفید است — با کنترل درست\n"
-                    "• اسپری تسکین‌دهنده را ۱۵ دقیقه قبل از ورزش استفاده کن (اگر پزشک گفته)\n"
-                    "• گرم‌کردن طولانی (۱۰-۱۵ دقیقه) انجام بده\n"
-                    "• ورزش‌های مناسب: شنا، پیاده‌روی، دوچرخه\n"
-                    "• هوای سرد و خشک می‌تواند حملات را تحریک کند — در پاییز/زمستان داخل خانه ورزش کن\n"
-                    "• اسپری اضطراری همیشه همراهت باشد\n\n⚠️ اگر حین ورزش تنگی نفس شدنی، ورزش را قطع کن و اسپری بزن.") if fa else \
-                   ("🏃 **Exercise with asthma:**\n\n"
-                    "• Yes, exercise is fine with proper control\n"
-                    "• Use reliever inhaler 15 min before exercise (if prescribed)\n"
-                    "• Long warm-up (10-15 min)\n"
-                    "• Good options: swimming, walking, cycling\n"
-                    "• Cold dry air can trigger attacks\n"
-                    "• Always carry your rescue inhaler")
+            return (" **ورزش با آسم:**\n\n" "• بله، ورزش مجاز و حتی مفید است — با کنترل درست\n" "• اسپری تسکین‌دهنده را ۱۵ دقیقه قبل از ورزش استفاده کن (اگر پزشک گفته)\n" "• گرم‌کردن طولانی (۱۰-۱۵ دقیقه) انجام بده\n" "• ورزش‌های مناسب: شنا، پیاده‌روی، دوچرخه\n" "• هوای سرد و خشک می‌تواند حملات را تحریک کند — در پاییز/زمستان داخل خانه ورزش کن\n" "• اسپری اضطراری همیشه همراهت باشد\n\n اگر حین ورزش تنگی نفس شدنی، ورزش را قطع کن و اسپری بزن.") if fa else \
+                   (" **Exercise with asthma:**\n\n" "• Yes, exercise is fine with proper control\n" "• Use reliever inhaler 15 min before exercise (if prescribed)\n" "• Long warm-up (10-15 min)\n" "• Good options: swimming, walking, cycling\n" "• Cold dry air can trigger attacks\n" "• Always carry your rescue inhaler")
         return None
     if not cond:
         return None
@@ -172,10 +153,10 @@ def answer_lifestyle_question(message: str) -> str | None:
     tip_list = tips[0]
     names = {"hypertension": "فشار خون بالا", "diabetes": "دیابت",
              "anemia": "کم‌خونی", "high_cholesterol": "کلسترول بالا"}
-    lines = [f"🍽 {'تغذیه برای' if fa else 'Diet for'} {names[cond] if fa else cond}:", ""]
+    lines = [f" {'تغذیه برای' if fa else 'Diet for'} {names[cond] if fa else cond}:", ""]
     for t in tip_list:
         lines.append(f"  • {t}")
     lines.append("")
-    lines.append("💡 " + ("تغییرات را تدریجی شروع کن و با پزشک یا متخصص تغذیه هماهنگ باش." if fa
+    lines.append(" " + ("تغییرات را تدریجی شروع کن و با پزشک یا متخصص تغذیه هماهنگ باش." if fa
                           else "Start changes gradually and coordinate with your doctor."))
     return "\n".join(lines)

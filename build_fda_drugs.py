@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Builds the FDA drug bank from the NDC directory.
 I rerun it whenever the source gets refreshed.
@@ -37,7 +36,7 @@ def fetch() -> list[dict]:
             with urllib.request.urlopen(req, timeout=600) as r:
                 src = r.read()
             break
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             print("  ناموفق:", e)
     if not src:
         print("خطا: دانلود دیتاست ممکن نشد — اینترنت را بررسی کنید.")
@@ -48,7 +47,6 @@ def fetch() -> list[dict]:
     with z.open(name) as f:
         if name.endswith(".json"):
             return json.load(f)["results"]
-        # plain-text format (product.txt, tab separated)
         text = io.TextIOWrapper(f, encoding="utf-8-sig", errors="replace")
         cols = text.readline().rstrip("\n").split("\t")
         idx = {c: i for i, c in enumerate(cols)}
@@ -109,7 +107,6 @@ def build(products: list[dict]) -> list[dict]:
             rt_val = rt_val.split(",")
         for rt in rt_val or []:
             _add("routes", str(rt), 4)
-        # pharm class: either the pharm_class string or the openfda sub-dict
         pc = p.get("pharm_class")
         if isinstance(pc, str):
             for tag in pc.split(","):
@@ -123,7 +120,7 @@ def build(products: list[dict]) -> list[dict]:
                 _add("class", clean_class(str(tag)), 4)
         _add("mkt", p.get("marketing_category"), 3)
     out = sorted(db.values(), key=lambda x: x["g"].lower())
-    return out  # sort alphabetically, easier to search
+    return out
 
 
 def main() -> None:
@@ -132,10 +129,9 @@ def main() -> None:
         products = json.load(zipfile.ZipFile(CACHE_ZIP).open(zipfile.ZipFile(CACHE_ZIP).namelist()[0]))["results"]
     else:
         products = fetch()
-        # cache the download for next runs (ignored by git)
         try:
             with open(CACHE_ZIP, "wb") as f:
-                f.write(b"")  # placeholder, the real payload lives in memory during this run
+                f.write(b"")
         except Exception:
             pass
     db = build(products)

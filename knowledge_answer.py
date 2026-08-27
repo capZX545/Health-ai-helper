@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 knowledge_answer.py — answers knowledge questions (drug/disease/advice)
 using the local banks, GPT-style: concise, structured, bilingual.
@@ -18,12 +17,10 @@ def _is_fa() -> bool:
 def answer_drug_question(message: str) -> str | None:
     """Answer 'what is ibuprofen' style questions from the drug bank."""
     fa = _is_fa()
-    # extract a drug name from the message
     from knowledge_browser import search_drugs, get_drug_label, fa_drug_name
     q = message.strip()
     hits = search_drugs(q) or []
     if not hits:
-        # try single words
         for w in q.split():
             if len(w) > 3:
                 hits = search_drugs(w)
@@ -34,17 +31,15 @@ def answer_drug_question(message: str) -> str | None:
     d = hits[0]
     name = d.get("fa") if fa else (d.get("en") or d.get("fa"))
     lines = []
-    lines.append(f"💊 {name}" + (f" ({d['en']})" if fa and d.get("en") else ""))
+    lines.append(f" {name}" + (f" ({d['en']})" if fa and d.get("en") else ""))
     if d.get("category") or d.get("category_en"):
         cat = d.get("category") if fa else (d.get("category_en") or d.get("category"))
         lines.append(f"{'دسته' if fa else 'Class'}: {cat}")
-    # FDA label
     lb = get_drug_label(d.get("en", ""))
     if lb and lb.get("ind"):
         txt = lb["ind"]
         for h in ("INDICATIONS AND USAGE", "Indications and Usage", "Uses", "Uses "):
             txt = txt.replace(h, "").strip(" .:—-")
-        # فقط جمله‌ی اول
         txt = txt.split(". ")[0][:150].strip()
         if fa:
             from translit import translit
@@ -53,7 +48,6 @@ def answer_drug_question(message: str) -> str | None:
         else:
             lines.append("")
             lines.append(f"Used for: {txt}")
-    # interactions
     inter = d.get("interactions") or []
     if inter:
         sev_fa = {"major": "شدید", "moderate": "متوسط", "minor": "خفیف"}
@@ -67,7 +61,7 @@ def answer_drug_question(message: str) -> str | None:
                 other = other[0] if other else ""
             lines.append(f"  • {str(other).strip('[]\'')} ({s})")
     lines.append("")
-    lines.append("⚠️ " + ("دوز و مصرف فقط با تجویز پزشک." if fa else "Dosage only as prescribed."))
+    lines.append(" " + ("دوز و مصرف فقط با تجویز پزشک." if fa else "Dosage only as prescribed."))
     return "\n".join(lines)
 
 
@@ -76,7 +70,6 @@ def answer_disease_question(message: str) -> str | None:
     fa = _is_fa()
     from knowledge_browser import full_profile, search_wiki_diseases, search_doid, icd_about
     q = message.strip()
-    # find a disease name
     name = ""
     wiki = search_wiki_diseases(q, 1)
     if wiki:
@@ -86,7 +79,6 @@ def answer_disease_question(message: str) -> str | None:
         if doid:
             name = doid[0].get("name", "")
     if not name:
-        # try known ICD about
         for kw, key in (("دیابت", "E11"), ("فشار", "I10"), ("آسم", "J45"),
                         ("سرطان", "C00"), ("diabet", "E11"), ("hypertens", "I10"), ("asthma", "J45")):
             if kw in q.lower():
@@ -94,7 +86,6 @@ def answer_disease_question(message: str) -> str | None:
                 break
     if not name:
         return None
-    # try to get the ICD code for a richer profile
     code = ""
     for kw, icd in (("دیابت", "E11"), ("فشار خون", "I10"), ("آسم", "J45"),
                     ("سرطان", "C00"), ("diabet", "E11"), ("hypertens", "I10"), ("asthma", "J45")):
@@ -104,11 +95,10 @@ def answer_disease_question(message: str) -> str | None:
     p = full_profile(name, code, "", "", [], [])
     lines = []
     nm = name if not fa else (p.get("about_fa", "") and name or name)
-    lines.append(f"🦠 {nm}")
+    lines.append(f" {nm}")
     lines.append("")
     about = p["about_fa"] if fa else p["about_en"]
     if "ثبت‌شده" in about or "recorded medical" in about:
-        # fallback: chapter summary
         from synth_desc import synthesize_description
         fa_s, en_s = synthesize_description(name, code, "")
         about = fa_s if fa else en_s
@@ -128,7 +118,6 @@ def answer_advice_question(message: str) -> str | None:
     det = detect_symptoms(message)
     present = [s for s, i in det.get("present", {}).items() if not i.get("denied")]
     if not present:
-        # try to find a disease name and give its advice
         from knowledge_browser import search_wiki_diseases, search_doid, get_catalog_diseases
         name = ""
         w = search_wiki_diseases(message, 1)
@@ -139,12 +128,10 @@ def answer_advice_question(message: str) -> str | None:
             if d:
                 name = d[0].get("name", "")
         if not name:
-            # ICD catalog bridge (farsi works here)
             cat = get_catalog_diseases(message, 1).get("results") or []
             if cat:
                 name = cat[0].get("name", "")
         if not name:
-            # fa→en dictionary for common diseases
             from knowledge_browser import _FA_EN_MED
             nq = message.strip()
             for fa_t, en_t in _FA_EN_MED.items():
@@ -157,7 +144,7 @@ def answer_advice_question(message: str) -> str | None:
             return None
         from knowledge_browser import full_profile
         p = full_profile(name, "", "", "", [], [])
-        lines = [f"🩺 {'توصیه برای' if fa else 'Care for'} {name}:", ""]
+        lines = [f" {'توصیه برای' if fa else 'Care for'} {name}:", ""]
         lines.append(f"  • {'درمان' if fa else 'Treatment'}: {p['treat_fa'] if fa else p['treat_en']}")
         if p['sym_fb_en']:
             lines.append(f"  • {'علائم' if fa else 'Signs'}: {p['sym_fb_fa'] if fa else p['sym_fb_en']}")
@@ -165,7 +152,6 @@ def answer_advice_question(message: str) -> str | None:
         lines.append(("اگر علائم شدید یا بیش از ۳ روز ادامه داشت، به پزشک مراجعه کن." if fa
                      else "See a doctor if symptoms are severe or last over 3 days."))
         return "\n".join(lines)
-    # symptom-based advice
     lines = []
     lines.append(("برای علائمی که گفتی:" if fa else "For your symptoms:"))
     lines.append("")
@@ -182,9 +168,5 @@ def answer_advice_question(message: str) -> str | None:
 def answer_greeting(message: str) -> str:
     fa = _is_fa()
     if fa:
-        return ("سلام! 👋 من نکسوس هستم، دستیار پزشکی دوزبانه.\n\n"
-                "علائمت را بنویس تا احتمالات را بررسی کنم.\n"
-                "یا هر سوال پزشکی داری بپرس.")
-    return ("Hi! 👋 I'm Nexus, the bilingual medical assistant.\n\n"
-            "Describe your symptoms and I'll check the possibilities.\n"
-            "Or ask me any medical question.")
+        return ("سلام  من نکسوس هستم، دستیار پزشکی دوزبانه.\n\n" "علائمت را بنویس تا احتمالات را بررسی کنم.\n" "یا هر سوال پزشکی داری بپرس.")
+    return ("Hi  I'm Nexus, the bilingual medical assistant.\n\n" "Describe your symptoms and I'll check the possibilities.\n" "Or ask me any medical question.")

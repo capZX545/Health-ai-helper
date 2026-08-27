@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Parses lab text/lines, compares against reference ranges, explains in Persian.
 Example input: "FBS 132" or "hemoglobin 10.5" or "TSH 6.2 mIU/L"
@@ -10,14 +9,13 @@ from typing import Any
 
 from common_2077 import fa_digits
 from lab_catalog import find_test
-from lab_catalog import RANGE_NOTE  # noqa: F401  (callable)
+from lab_catalog import RANGE_NOTE
 
 _NUM = r"(\d{1,5}(?:[.,]\d{1,2})?)"
 LINE_RE = re.compile(r"([A-Za-z0-9\- آ-ی‌]{2,30}?)\s*[:=]?\s*"+ _NUM + r"\s*([A-Za-z/%µ×°]*.*)?")
 NUM_ONLY = re.compile(_NUM)
 
 CRITICAL_RULES = [
-    # (key, high threshold, (high msg en, fa), low threshold, (low msg en, fa))
     ("k", 6.5, ("critically high potassium - heart rhythm danger; emergency", "پتاسیم بحرانی بالا — خطر ریتم قلب؛ اورژانس"),
      2.5, ("critically low potassium - heart rhythm danger; emergency", "پتاسیم بحرانی پایین — خطر ریتم قلب؛ اورژانس")),
     ("na", 155, ("critically high sodium - emergency", "سدیم بحرانی بالا — اورژانس"),
@@ -55,7 +53,6 @@ def parse_lines(text: str) -> list[dict[str, Any]]:
         line = raw.strip()
         if not line:
             continue
-        # first match the test name apart from the number ("K 6.9", "hemoglobin 10.5")
         line_en = line.translate(str.maketrans("۰۱۲۳۴۵۶۷۸۹٫", "0123456789."))
         name_only = NUM_ONLY.sub("", line_en).strip(":=-–")
         t = find_test(name_only) or find_test(line_en)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Ollama connector (local AI on your own GPU/CPU).
 Defaults: http://localhost:11434 with qwen2.5:7b-instruct

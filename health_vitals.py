@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 health_vitals.py — bilingual vitals: BMI, blood pressure categories and a
 history log. History is personal data and stays in vitals_history.json.

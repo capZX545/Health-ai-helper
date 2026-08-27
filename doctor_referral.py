@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 doctor_referral.py — printable bilingual referral report (referral_report.html).
 Sections: profile, vitals, current symptoms, probabilistic assessment, labs,
@@ -120,7 +119,7 @@ def generate(profile: dict | None = None, vitals: list[dict] | None = None,
     tail = ("این گزارش صرفاً جمع‌بندی اطلاعاتی بیمار است و جایگزین معاینه، پرسش‌های بالینی و نظر پزشک نیست." if fa
             else "This report is only a summary of patient-reported information; it does not replace examination, clinical questions or medical judgment.")
 
-    html = f"""<!DOCTYPE html><html lang="{lang}" dir="{direction}"><head><meta charset="utf-8">
+    html = f"""<DOCTYPE html><html lang="{lang}" dir="{direction}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Referral - NexusMed 2077</title>
 <style>{_CSS}</style></head><body>

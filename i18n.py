@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 i18n.py — language layer. English is the default language; Persian is fully
 supported. The active language is stored in app_settings.json ("language")
@@ -10,7 +9,7 @@ from __future__ import annotations
 import threading
 
 _lock = threading.RLock()
-_override: str | None = None  # for tests / forced rendering
+_override: str | None = None
 
 
 _lang_cache: dict = {"stamp": None, "gen": -1, "value": "en"}

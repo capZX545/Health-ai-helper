@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Catalog of common lab tests with general reference ranges.
 Ranges differ between labs; your own lab sheet is what counts.
@@ -70,7 +69,6 @@ def find_test(token: str) -> dict[str, Any] | None:
                 out = {"key": key, **t}
                 out.setdefault("en", _first_latin(t["aliases"]) or key)
                 return out
-    # fuzzy match
     for key, t in TESTS.items():
         if not t:
             continue

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Key and settings handling for the AI providers.
 Keys are only read from .env or the environment, never stored in code or the ZIP.
@@ -50,11 +49,9 @@ def get_settings() -> dict[str, Any]:
     if isinstance(stored, dict):
         s.update({k: v for k, v in stored.items() if k in DEFAULT_SETTINGS})
     else:
-        # no saved settings yet -> fall back to the model from .env
         env_model = env_get("OPENROUTER_MODEL", "")
         if env_model:
             s["openrouter_model"] = env_model
-    # reasoning flag can also come from .env (off by default)
     if env_get("OPENROUTER_REASONING_ENABLED", "0") in ("1", "true", "True"):
         s["reasoning_enabled"] = True
     _settings_cache = {"mtime": mt, "gen": _SETTINGS_GEN, "data": s}

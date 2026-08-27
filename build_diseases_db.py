@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Builds the offline SQLite database (diseases_offline.db)
 from the internal knowledge base + diseases_extra.json.

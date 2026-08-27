@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Connector for the WHO Global Health Observatory (GHO) API.
 Health indicators for 194 countries: disease stats, mortality, burden.
@@ -17,7 +16,6 @@ try:
 except ImportError:
     requests = None
 
-# the handy indicators
 INDICATORS = {
     "life_expectancy": "WHS4_100",
     "under5_mortality": "MDG_0000000001",

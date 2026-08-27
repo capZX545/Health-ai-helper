@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Homegrown RAG with TF-IDF (character n-grams, works fine for Persian
 without a tokenizer).
@@ -150,7 +149,6 @@ def _rag_quality_ok(text: str) -> bool:
     """Reject only truly corrupted text: non-english latin gibberish mixed into farsi."""
     import re as _re
     fa_chars = len(_re.findall(r"[\u0600-\u06ff]", text))
-    # words with diacritics/odd chars that no medical text should have
     gibberish = _re.findall(r"[A-Za-z]*[ąćęłńóśźżáéíóúýčďěňřšťůžâêîôûàèìòù]{2,}[A-Za-z]*", text)
     if fa_chars > 40 and len(gibberish) > 3:
         return False

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 ecg_analyzer.py — offline, honest analysis of an ECG strip photo.
 It extracts the dark trace from a light background, counts QRS-like
@@ -34,7 +33,7 @@ def analyze_ecg(image_bytes: bytes) -> dict[str, Any]:
         trace = (dark * rows[:, None]).sum(axis=0) / np.maximum(col_counts, 1)
         t = trace[usable]
         base = np.median(t)
-        dev = base - t          # upward deflection (smaller y) = positive
+        dev = base - t
         thr = max(3.0, 2.5 * float(np.std(dev)))
         above = dev > thr
         groups = []
@@ -64,11 +63,8 @@ def analyze_ecg(image_bytes: bytes) -> dict[str, Any]:
         out["rr_variability"] = round(cov, 3)
         out["note_en"] = (f"{len(groups)} beat-like deflections; rhythm appears "
                           + ("regular" if out["regular"] else "IRREGULAR")
-                          + ". Beats-per-minute cannot be computed without the printed paper speed. "
-                            "This is not an interpretation - a physician must read the strip.")
-        out["note_fa"] = (f"{len(groups)} موج شبه‌ضربان؛ ریتم {'منظم' if out['regular'] else 'نامنظم'} به نظر می‌رسد. "
-                          "بدون مقیاس چاپیِ سرعت کاغذ نمی‌توان ضربان دقیق را محاسبه کرد. "
-                          "این یک تفسیر نیست — خواندن نوار فقط توسط پزشک است.")
+                          + ". Beats-per-minute cannot be computed without the printed paper speed. " "This is not an interpretation - a physician must read the strip.")
+        out["note_fa"] = (f"{len(groups)} موج شبه‌ضربان؛ ریتم {'منظم' if out['regular'] else 'نامنظم'} به نظر می‌رسد. " "بدون مقیاس چاپیِ سرعت کاغذ نمی‌توان ضربان دقیق را محاسبه کرد. " "این یک تفسیر نیست — خواندن نوار فقط توسط پزشک است.")
         return out
     except Exception as e:
         out["note_en"] = "trace analysis failed: " + str(e)[:60]

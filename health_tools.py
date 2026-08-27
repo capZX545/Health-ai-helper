@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 health_tools.py — practical tools: unit converter, dose calculator,
 pregnancy safety, multi-drug check, due date, symptom diary, backup.
@@ -13,9 +12,7 @@ from typing import Any
 
 DATA_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# ============================ unit converter ============================
 
-# factor: mg/dL * factor = mmol/L
 UNITS = {
     "glucose": {"name_en": "Glucose", "name_fa": "قند خون", "mgdl_to_mmol": 0.0555,
                 "ref_en": "70-99 mg/dL (fasting)", "ref_fa": "۷۰-۹۹ mg/dL (ناشتا)"},
@@ -69,8 +66,6 @@ def convert_unit(test_key: str, value: float, from_unit: str) -> dict:
     return {"ok": False}
 
 
-# ============================ dose calculator ============================
-
 DOSE_TABLE = {
     "paracetamol": {"name_en": "Paracetamol/Acetaminophen", "name_fa": "استامینوفن",
                     "mg_per_kg": 15, "max_daily_mg_per_kg": 75, "interval_h": 6,
@@ -110,7 +105,6 @@ def calculate_dose(drug_key: str, weight_kg: float) -> dict:
     single_dose = round(d["mg_per_kg"] * w)
     max_daily = round(d["max_daily_mg_per_kg"] * w)
     doses_per_day = round(24 / d["interval_h"])
-    # شکل دارویی
     forms_info = []
     for fk, fname in d.get("forms", {}).items():
         conc = 0
@@ -129,8 +123,6 @@ def calculate_dose(drug_key: str, weight_kg: float) -> dict:
             "warning": f"Max {max_daily} mg/day. Always confirm with a doctor.",
             "warning_fa": f"حداکثر {max_daily} میلی‌گرم در روز. همیشه با پزشک تأیید کن."}
 
-
-# ============================ pregnancy safety ============================
 
 PREGNANCY_CATEGORIES = {
     "A": {"en": "Safe — controlled studies show no risk", "fa": "ایمن — مطالعات کنترل‌شده خطری نشان نداده"},
@@ -157,7 +149,6 @@ PREGNANCY_DRUGS = {
     "albuterol": "C", "salbutamol": "C",
 }
 
-# شیردهی
 LACTATION_NOTES = {
     "ibuprofen": {"en": "Safe in breastfeeding", "fa": "در شیردهی ایمن است"},
     "paracetamol": {"en": "Safe in breastfeeding", "fa": "در شیردهی ایمن است"},
@@ -190,9 +181,6 @@ def check_pregnancy(drug_name: str) -> dict:
             "lactation_fa": lact["fa"] if lact else "از پزشکت بپرس"}
 
 
-# ============================ multi-drug interaction ============================
-
-
 def check_multi_drugs(drug_list: list[str]) -> dict:
     """Check interactions between 2+ drugs simultaneously."""
     from drug_interaction import check_interaction, search_drug, SEV_FA
@@ -219,9 +207,6 @@ def check_multi_drugs(drug_list: list[str]) -> dict:
             "message_en": f"{len(pairs)} interaction(s) found" if pairs else "No significant interaction found"}
 
 
-# ============================ due date calculator ============================
-
-
 def due_date(lmp: str, cycle_length: int = 28) -> dict:
     """Naegele's rule + ultrasound adjustment."""
     try:
@@ -244,8 +229,6 @@ def due_date(lmp: str, cycle_length: int = 28) -> dict:
             "message_en": f"{weeks} weeks {days} days — trimester {trimester}"}
 
 
-# ============================ symptom diary ============================
-
 DIARY_FILE = os.path.join(DATA_DIR, "symptom_diary.json")
 
 
@@ -254,7 +237,7 @@ def diary_add(date_str: str, symptom: str, severity: int, note: str = "") -> dic
     e = {"date": date_str, "symptom": symptom, "severity": max(1, min(10, severity)), "note": note or "",
          "ts": datetime.now().isoformat()[:19]}
     entries.append(e)
-    entries = entries[-500:]  # آخرین ۵۰۰
+    entries = entries[-500:]
     _diary_save(entries)
     return {"ok": True, "total": len(entries)}
 
@@ -279,8 +262,6 @@ def _diary_load() -> list[dict]:
 def _diary_save(entries: list[dict]) -> None:
     json.dump(entries, open(DIARY_FILE, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 
-
-# ============================ medication reminder ============================
 
 REMINDERS_FILE = os.path.join(DATA_DIR, "med_reminders.json")
 
@@ -316,8 +297,6 @@ def _rem_save(rem: list[dict]) -> None:
     json.dump(rem, open(REMINDERS_FILE, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 
 
-# ============================ backup / restore ============================
-
 BACKUP_FILES = ["patient_profile.json", "vitals_history.json", "learned_knowledge.json",
                 "ai_behavior_profile.json", "local_llm_config.json", "app_settings.json",
                 "symptom_diary.json", "med_reminders.json", "conversation_history.json"]
@@ -344,16 +323,12 @@ def restore_all(src_dir: str) -> dict:
     return {"ok": True, "files": restored}
 
 
-# ============================ growth chart (child) ============================
-
-# WHO percentile data (approximate, boys, height cm)
 WHO_HEIGHT_BOYS = {1: [46.1, 48.9, 50.8, 52.7, 54.7], 6: [63.4, 66.6, 68.0, 69.3, 70.7],
                    12: [71.0, 74.5, 76.0, 77.6, 79.2], 24: [81.7, 86.4, 88.5, 90.7, 92.9],
                    36: [89.4, 94.9, 97.5, 100.0, 102.7], 60: [102.7, 109.2, 112.0, 115.0, 118.0]}
 WHO_HEIGHT_GIRLS = {1: [45.4, 48.2, 49.9, 51.7, 53.5], 6: [61.8, 64.8, 66.2, 67.6, 69.0],
                     12: [69.8, 73.3, 74.9, 76.5, 78.1], 24: [80.4, 84.9, 87.0, 89.2, 91.4],
                     36: [88.6, 93.9, 96.5, 99.1, 101.7], 60: [101.6, 108.0, 110.9, 113.9, 116.9]}
-# weight kg
 WHO_WEIGHT_BOYS = {1: [2.9, 3.6, 3.9, 4.3, 4.7], 6: [6.4, 7.4, 7.9, 8.4, 8.9],
                    12: [8.0, 9.2, 9.6, 10.3, 10.9], 24: [10.5, 12.2, 12.7, 13.7, 14.8],
                    36: [12.7, 14.7, 15.3, 16.5, 17.7], 60: [15.9, 18.3, 19.0, 20.5, 22.0]}
@@ -368,7 +343,6 @@ def growth_percentile(age_months: int, sex: str, height_cm: float = 0, weight_kg
     s = "boys" if sex.lower().startswith("m") or sex == "پسر" else "girls"
     h_table = WHO_HEIGHT_BOYS if s == "boys" else WHO_HEIGHT_GIRLS
     w_table = WHO_WEIGHT_BOYS if s == "boys" else WHO_WEIGHT_GIRLS
-    # نزدیک‌ترین سن موجود
     closest = min(h_table.keys(), key=lambda x: abs(x - age_months))
     result = {"ok": True, "age_months": age_months, "sex": s, "reference_age": closest}
     if height_cm > 0:
@@ -396,9 +370,6 @@ def _find_percentile(val: float, ref: list) -> int:
             frac = (val - ref[i]) / (ref[i + 1] - ref[i]) if ref[i + 1] > ref[i] else 0
             return i + (1 if frac > 0.5 else 0)
     return 2
-
-
-# ============================ chat history search ============================
 
 
 def search_chat_history(query: str, limit: int = 20) -> list[dict]:

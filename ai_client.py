@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 HTTP client for OpenRouter / OpenAI / DeepSeek.
 Optional reasoning_details support (prompt part 8): stored and sent back verbatim
@@ -14,7 +13,7 @@ from typing import Any
 
 try:
     import requests
-except ImportError:  # app still runs without requests, external calls are just disabled
+except ImportError:
     requests = None
 
 from common_2077 import DATA_DIR, env_get, read_json, write_json
@@ -56,8 +55,6 @@ def _model_for(provider: str, model: str | None) -> str:
     return model or ""
 
 
-# ------------------------------------------------- reasoning_details (part 8)
-
 def _load_reasoning_state() -> dict:
     return read_json(REASONING_STATE_PATH, default={}) or {}
 
@@ -75,7 +72,6 @@ def save_reasoning(model: str, details: Any) -> None:
     with _reasoning_lock:
         st = _load_reasoning_state()
         st[model] = details
-        # keep only the last 5 models
         if len(st) > 5:
             for k in list(st.keys())[:-5]:
                 st.pop(k, None)
@@ -91,8 +87,6 @@ def clear_reasoning(model: str | None = None) -> None:
         else:
             write_json(REASONING_STATE_PATH, {})
 
-
-# ------------------------------------------------------------------- chat
 
 def chat(provider: str, messages: list[dict], model: str | None = None,
          temperature: float = 0.4, max_tokens: int = 1200,
@@ -117,7 +111,6 @@ def chat(provider: str, messages: list[dict], model: str | None = None,
         return {"ok": False, "error": "unknown_provider", "error_fa": tt("Unknown provider.", "سرویس ناشناخته است.")}
     mdl = _model_for(provider, model)
 
-    # build the last message + image (vision)
     msgs = [dict(m) for m in messages]
     if image_b64 and msgs:
         last = msgs[-1]
@@ -125,7 +118,6 @@ def chat(provider: str, messages: list[dict], model: str | None = None,
                    {"type": "image_url", "image_url": {"url": f"data:{image_mime};base64,{image_b64}"}}]
         msgs[-1] = {"role": "user", "content": content}
 
-    # return the reasoning_details saved for this model, untouched
     saved = get_saved_reasoning(mdl) if reasoning_enabled else None
     if saved and msgs and msgs[-1].get("role") == "user":
         msgs.append({"role": "assistant", "content": "", "reasoning_details": saved})

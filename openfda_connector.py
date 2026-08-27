@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Talks to openFDA (free, no key) for:
 - reported adverse drug events

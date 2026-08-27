@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 medical_nlg.py — builds the offline engine's reply, English or Persian.
 Never a definitive diagnosis: always possibilities, a follow-up question
@@ -52,7 +51,6 @@ def compose_offline_answer(analysis: dict[str, Any], dialogue_summary: dict[str,
     cands = analysis.get("candidates", [])
     det = analysis.get("detected", {}) or {}
 
-    # ---- findings: short, no repetition ----
     findings: list[str] = []
     if syms:
         _s = [_clean_fa(str(x)) if fa else str(x) for x in syms[:8]]
@@ -68,11 +66,9 @@ def compose_offline_answer(analysis: dict[str, Any], dialogue_summary: dict[str,
     if bits:
         findings.append(" | ".join(bits))
     sections["findings"] = findings or [""]
-    # hide the findings section visually if empty
     if not findings:
         sections["findings"] = [""]
 
-    # ---- probables: just the names + % + urgency, no disclaimers here ----
     probables: list[str] = []
     urg = URGENCY_FA if fa else URGENCY_EN
     if cands:
@@ -82,13 +78,11 @@ def compose_offline_answer(analysis: dict[str, Any], dialogue_summary: dict[str,
             line = f"{short} {_pct(c['percent'])}" + (f" [{u}]" if u else "")
             probables.append(line)
     if not probables:
-        probables = [("" if fa else "")]  # empty string → section hidden
+        probables = [("" if fa else "")]
     sections["probables"] = probables
 
-    # ---- advice: max 2 items ----
     advice: list[str] = []
     seen: set[str] = set()
-    # advice comes from the TOP candidate first, then the second
     for c in cands[:2]:
         for a in c.get("advice", [])[:2]:
             k = a.strip()[:50]
@@ -96,28 +90,25 @@ def compose_offline_answer(analysis: dict[str, Any], dialogue_summary: dict[str,
                 seen.add(k)
                 advice.append(a)
         if advice:
-            break  # top candidate's advice is enough
+            break
     advice = [_clean_fa(a) if fa else a for a in advice]
     advice = [a for a in advice if a.strip()]
     if not advice:
         advice = ["استراحت و آب کافی" if fa else "Rest and hydrate"]
     sections["advice"] = advice
 
-    # ---- doctor: single short line ----
     doctor: list[str] = []
     for c in cands[:1]:
         if c.get("doctor_when"):
             doctor.append(str(c["doctor_when"])[:120])
     sections["doctor"] = doctor
 
-    # ---- warning only on emergency candidates ----
     sections["warning"] = ""
     for c in cands[:2]:
         if c.get("urgency") == "emergency":
-            sections["warning"] = ("⚠️ اورژانس: ۱۱۵ / ۱۱۲" if fa else "⚠️ Emergency: 115 / 112")
+            sections["warning"] = (" اورژانس: ۱۱۵ / ۱۱۲" if fa else " Emergency: 115 / 112")
             break
 
-    # ---- followup: exactly one short question ----
     if followup_question:
         sections["followup"] = str(followup_question).strip()
     else:
@@ -129,7 +120,6 @@ def compose_offline_answer(analysis: dict[str, Any], dialogue_summary: dict[str,
 def _clean_fa(text: str) -> str:
     """Strip obviously corrupted segments (foreign words mixed into farsi)."""
     import re as _re
-    # remove latin words of 3+ letters that are not known medical terms
     keep = {"mg", "dl", "mmol", "kg", "cm", "ph", "ecg", "mri", "ct", "copd", "aids",
             "hiv", "cpr", "icd", "who", "fda", "hpo", "doid", "tsh", "fbs", "hba1c",
             "ldl", "hdl", "nsaid", "ssri", "acei", "arb", "pPI", "utI", "bp", "bmi"}
@@ -137,7 +127,6 @@ def _clean_fa(text: str) -> str:
         w = m.group(0)
         return w if w.lower() in keep else ""
     cleaned = _re.sub(r"[A-Za-z]{3,}", _sub, text)
-    # collapse double spaces / orphan punctuation
     cleaned = _re.sub(r"\s{2,}", " ", cleaned)
     cleaned = _re.sub(r"\(\s*", "(", cleaned)
     cleaned = _re.sub(r"\s*\)", ")", cleaned)

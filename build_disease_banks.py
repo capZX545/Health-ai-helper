@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Builds the big open disease/symptom banks:
 - wiki_diseases.json : every Wikidata disease with fa/en names, ICD/DOID/MeSH
@@ -63,7 +62,7 @@ def build_wiki():
                 e.setdefault("sym", [])
                 if r["s"] not in e["sym"]:
                     e["sym"].append(r["s"])
-    except Exception as ex:  # noqa: BLE001
+    except Exception as ex:
         print("symptoms query failed:", ex)
     try:
         drugs = sparql("""
@@ -75,7 +74,7 @@ def build_wiki():
                 e.setdefault("drug", [])
                 if r["d"] not in e["drug"]:
                     e["drug"].append(r["d"])
-    except Exception as ex:  # noqa: BLE001
+    except Exception as ex:
         print("drugs query failed:", ex)
     with open(os.path.join(HERE, "wiki_diseases.json"), "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
@@ -90,8 +89,7 @@ def build_doid():
     path = "/tmp/doid.json"
     if not os.path.exists(path):
         with open(path, "wb") as f:
-            f.write(http("https://raw.githubusercontent.com/DiseaseOntology/"
-                         "HumanDiseaseOntology/main/src/ontology/doid.json"))
+            f.write(http("https://raw.githubusercontent.com/DiseaseOntology/" "HumanDiseaseOntology/main/src/ontology/doid.json"))
     d = json.load(open(path, encoding="utf-8"))
     out = []
     for g in d.get("graphs", []):
@@ -133,8 +131,7 @@ def build_hpo():
     path = "/tmp/hp.obo"
     if not os.path.exists(path):
         with open(path, "wb") as f:
-            f.write(http("https://raw.githubusercontent.com/obophenotype/"
-                         "human-phenotype-ontology/master/hp.obo"))
+            f.write(http("https://raw.githubusercontent.com/obophenotype/" "human-phenotype-ontology/master/hp.obo"))
     out = []
     in_term = False
     tid = tname = None

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Drug/herb lookup + interaction check + allergy warning.
 General educational info only; the final call belongs to a doctor/pharmacist.
@@ -46,7 +45,6 @@ DRUGS: list[dict[str, Any]] = [
     {"id": "codeine", "fa": ["کدئین", "کدئین شربت"], "en": ["codeine"], "cat": "مسکن/ضدسرفه"},
     {"id": "alprazolam", "fa": ["آلپرازولام", "زناکس"], "en": ["alprazolam", "xanax"], "cat": "ضد اضطراب (بنزودیازپین)"},
     {"id": "clonazepam", "fa": ["کلونازپام", "ریووترین"], "en": ["clonazepam", "rivotril"], "cat": "ضد تشنج/اضطراب"},
-    # herbal stuff
     {"id": "ginkgo", "fa": ["گیاه گینکو", "گینکو بیلوبا"], "en": ["ginkgo", "ginkgo biloba"], "cat": "گیاه دارویی"},
     {"id": "ginseng", "fa": ["جینسنگ"], "en": ["ginseng"], "cat": "گیاه دارویی"},
     {"id": "garlic", "fa": ["سیر", "قرص سیر", "عصاره‌ی سیر"], "en": ["garlic"], "cat": "گیاه دارویی"},
@@ -56,25 +54,21 @@ DRUGS: list[dict[str, Any]] = [
     {"id": "stjohnswort", "fa": ["گل راعی", "چای کوهی", "سن‌جان"], "en": ["st johns wort", "st. john's wort"], "cat": "گیاه دارویی"},
     {"id": "senna", "fa": ["سنا", "برگ سنا", "شربت سنا"], "en": ["senna"], "cat": "ملین گیاهی"},
     {"id": "licorice", "fa": ["ریشه‌ی شیرین‌بیان", "شیرین بیان"], "en": ["licorice", "liquorice"], "cat": "گیاه دارویی"},
-    # ---- extra respiratory/allergy drugs ----
     {"id": "salmete_roflast", "fa": ["سالمترول/فلوتیکازون", "سرتاید"], "en": ["salmeterol fluticasone", "seretide", "advair"], "cat": "اسپری ترکیبی آسم (ICS/LABA)"},
     {"id": "formoterol_budesonide", "fa": ["فورموترول/بودزوناید", "سیمبیکورت"], "en": ["formoterol budesonide", "symbicort"], "cat": "اسپری ترکیبی آسم"},
     {"id": "tiotropium", "fa": ["تیوتروپیوم", "اسپیریوا"], "en": ["tiotropium", "spiriva"], "cat": "برونکودیلاتور طولانی‌اثر (COPD)"},
     {"id": "sodium_cromoglycate", "fa": ["سدیم کروموگلیکات", "اینتال"], "en": ["sodium cromoglycate", "intal"], "cat": "پیشگیری از آسم"},
-    # ---- extra cardiovascular ----
     {"id": "ivabradine", "fa": ["ایوابرادین", "پروکورالان"], "en": ["ivabradine", "procoralan"], "cat": "کاهش ضربان قلب"},
     {"id": "ranolazine", "fa": ["رانولازین", "رانکزا"], "en": ["ranolazine", "ranexa"], "cat": "ضد آنژین"},
     {"id": "moxonidine", "fa": ["موکسونیدین", "فیزیوتنس"], "en": ["moxonidine", "physiotens"], "cat": "ضد فشار خون مرکزی"},
     {"id": "methyldopa", "fa": ["متیل‌دوپا", "ال‌دومت"], "en": ["methyldopa", "aldomet"], "cat": "ضد فشار خون (بارداری)"},
     {"id": "hydralazine", "fa": ["هیدرالازین", "آپراسولین"], "en": ["hydralazine", "apresoline"], "cat": "وازودیلاتور"},
     {"id": "minoxidil", "fa": ["مینوکسیدیل", "روگین"], "en": ["minoxidil", "rogaine"], "cat": "ضد ریزش مو/ضد فشار"},
-    # ---- extra diabetes ----
     {"id": "pioglitazone", "fa": ["پیوگلیتازون", "اکتوس"], "en": ["pioglitazone", "actos"], "cat": "ضد دیابت (تزوگلیتازون)"},
     {"id": "acarbose", "fa": ["آکاربوز", "گلوکوبای"], "en": ["acarbose", "glucobay"], "cat": "ضد دیابت (آلفا-گلوکوزیداز)"},
     {"id": "nateglinide", "fa": ["ناتگلینید", "استارلیکس"], "en": ["nateglinide", "starlix"], "cat": "ضد دیابت (مگلیتینید)"},
     {"id": "dulaglutide", "fa": ["دولاگلوتید", "ترولیسیتی"], "en": ["dulaglutide", "trulicity"], "cat": "ضد دیابت (GLP-1)"},
     {"id": "semaglutide", "fa": ["سماگلوتید", "اوزمپیک"], "en": ["semaglutide", "ozempic"], "cat": "ضد دیابت (GLP-1)"},
-    # ---- extra psychiatric ----
     {"id": "aripiprazole", "fa": ["آریپیپرازول", "ابیلیفای"], "en": ["aripiprazole", "abilify"], "cat": "ضد روان‌پریشی"},
     {"id": "olanzapine", "fa": ["اولانزاپین", "زیپرکسا"], "en": ["olanzapine", "zyprexa"], "cat": "ضد روان‌پریشی"},
     {"id": "risperidone", "fa": ["ریسپریدون", "ریسپردال"], "en": ["risperidone", "risperdal"], "cat": "ضد روان‌پریشی"},
@@ -84,23 +78,18 @@ DRUGS: list[dict[str, Any]] = [
     {"id": "propranolol2", "fa": ["پروپرانولول (میگرن)", "ایندرال"], "en": ["propranolol migraine"], "cat": "پیشگیری از میگرن"},
     {"id": "topiramate", "fa": ["توپیرامات", "توپاماکس"], "en": ["topiramate", "topamax"], "cat": "پیشگیری از میگرن/ضدتشنج"},
     {"id": "clozapine", "fa": ["کلوزاپین", "کلوزاریل"], "en": ["clozapine", "clozaril"], "cat": "ضد روان‌پریشی مقاوم"},
-    # ---- extra GI ----
     {"id": "mesalazine", "fa": ["مزالازین", "پنتاسا"], "en": ["mesalazine", "pentasa"], "cat": "ضد التهاب روده (IBD)"},
     {"id": "infliximab", "fa": ["اینفلیکسیماب", "رمیکید"], "en": ["infliximab", "remicade"], "cat": "بیولوژیک (IBD/RA)"},
     {"id": "rabeprazole", "fa": ["رابپرازول", "پاریت"], "en": ["rabeprazole", "pariet"], "cat": "کاهنده‌ی اسید معده (PPI)"},
-    # ---- extra anti-infective ----
     {"id": "vancomycin", "fa": ["وانکومایسین"], "en": ["vancomycin"], "cat": "آنتی‌بیوتیک (عفونت مقاوم)"},
     {"id": "meropenem", "fa": ["مراپنم", "مرونم"], "en": ["meropenem", "meronem"], "cat": "آنتی‌بیوتیک وسیع‌الطیف"},
     {"id": "linezolid", "fa": ["لینزولید", "زایووکس"], "en": ["linezolid", "zyvox"], "cat": "آنتی‌بیوتیک (MRSA)"},
     {"id": "clindamycin2", "fa": ["کلیندامایسین"], "en": ["clindamycin"], "cat": "آنتی‌بیوتیک"},
-    # ---- immunology/oncology ----
     {"id": "tacrolimus", "fa": ["تاکرولیموس", "پروگراف"], "en": ["tacrolimus", "prograf"], "cat": "سرکوب‌کننده‌ی ایمنی"},
     {"id": "cyclosporine", "fa": ["سیکلوسپورین", "ساندیمون"], "en": ["cyclosporine", "sandimmune"], "cat": "سرکوب‌کننده‌ی ایمنی"},
     {"id": "mycophenolate", "fa": ["میکوفنولات", "سلی‌سپت"], "en": ["mycophenolate", "cellcept"], "cat": "سرکوب‌کننده‌ی ایمنی"},
-    # ---- bone ----
     {"id": "raloxifene", "fa": ["رالوکسیفن", "اویستا"], "en": ["raloxifene", "evista"], "cat": "درمان پوکی استخوان"},
     {"id": "zoledronic", "fa": ["زولدرونیک اسید", "زومتا"], "en": ["zoledronic acid", "reclast"], "cat": "درمان پوکی استخوان (وریدی)"},
-    # ---- iranian medicinal herbs (HMOIr/MediCib/UNaProd) ----
     {"id": "ziziphora", "fa": ["زوفا", "زوفای کوهی"], "en": ["ziziphora"], "cat": "گیاه دارویی ایرانی (ضدعفونی)"},
     {"id": "echinacea", "fa": ["ایناکاسیا", "سرخارگل"], "en": ["echinacea"], "cat": "گیاه دارویی (ایمنی)"},
     {"id": "valerian", "fa": ["سنبل‌الطیب", "سنبل الطیب", "والریان"], "en": ["valerian", "valeriana"], "cat": "گیاه دارویی (خواب‌آور)"},
@@ -117,12 +106,10 @@ DRUGS: list[dict[str, Any]] = [
     {"id": "saffron", "fa": ["زعفران"], "en": ["saffron", "crocus"], "cat": "گیاه دارویی ایرانی"},
     {"id": "pomegranate", "fa": ["انار", "پوست انار"], "en": ["pomegranate"], "cat": "گیاه دارویی ایرانی"},
     {"id": "chamomile", "fa": ["بابونه", "چای بابونه"], "en": ["chamomile"], "cat": "گیاه دارویی"},
-    # ---- painkillers/antipyretics ----
     {"id": "celecoxib", "fa": ["سلکوکسیب", "سلبرکس"], "en": ["celecoxib", "celebrex"], "cat": "مسکن NSAID (COX-2)"},
     {"id": "mefenamic", "fa": ["مفنامیک اسید", "پونستان"], "en": ["mefenamic acid", "ponstan"], "cat": "مسکن NSAID"},
     {"id": "indomethacin", "fa": ["ایندومتاسین", "ایندومتاسین"], "en": ["indomethacin", "indocid"], "cat": "مسکن NSAID"},
     {"id": "ketorolac", "fa": ["کتورولاک"], "en": ["ketorolac"], "cat": "مسکن NSAID"},
-    # ---- antibiotics/antiseptics ----
     {"id": "cephalexin", "fa": ["سفالکسین", "کفالکسین"], "en": ["cephalexin", "keflex"], "cat": "آنتی‌بیوتیک (سفالوسپورین)"},
     {"id": "cefixime", "fa": ["سفیکسیم", "سوپراکس"], "en": ["cefixime", "suprax"], "cat": "آنتی‌بیوتیک (سفالوسپورین)"},
     {"id": "clarithromycin", "fa": ["کلاریترومایسین", "کلاسیت"], "en": ["clarithromycin", "biaxin"], "cat": "آنتی‌بیوتیک (ماکرولید)"},
@@ -135,7 +122,6 @@ DRUGS: list[dict[str, Any]] = [
     {"id": "clotrimazole", "fa": ["کلوتریمازول", "کانستن"], "en": ["clotrimazole", "canesten"], "cat": "ضدقارچ موضعی"},
     {"id": "acyclovir", "fa": ["آسیکلوویر", "زوویراکس"], "en": ["acyclovir", "zovirax"], "cat": "ضدویروس"},
     {"id": "oseltamivir", "fa": ["اسلتاموییر", "تامی‌فلو"], "en": ["oseltamivir", "tamiflu"], "cat": "ضدویروس (آنفلوآنزا)"},
-    # ---- cardiovascular ----
     {"id": "rosuvastatin", "fa": ["روزوواستاتین", "کرستور"], "en": ["rosuvastatin", "crestor"], "cat": "کاهنده‌ی چربی خون"},
     {"id": "simvastatin", "fa": ["سیمواستاتین", "زوکور"], "en": ["simvastatin", "zocor"], "cat": "کاهنده‌ی چربی خون"},
     {"id": "ezetimibe", "fa": ["ازتیمایب", "ازترول"], "en": ["ezetimibe", "ezetrol"], "cat": "کاهنده‌ی چربی خون"},
@@ -155,13 +141,11 @@ DRUGS: list[dict[str, Any]] = [
     {"id": "ticagrelor", "fa": ["تیکاگرلور", "بریلینتا"], "en": ["ticagrelor", "brilinta"], "cat": "ضدپلاکت"},
     {"id": "amiodarone", "fa": ["آمیودارون", "کوردارون"], "en": ["amiodarone", "cordarone"], "cat": "ضد آریتمی"},
     {"id": "isosorbide", "fa": ["ایزوسورباید", "ایزوردیل"], "en": ["isosorbide", "isordil"], "cat": "ضد آنژین (نیترات)"},
-    # ---- diabetes/thyroid ----
     {"id": "gliclazide", "fa": ["گلیکلازید", "دیامیکرون"], "en": ["gliclazide", "diamicron"], "cat": "ضد دیابت (سولفونیل‌اوره)"},
     {"id": "sitagliptin", "fa": ["سیتاگلیپتین", "جانوویا"], "en": ["sitagliptin", "januvia"], "cat": "ضد دیابت"},
     {"id": "empagliflozin", "fa": ["امپاگلیفلوزین", "جاردیانس"], "en": ["empagliflozin", "jardiance"], "cat": "ضد دیابت (SGLT2)"},
     {"id": "insulin_glargine", "fa": ["انسولین گلارژین", "لانتوس"], "en": ["insulin glargine", "lantus"], "cat": "انسولین طولانی‌اثر"},
     {"id": "carbimazole", "fa": ["کاربیمازول", "نئومرکازول"], "en": ["carbimazole", "neo-mercazole"], "cat": "ضد پرکاری تیروئید"},
-    # ---- GI ----
     {"id": "esomeprazole", "fa": ["ازومپرازول", "نکسیوم"], "en": ["esomeprazole", "nexium"], "cat": "کاهنده‌ی اسید معده (PPI)"},
     {"id": "famotidine", "fa": ["فاموتیدین"], "en": ["famotidine"], "cat": "کاهنده‌ی اسید معده (H2)"},
     {"id": "ondansetron", "fa": ["اندانسترون", "زوفران"], "en": ["ondansetron", "zofran"], "cat": "ضد تهوع"},
@@ -169,7 +153,6 @@ DRUGS: list[dict[str, Any]] = [
     {"id": "loperamide", "fa": ["لوپرامید", "ایمودیوم"], "en": ["loperamide", "imodium"], "cat": "ضد اسهال"},
     {"id": "lactulose", "fa": ["لاکتولوز", "دوفالاک"], "en": ["lactulose", "duphalac"], "cat": "ملین"},
     {"id": "bisacodyl", "fa": ["بیساکودییل", "دلوکوکس"], "en": ["bisacodyl", "dulcolax"], "cat": "ملین"},
-    # ---- respiratory/allergy ----
     {"id": "fexofenadine", "fa": ["فکسوفنادین", "الرتفکس"], "en": ["fexofenadine", "allegra"], "cat": "آنتی‌هیستامین"},
     {"id": "chlorpheniramine", "fa": ["کلرفنیرامین"], "en": ["chlorpheniramine"], "cat": "آنتی‌هیستامین خواب‌آور"},
     {"id": "hydroxyzine", "fa": ["هیدروکسی‌زین", "آتاراکس"], "en": ["hydroxyzine", "atarax"], "cat": "آنتی‌هیستامین/ضدخارش"},
@@ -180,7 +163,6 @@ DRUGS: list[dict[str, Any]] = [
     {"id": "fluticasone", "fa": ["فلوتیکازون", "فلوونت/آوامیس"], "en": ["fluticasone", "flixotide", "avamys"], "cat": "کورتون استنشاقی/بینی"},
     {"id": "montelukast", "fa": ["مونته‌لوکاست", "سینگولیر"], "en": ["montelukast", "singulair"], "cat": "ضد آسم/آلرژی"},
     {"id": "theophylline", "fa": ["تئوفیلین"], "en": ["theophylline"], "cat": "برونکودیلاتور"},
-    # ---- neuro/psych ----
     {"id": "escitalopram", "fa": ["اسسیتالوپرام", "سرالکس", "لکساپرو"], "en": ["escitalopram", "lexapro", "cipralex"], "cat": "ضدافسردگی (SSRI)"},
     {"id": "paroxetine", "fa": ["پاروکستین", "پاکسیل"], "en": ["paroxetine", "paxil"], "cat": "ضدافسردگی (SSRI)"},
     {"id": "sertraline2", "fa": ["سرترالین", "زولوفت"], "en": ["sertraline", "zoloft"], "cat": "ضدافسردگی (SSRI)"},
@@ -200,20 +182,17 @@ DRUGS: list[dict[str, Any]] = [
     {"id": "phenytoin", "fa": ["فنی‌توئین", "دیلانتین"], "en": ["phenytoin", "dilantin"], "cat": "ضدتشنج"},
     {"id": "levodopa", "fa": ["لوودوپا/کاربی‌دوپا", "سینمت"], "en": ["levodopa", "sinemet"], "cat": "ضد پارکینسون"},
     {"id": "sumatriptan", "fa": ["سوماتریپتان", "ایمیگران"], "en": ["sumatriptan", "imigran"], "cat": "ضد میگرن (تریپتان)"},
-    # ---- urology/gyn ----
     {"id": "alfuzosin", "fa": ["آلفوزوسین", "اوزترین"], "en": ["alfuzosin", "uroxatral"], "cat": "ضد بزرگی پروستات"},
     {"id": "finasteride", "fa": ["فیناسترید", "پروسکار"], "en": ["finasteride", "proscar"], "cat": "ضد بزرگی پروستات"},
     {"id": "sildenafil", "fa": ["سیلدنافیل", "ویاگرا"], "en": ["sildenafil", "viagra"], "cat": "ضد اختلال نعوظ"},
     {"id": "tadalafil", "fa": ["تادالافیل", "سیالیس"], "en": ["tadalafil", "cialis"], "cat": "ضد اختلال نعوظ"},
     {"id": "ocp", "fa": ["قرص ضدبارداری", "قرص ترکیبی پیشگیری", "OCP"], "en": ["contraceptive pill", "oral contraceptive", "ocp", "birth control pill"], "cat": "قرص ضدبارداری"},
-    # ---- bone/supplements ----
     {"id": "alendronate", "fa": ["آلندرونات", "فوزاماکس"], "en": ["alendronate", "fosamax"], "cat": "درمان پوکی استخوان"},
     {"id": "calcium", "fa": ["کلسیم", "قرص کلسیم"], "en": ["calcium", "calcium carbonate"], "cat": "مکمل"},
     {"id": "vitamin_d", "fa": ["ویتامین D", "ویتامین دی"], "en": ["vitamin d", "cholecalciferol"], "cat": "مکمل"},
     {"id": "iron_supplement", "fa": ["قرص آهن", "فروس سولفات"], "en": ["iron supplement", "ferrous sulfate"], "cat": "مکمل آهن"},
     {"id": "potassium", "fa": ["پتاسیم", "قرص پتاسیم"], "en": ["potassium", "kcl", "potassium chloride"], "cat": "مکمل پتاسیم"},
     {"id": "folic_acid", "fa": ["فولیک اسید", "اسید فولیک"], "en": ["folic acid", "folate"], "cat": "مکمل"},
-    # ---- gout/IBD/immune ----
     {"id": "allopurinol", "fa": ["آلوپورینول", "زایلوپریم"], "en": ["allopurinol", "zyloprim"], "cat": "پیشگیری از نقرس"},
     {"id": "colchicine", "fa": ["کولشیسین"], "en": ["colchicine"], "cat": "درمان حمله‌ی نقرس"},
     {"id": "febuxostat", "fa": ["فبوکسوستات", "ادوریک"], "en": ["febuxostat", "uloric"], "cat": "کاهنده‌ی اوریک اسید"},
@@ -445,7 +424,7 @@ def allergy_alert(drug_names: list[str]) -> dict[str, Any]:
             for alias in [name["fa"], name["en"]]:
                 if normalize(alias) and normalize(alias) in al:
                     import i18n as _i18n
-                    alerts.append(_i18n.tt(f"'{name['en']}' matches an allergy on your profile ({alias})!",
-                                           f"«{name['fa']}» با حساسیت ثبت‌شده‌ی شما ({alias}) مطابقت دارد!"))
+                    alerts.append(_i18n.tt(f"'{name['en']}' matches an allergy on your profile ({alias})",
+                                           f"«{name['fa']}» با حساسیت ثبت‌شده‌ی شما ({alias}) مطابقت دارد"))
                     break
     return {"ok": True, "alerts": alerts}

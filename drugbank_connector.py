@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 DrugBank-style drug records: ATC class, route, half-life, metabolism,
 contraindications, pregnancy warnings. Other modules (interactions, prescription
@@ -8,7 +7,6 @@ from __future__ import annotations
 
 from typing import Any
 
-# ATC codes (Anatomical Therapeutic Chemical) (Anatomical Therapeutic Chemical)
 ATC_CATEGORIES = {
     "A": ("گوارش و سوخت‌وساز", "Alimentary tract and metabolism"),
     "B": ("خون و اعضای خون‌ساز", "Blood and blood forming organs"),
@@ -26,7 +24,6 @@ ATC_CATEGORIES = {
     "V": ("متفرقه", "Various"),
 }
 
-# the full drug records (DrugBank-style)
 DRUG_DATABASE: dict[str, dict[str, Any]] = {
     "metformin": {
         "atc": "A10BA02", "class_fa": "ضد دیابت - بی‌گوانید", "half_life": "6h",
@@ -131,7 +128,7 @@ DRUG_DATABASE: dict[str, dict[str, Any]] = {
         "metabolism": "کبدی جزئی، دفع کلیوی",
         "routes": ["خوراکی", "زیرجلدی", "وریدی"], "pregnancy": "X (منع مطلق)",
         "contra_fa": "بارداری، نارسایی کبد/کلیه، سرکوب مغز استخوان",
-        "notes_fa": "همیشه با فولیک اسید؛ هفتگی (نه روزانه!) در RA؛ پایش CBC/LFT",
+        "notes_fa": "همیشه با فولیک اسید؛ هفتگی (نه روزانه) در RA؛ پایش CBC/LFT",
     },
     "tamsulosin": {
         "atc": "G04CA02", "class_fa": "آلفا-۱ بلاکر (پروستات)", "half_life": "10h",
@@ -148,7 +145,7 @@ DRUG_DATABASE: dict[str, dict[str, Any]] = {
         "notes_fa": "منع مصرف مطلق با نیترات (نیتروگلیسیرین/ایزوسورباید)",
     },
     "amiodarone": {
-        "atc": "C01BD01", "class_fa": "ضد آریتمی کلاس III", "half_life": "40-55 روز!",
+        "atc": "C01BD01", "class_fa": "ضد آریتمی کلاس III", "half_life": "40-55 روز",
         "metabolism": "کبدی",
         "routes": ["خوراکی", "وریدی"], "pregnancy": "D",
         "contra_fa": "برادیکاردی شدید، بلوک قلبی، تیروتوکسیکوز، آلرژی ید",

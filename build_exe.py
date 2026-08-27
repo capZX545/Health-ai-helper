@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Builds the Windows executable with PyInstaller (run this on Windows).
 Output: dist/NexusMed2077/NexusMed2077.exe (+ the data folder)
@@ -13,7 +12,6 @@ import sys
 BASE = os.path.dirname(os.path.abspath(__file__))
 APP_NAME = "NexusMed2077"
 
-# data files that must sit next to the EXE
 DATA_FILES = [
     "clinic_2077.html",
     "manifest.json",
@@ -26,7 +24,6 @@ DATA_FILES = [
     "fonts/Vazirmatn-Bold.ttf",
     "fonts/Inter-Regular.ttf",
     "fonts/Inter-Bold.ttf",
-    # knowledge banks
     "nlm_conditions.json",
     "drugs_fda.json",
     "drug_labels.json.gz",
@@ -82,7 +79,6 @@ def main() -> int:
         print("pyinstaller failed.")
         return code
 
-    # copy the data next to the EXE
     import shutil
     dest = os.path.join(BASE, "dist", APP_NAME)
     for f in DATA_FILES:

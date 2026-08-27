@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 medical_qa.py — hard-coded GPT-quality answers for common medical questions
 that banks alone can't answer well. Concise, structured, bilingual.
@@ -12,10 +11,9 @@ def _fa() -> bool:
 
 
 _QA: list[tuple[tuple, str, str]] = [
-    # (keywords_fa, keywords_en, answer_fa, answer_en)
     (("فرق دیابت نوع ۱ و ۲", "فرق دیابت ۱ و ۲", "تفاوت دیابت"),
      ("difference between type 1 and type 2", "type 1 vs type 2"),
-     """🩸 **فرق دیابت نوع ۱ و ۲:**
+     """ **فرق دیابت نوع ۱ و ۲:**
 
 **نوع ۱:**
 • بیماری خودایمنی — بدن سلول‌های انسولین‌ساز پانکراس را تخریب می‌کند
@@ -33,7 +31,7 @@ _QA: list[tuple[tuple, str, str]] = [
 
 **خلاصه:** نوع ۱ = کمبود انسولین؛ نوع ۲ = مقاومت به انسولین""",
 
-     """🩸 **Type 1 vs Type 2 Diabetes:**
+     """ **Type 1 vs Type 2 Diabetes:**
 
 **Type 1:**
 • Autoimmune — body destroys insulin-producing cells
@@ -51,7 +49,7 @@ _QA: list[tuple[tuple, str, str]] = [
 
     (("ویتامین د چقدر", "ویتامین دی چقدر", "دوز ویتامین د", "ویتامین d چقدر", "ویتامین d بخورم"),
      ("vitamin d dose", "vitamin d how much", "vitamin d"),
-     """💊 **دوز ویتامین D:**
+     """ **دوز ویتامین D:**
 
 • **بزرگسالان:** ۶۰۰-۸۰۰ واحد بین‌المللی (IU) در روز
 • **بالای ۷۰ سال:** ۸۰۰ IU در روز
@@ -63,9 +61,9 @@ _QA: list[tuple[tuple, str, str]] = [
 • ماهی چرب (سالمون، تن): ~۳۶۰-۶۰۰ IU در ۱۰۰ گرم
 • زرده تخم‌مرغ: ~۴۰ IU
 
-⚠️ دوز بالای ۴,۰۰۰ IU در روز بدون نظر پزشک **مسمومیت** ایجاد می‌کند (کلسیم بالا، سنگ کلیه).""",
+ دوز بالای ۴,۰۰۰ IU در روز بدون نظر پزشک **مسمومیت** ایجاد می‌کند (کلسیم بالا، سنگ کلیه).""",
 
-     """💊 **Vitamin D dosage:**
+     """ **Vitamin D dosage:**
 
 • **Adults:** 600-800 IU/day
 • **Over 70:** 800 IU/day
@@ -74,11 +72,11 @@ _QA: list[tuple[tuple, str, str]] = [
 
 **Sources:** sunlight 10-15 min 2-3×/week; fatty fish 360-600 IU/100g; egg yolk ~40 IU
 
-⚠️ Over 4,000 IU/day without medical supervision can cause toxicity."""),
+ Over 4,000 IU/day without medical supervision can cause toxicity."""),
 
     (("چرا همیشه خسته", "همیشه خسته‌ام", "دلیل خستگی"),
      ("why am i always tired", "always fatigued"),
-     """😴 **دلایل شایع خستگی مداوم:**
+     """ **دلایل شایع خستگی مداوم:**
 
 **سبک زندگی (شایع‌ترین):**
 • کم‌خوابی (زیر ۷ ساعت) یا بی‌کیفیت بودن خواب
@@ -100,7 +98,7 @@ _QA: list[tuple[tuple, str, str]] = [
 ۳. آب کافی (۸ لیوان)
 ۴. اگر بعد از ۲-۳ هفته بهتر نشدی → آزمایش CBC، TSH، فریتین، ویتامین D""",
 
-     """😴 **Common causes of persistent fatigue:**
+     """ **Common causes of persistent fatigue:**
 
 **Lifestyle:** poor sleep (<7h), inactivity, poor diet, dehydration, chronic stress
 **Medical (need labs):** anemia (CBC+ferritin), hypothyroidism (TSH), vitamin D/B12 deficiency, sleep apnea, diabetes

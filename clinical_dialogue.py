@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 clinical_dialogue.py — step-by-step clinical dialogue: asks one useful question
 at a time, records confirmed/denied symptoms, severity and duration, and avoids
@@ -145,7 +144,6 @@ class ClinicalDialogue:
             "turns": self.turn,
             "symptoms": sorted(sym_name(s) for s in self.mentioned),
             "denied": sorted(sym_name(s) for s in self.denied),
-            # kept for older callers:
             "symptoms_fa": sorted(sym_name(s) for s in self.mentioned),
             "denied_fa": sorted(sym_name(s) for s in self.denied),
             "duration_days": next((h["duration_days"] for h in reversed(self.history) if h["duration_days"]), None),

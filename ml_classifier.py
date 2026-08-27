@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Scikit-learn classifier trained on the synthetic dataset
 (medical_ml_test_dataset.csv). That dataset is for ML testing only,
@@ -67,7 +66,7 @@ def _train(force: bool = False) -> bool:
             m2.fit(X, y2)
             _state.update(dx_model=m1, urg_model=m2, ready=True, error=None)
             return True
-        except Exception as e:  # pragma: no cover
+        except Exception as e:
             _state["error"] = str(e)
             return False
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Scans prescription/lab text: translates medical shorthand to Persian,
 picks out drugs and raises allergy/interaction warnings.
@@ -12,7 +11,6 @@ from common_2077 import normalize
 
 from i18n import pick as _pick
 
-# each abbreviation maps to (english, persian)
 SIG_ABBREV: dict[str, tuple[str, str]] = {
     "BID": ("twice a day (every 12 hours)", "دو بار در روز (هر ۱۲ ساعت)"),
     "TID": ("three times a day (every 8 hours)", "سه بار در روز (هر ۸ ساعت)"),
@@ -153,11 +151,9 @@ def scan(text: str) -> dict[str, Any]:
         elif up in LAB_ABBREV and up not in seen:
             seen.add(up)
             translations.append({"abbr": tok, "type": type_lab, "fa": _lab_fa(up)})
-    # drugs
     drug_hits: list[dict] = []
     from drug_interaction import allergy_alert, check_interaction, search_drug
     chunks = [c.strip() for c in re.split(r"[،,\n؛;]+", t) if c.strip()]
-    # alphabetic words are checked too so "Amoxicillin 500mg BID" is caught
     tokens = re.findall(r"[A-Za-zآ-ی][A-Za-zآ-ی\-]+", t)
     seen_ids: set = set()
     for w in chunks + tokens:
@@ -165,7 +161,6 @@ def scan(text: str) -> dict[str, Any]:
         if d and d[0]["score"] >= 100 and d[0]["id"] not in seen_ids:
             seen_ids.add(d[0]["id"])
             drug_hits.append(d[0])
-    # profile allergy warning
     alerts: list[str] = []
     names = [d["fa"] for d in drug_hits]
     if names:
@@ -176,7 +171,6 @@ def scan(text: str) -> dict[str, Any]:
             if inter.get("ok"):
                 for it in inter["interactions"]:
                     alerts.append(f"{it['severity_fa']}: {it['detail_fa']}")
-    # common numeric combos like 500mg
     doses = re.findall(r"(\d{2,4})\s*(?:mg|milligram|میلی‌گرام|میلی گرم)", t, re.IGNORECASE)
     return {"ok": True, "translations": translations, "drugs": drug_hits, "doses_mg": doses,
             "alerts": alerts, "disclaimer": DISCLAIMER()}

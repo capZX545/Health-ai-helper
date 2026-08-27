@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 image_caption.py — medical image analysis with a text note.
 Flow: red flag check -> offline type detection (image_type_detector) ->
@@ -27,10 +26,6 @@ def prepare_image(image_bytes: bytes, max_side: int = 1024, quality: int = 82) -
     im.save(buf, format="JPEG", quality=quality)
     return base64.b64encode(buf.getvalue()).decode("ascii"), "image/jpeg"
 
-
-# --------------------------------------------------------------------------
-# Type-specific instructions for the external vision model
-# --------------------------------------------------------------------------
 
 PROMPT_FRAGMENTS: dict[str, dict[str, str]] = {
     "skin_photo": {
@@ -116,8 +111,7 @@ def lesion_summary_for_ai(image_bytes: bytes | None, tkey: str) -> str:
         lines = [f"- {f['en']}" for f in les["findings"]]
         m = les.get("measures", {})
         lines.append(f"- measured: affected area ~{m.get('affected_area_pct', '?')}% of frame, redness index {m.get('redness_index', '?')}")
-        return ("Offline preprocessing measured these objective findings in the image "
-                "(use them, correct them if they look wrong, and stay cautious):\n" + "\n".join(lines) + "\n")
+        return ("Offline preprocessing measured these objective findings in the image " "(use them, correct them if they look wrong, and stay cautious):\n" + "\n".join(lines) + "\n")
     except Exception:
         return ""
 
@@ -162,7 +156,7 @@ def analyze_image_with_ai(image_b64: str, mime: str, note: str, engine=None,
         if p == "openrouter" and not is_vision_model(model or ""):
             model = vision_models()[0]
         if p == "deepseek":
-            continue  # DeepSeek has no vision endpoint
+            continue
         r = ext_chat(p, [{"role": "user", "content": _vision_prompt(note, type_info, _lesion_block)}],
                      model=model, image_b64=image_b64, image_mime=mime, max_tokens=1100)
         if r.get("ok"):
@@ -170,10 +164,6 @@ def analyze_image_with_ai(image_b64: str, mime: str, note: str, engine=None,
             return r
     return {"ok": False, "error": "no_vision_ai", "error_fa": "no vision model available" if not is_fa() else "مدل تصویری خارجی در دسترس نیست"}
 
-
-# --------------------------------------------------------------------------
-# Honest offline answers, tailored per detected type
-# --------------------------------------------------------------------------
 
 def _type_header(type_info: dict, fa: bool) -> str:
     if fa:
@@ -366,7 +356,6 @@ def offline_analysis(type_info: dict, note: str, image_bytes: bytes | None = Non
     q = [head + _type_header(type_info, fa)]
     if type_info.get("quality"):
         q.append(("کیفیت عکس: " if fa else "Photo quality: ") + ("، ".join(type_info["quality"]) if fa else ", ".join(type_info["quality"])))
-# offline ECG trace analysis: rate + rhythm counting, no clinical interpretation
     if tkey == "ecg_strip" and image_bytes:
         try:
             from ecg_analyzer import analyze_ecg
@@ -376,7 +365,6 @@ def offline_analysis(type_info: dict, note: str, image_bytes: bytes | None = Non
                 q.append(("بررسی آفلاین ریتم: " if fa else "Offline trace check: ") + note_txt)
         except Exception:
             pass
-    # objective photo measurements, not diagnosis
     if image_bytes and tkey in ("skin_photo", "wound_photo", "eye_photo"):
         try:
             from lesion_analyzer import analyze_lesion
@@ -388,7 +376,7 @@ def offline_analysis(type_info: dict, note: str, image_bytes: bytes | None = Non
                 for f in les["findings"]:
                     lines.append(("• " if fa else "- ") + (f["fa"] if fa else f["en"]))
                     if f.get("meaning_fa" if fa else "meaning_en"):
-                        lines.append("   " + ("معنی ممکن: " if fa else "What it can mean: ") + (f["meaning_fa"] if fa else f["meaning_en"]))
+                        lines.append(" " + ("معنی ممکن: " if fa else "What it can mean: ") + (f["meaning_fa"] if fa else f["meaning_en"]))
                 if any(f.get("level") == "urgent" for f in les["findings"]):
                     lines.append(("توجه: یکی از یافته‌ها فوریت بالاتری دارد — مسیر ارجاع بالا را جدی بگیر." if fa
                                   else "Note: one of the findings carries higher urgency - take the referral path above seriously."))
@@ -400,7 +388,6 @@ def offline_analysis(type_info: dict, note: str, image_bytes: bytes | None = Non
         if red is not None:
             q.append(("شاخص قرمزی تصویر: " if fa else "Image redness index: ") + f"{red:.2f}")
     q.append(body)
-    # likelihood read from the note text only, never guessed from the image itself
     if tkey in ("skin_photo", "wound_photo", "eye_photo", "other_photo") and note:
         try:
             from bayesian_engine import rank_diseases
@@ -437,7 +424,6 @@ def analyze_image_bytes(image_bytes: bytes, note: str, engine=None, hint: str | 
         return {"ok": False, "text": tt("Could not read the image (" + str(e)[:60] + "). Try a JPG or PNG file.",
                                         "تصویر قابل خواندن نبود (" + str(e)[:60] + "). فرمت JPG/PNG را امتحان کن."),
                 "source": "image-error"}
-    # red flag check on the note first — before anything else
     from medical_engine import check_red_flags
     red = check_red_flags(note or "")
     if red and red.get("flag"):

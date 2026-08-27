@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 The main brain: external AI + offline engine + auto-learning, wired together.
 Flow:
@@ -54,7 +53,6 @@ class HybridEngine:
         self.memory: list[dict[str, str]] = []
         self.last_source = "internal"
 
-    # ------------------------------------------------------------- system prompt
     def _system_prompt(self, profile: dict, rag_hits: list[dict]) -> str:
         from patient_profile import load_profile
         prof = profile or load_profile()
@@ -69,7 +67,6 @@ class HybridEngine:
 
 {SAFETY_RULES_FA}"""
 
-    # ------------------------------------------------------------------ chat
     def chat(self, user_text: str, image_b64: str | None = None, image_mime: str = "image/jpeg",
              image_note: str = "", image_hint: str | None = None, lang: str | None = None) -> dict[str, Any]:
         with _lock:
@@ -77,7 +74,6 @@ class HybridEngine:
 
     def _chat_inner(self, user_text: str, image_b64, image_mime, image_note, image_hint=None, lang=None) -> dict[str, Any]:
         user_text = (user_text or "")[:8000]
-        # answer language: explicit choice > detected from the message > settings
         import i18n as _i18n
         if lang not in ("en", "fa"):
             letters = [c for c in (user_text or "") + (image_note or "") if c.isalpha()]
@@ -92,11 +88,9 @@ class HybridEngine:
     def _chat_body(self, user_text: str, image_b64, image_mime, image_note, image_hint=None) -> dict[str, Any]:
         from patient_profile import load_profile
         profile = load_profile()
-        # with an image, red flags are checked against the text + image note
         red_flag_text = (user_text + " " + (image_note or "")).strip() if image_b64 else user_text
         analysis = analyze(red_flag_text, profile)
 
-        # 1) red flags -> instant emergency answer, normal assessment stops →
         if analysis["red_flag"]:
             self._remember("user", user_text)
             reply = emergency_response(analysis["red_flag_reasons"])
@@ -104,14 +98,11 @@ class HybridEngine:
             return {"ok": True, "text": reply, "source": "internal-emergency",
                     "red_flag": True, "reasons": analysis["red_flag_reasons"], "learned": False}
 
-        # 1.5) intent routing: knowledge questions answered from local banks
         if not image_b64 and not analysis.get("red_flag"):
             try:
                 from intent_router import classify
                 from knowledge_answer import (answer_greeting, answer_drug_question,
                                               answer_disease_question, answer_advice_question)
-                # priority: QA > lab > lifestyle > specific intent
-                # (advice/lifestyle questions often contain disease words too)
                 _ans = None
                 from medical_qa import answer_from_qa
                 from lab_answer import answer_lab_question, answer_lifestyle_question
@@ -136,9 +127,8 @@ class HybridEngine:
                     return {"ok": True, "text": _ans, "source": "internal-knowledge",
                             "red_flag": False, "learned": False}
             except Exception:
-                pass  # fall through to normal flow
+                pass
 
-        # 2) external AI if a key exists - images go here too
         s = get_settings()
         external = None
         if image_b64:
@@ -166,7 +156,6 @@ class HybridEngine:
             text = external["text"]
             self._remember("user", user_text)
             self._remember("assistant", text)
-            # 3) auto-learning - only from genuinely external replies, not our own text
             learned = False
             ext_source = str(external.get("source") or f"external:{external.get('provider', '?')}")
             is_truly_external = bool(external.get("provider")) and ext_source.startswith("external")
@@ -188,7 +177,6 @@ class HybridEngine:
             return {"ok": True, "text": text, "source": self.last_source, "red_flag": False,
                     "learned": learned, "image_type": external.get("image_type")}
 
-        # 4) offline brain
         text, info = self.internal_answer(user_text, analysis)
         self._remember("user", user_text)
         self._remember("assistant", text)
@@ -201,7 +189,6 @@ class HybridEngine:
         msgs = [{"role": "system", "content": self._system_prompt({}, self._rag(user_text))}]
         msgs.extend(self.memory[-8:])
         msgs.append({"role": "user", "content": user_text})
-        # local model first?
         if s.get("local_first"):
             from local_llm import chat as local_chat, get_config
             if get_config().get("enabled"):
@@ -223,7 +210,7 @@ class HybridEngine:
                 r = local_chat(msgs)
                 if r.get("ok"):
                     return r
-        return last_err  # may be None when no key is configured
+        return last_err
 
     def _rag(self, query: str) -> list[dict]:
         try:
@@ -232,18 +219,14 @@ class HybridEngine:
         except Exception:
             return []
 
-    # -------------------------------------------------------- offline brain
     def internal_answer(self, user_text: str, analysis: dict | None = None) -> tuple[str, dict]:
         from patient_profile import load_profile
         from behavior_imitation import apply_style
         from medical_nlg import compose_offline_answer
         from medical_engine import sym_name
         profile = load_profile()
-        # move the dialogue forward
         proc = self.dialogue.process(user_text)
         analysis = analysis or analyze(user_text, profile)
-        # ranking uses every symptom of the whole conversation, not just the last message
-        # (a UTI mentioned last turn isn't lost when the next message only says 'mild fever')
         if not analysis.get("red_flag"):
             from bayesian_engine import rank_diseases
             dlg = self.dialogue
@@ -262,17 +245,14 @@ class HybridEngine:
             analysis["denied"] = [sym_name(s) for s in dlg.denied]
         cand_ids = [c["id"] for c in analysis.get("candidates", [])]
         followup = self.dialogue.next_question(cand_ids)
-        # 3+ symptoms and a clear top candidate -> skip further questions
         if followup and len(self.dialogue.mentioned) >= 3:
             top_pct = (analysis.get("candidates") or [{}])[0].get("percent", 0)
             if top_pct >= 25:
                 followup = None
-        # nothing recorded yet -> ask a concrete screening question
         if not followup and not self.dialogue.mentioned:
             from i18n import tt
             followup = tt("To get started: where is the discomfort (head, chest, belly, skin, urinary)? Any fever? How many days has it lasted?",
                           "برای شروع: ناراحتی کجاست (سر، سینه، شکم، پوست، ادرار)؟ تب داری؟ چند روز است ادامه دارد؟")
-        # optional ML signal
         ml = None
         if get_settings().get("brain_enabled"):
             try:
@@ -282,7 +262,6 @@ class HybridEngine:
                 ml = None
         rag_hits = self._rag(user_text)
         sections = compose_offline_answer(analysis, self.dialogue.summary(), profile, ml, rag_hits, followup)
-        # brain disabled -> give limited guidance only
         if not get_settings().get("brain_enabled"):
             from i18n import tt
             text = (tt("The internal brain is switched off in settings - essentials only:\n\n", "مغز داخلی در تنظیمات خاموش است — فقط موارد الزامی:\n\n")
@@ -300,7 +279,6 @@ class HybridEngine:
         if len(self.memory) > 24:
             self.memory = self.memory[-24:]
 
-    # ------------------------------------------------------------- status
     def status(self) -> dict[str, Any]:
         from ai_api_manager import has_any_external, masked_keys
         from local_llm import get_config

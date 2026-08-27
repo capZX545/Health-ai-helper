@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Knowledge browser module:
 - symptoms: everything searchable
@@ -13,8 +12,6 @@ from common_2077 import normalize
 from i18n import is_fa
 
 
-# ============================ symptoms ============================
-
 def get_all_symptoms() -> list[dict]:
     """
     All symptoms with fa/en names and keywords.
@@ -22,7 +19,6 @@ def get_all_symptoms() -> list[dict]:
     from medical_engine import SYMPTOM_KEYWORDS, SYMPTOM_NAMES_FA, SYMPTOM_NAMES_EN, DISEASES
     out = []
     for sid in sorted(SYMPTOM_KEYWORDS.keys()):
-        # which diseases carry this symptom
         related = []
         for d in DISEASES:
             if sid in d.get("symptoms", {}):
@@ -50,8 +46,6 @@ def search_symptoms(query: str) -> list[dict]:
     all_syms = get_all_symptoms()
     return [s for s in all_syms if nq in normalize(s["fa"]) or nq in normalize(s["en"]) or nq in s["id"]]
 
-
-# ============================ diseases ============================
 
 def get_all_diseases() -> list[dict]:
     """
@@ -96,7 +90,6 @@ def search_diseases(query: str) -> list[dict]:
     return [d for d in get_all_diseases() if nq in normalize(d["fa"]) or nq in normalize(d["en"]) or nq in d["id"]]
 
 
-# fa -> en bridge for the ICD-10 catalog (which is english-only)
 _FA_EN_MED = {
     "دیابت": "diabetes", "قند": "hyperglycemia", "سرطان": "cancer", "تومور": "tumor",
     "فشار خون": "hypertension", "پرفشاری": "hypertension", "کم‌خونی": "anemia",
@@ -143,7 +136,6 @@ def get_catalog_diseases(query: str = "", limit: int = 50) -> dict:
     q = query.strip()
     results = search_conditions(q, limit)
 
-    # ICD code prefix search (E11, J45.9, ...)
     if _re.match(r"^[A-TV-Za-tv-z]\d{2}", q):
         seen = {r.get("icd10") for r in results}
         for r in search_by_code_prefix(q, limit):
@@ -151,7 +143,6 @@ def get_catalog_diseases(query: str = "", limit: int = 50) -> dict:
                 seen.add(r.get("icd10"))
                 results.append(r)
 
-# fa -> en bridge
     nq = normalize(q)
     en_terms: list[str] = []
     has_fa = any("\u0600" <= ch <= "\u06FF" for ch in q)
@@ -194,8 +185,6 @@ def get_catalog_diseases(query: str = "", limit: int = 50) -> dict:
     }
 
 
-# ============================ drugs ============================
-
 def get_all_drugs() -> list[dict]:
     """
     All drugs with name, category, properties and interactions.
@@ -208,7 +197,6 @@ def get_all_drugs() -> list[dict]:
     out = []
     for d in DRUGS:
         did = d["id"]
-        # interactions of this drug
         interactions = []
         for it in INTERACTIONS:
             if did in (it["a"], it["b"]):
@@ -224,7 +212,6 @@ def get_all_drugs() -> list[dict]:
                             "moderate": "Combined use may need dose adjustment or monitoring; ask your doctor or pharmacist.",
                             "minor": "Mild possible interaction; usually manageable."}.get(it["sev"], "Possible interaction — consult your doctor.")),
                 })
-        # drugbank record
         db_info = drug_db_map.get(did, {})
         out.append({
             "id": did,
@@ -271,8 +258,6 @@ def get_interaction_count() -> int:
     return len(INTERACTIONS)
 
 
-# ============================ full FDA bank ============================
-
 _FDA_CACHE: dict | None = None
 
 
@@ -291,7 +276,6 @@ def _load_fda() -> list[dict]:
         except Exception as e:
             print(f"[knowledge_browser] بانک FDA بارگذاری نشد: {e}")
             _FDA_CACHE = []
-        # search index
         from common_2077 import normalize as _n
         from translit import translit
         _fa_drugs = _load_fa_names().get("drug_en_fa", {})
@@ -340,8 +324,6 @@ def get_fda_drug(generic_name: str) -> dict | None:
                 best = d
     return best
 
-
-# ============================ FDA labels + persian names ============================
 
 _LABELS_CACHE: dict | None = None
 _FA_NAMES_CACHE: dict | None = None
@@ -408,15 +390,12 @@ def fa_disease_name(icd: str = "", en: str = "") -> str:
         code = icd.strip().upper()
         v = m.get("icd_fa", {}).get(code, "")
         if not v and len(code) >= 4:
-            # category prefix (E11.9 -> E11)
             v = m.get("icd_fa", {}).get(code[:3], "")
         if v:
             return v
     if en:
         return m.get("disease_en_fa", {}).get(en.strip().lower(), "")
     return ""
-
-
 
 
 def _norm_key(s: str) -> str:
@@ -437,7 +416,6 @@ def fa_disease_full(en: str = "", icd: str = "", doid: str = "", mesh: str = "")
     return v
 
 
-# icd-10 chapters: (range, english, farsi)
 ICD_CHAPTERS = [
     ("A00-B99", "Infectious & parasitic diseases", "بیماری‌های عفونی و انگلی"),
     ("C00-D49", "Neoplasms", "بدخیمی‌ها (تومورها)"),
@@ -469,7 +447,6 @@ def icd_chapter(code: str) -> dict:
     c = (code or "").strip().upper()
     if not c or not c[0].isalpha():
         return {}
-    # the category is the letter + the next two digits ("G912" -> G91, "Z3A10" -> Z3)
     n = 0
     got = 0
     for ch in c[1:]:
@@ -491,7 +468,7 @@ def icd_chapter(code: str) -> dict:
                     v = v * 10 + int(ch)
                     taken += 1
                 elif ch.isalpha() and taken:
-                    v += 1  # 7th character style (O9A)
+                    v += 1
                 if taken >= 2 and not ch.isdigit():
                     break
             return v
@@ -510,7 +487,6 @@ def icd_chapter(code: str) -> dict:
     return {}
 
 
-# drug categories: (farsi, english, keywords in the pharm class)
 DRUG_CATS = [
     ("درد و تب (مسکن)", "Analgesics & antipyretics", ["analges", "anti-inflammatory", "antipyretic", "non-steroidal"]),
     ("آنتی‌بیوتیک", "Antibacterials", ["antibacterial", "antibiotic"]),
@@ -556,9 +532,6 @@ CAT_KW = [
 ]
 
 
-
-
-# english labels derived from ATC level-2 codes (WHO classification)
 ATC_L2_EN = {
     "A03": "functional gastrointestinal disorders", "A10": "antidiabetic",
     "B01": "antithrombotic", "B03": "antianemic", "C01": "cardiac therapy",
@@ -629,8 +602,6 @@ def classify_drug(class_list) -> str:
 def drug_categories() -> list:
     return [{"fa": fa, "en": en} for fa, en, _k in DRUG_CATS] + [{"fa": "سایر", "en": "Other"}]
 
-
-# ---------- big open banks: DOID / Wikidata / HPO ----------
 
 _DOID_CACHE: list | None = None
 _WIKI_CACHE: dict | None = None
@@ -711,7 +682,6 @@ def get_wiki_disease(en: str = "", icd: str = "", doid: str = "") -> dict | None
     """
     ne = normalize(en or "")
     code = (icd or "").strip().upper()
-    # take the ICD category like "E11" (letter + 2 digits)
     cat = ""
     if code:
         c = code[0]
@@ -721,19 +691,15 @@ def get_wiki_disease(en: str = "", icd: str = "", doid: str = "") -> dict | None
     dnum = str(doid or "").strip()
     best = None
     for k, e in _load_wiki().items():
-        # 1) exact name
         if ne and normalize(e.get("en", "")) == ne:
             return {"qid": k, **e}
-        # 2) ICD category prefix match (both sides same category)
         if cat:
             wc = str(e.get("icd", "")).strip().upper()
             if wc[:3] == cat and (e.get("sym") or e.get("drug")):
-                # prefer entries that also share a word with the query name
                 if best is None:
                     best = {"qid": k, **e}
                 elif ne and any(w in normalize(e.get("en", "")) for w in ne.split() if len(w) > 4):
                     best = {"qid": k, **e}
-        # 3) DOID
         if dnum and str(e.get("doid", "")).endswith(dnum):
             return {"qid": k, **e}
     return best
@@ -772,8 +738,6 @@ def search_hpo(query: str, limit: int = 30) -> list:
                 break
     return out
 
-
-# ---------- unified paged browsing over every bank ----------
 
 _UNIFIED_CACHE: list | None = None
 
@@ -828,7 +792,6 @@ def _build_unified() -> list:
         if key not in seen:
             seen[key] = {"name": d.get("name", ""), "fa": d.get("fa", ""), "code": "",
                          "src": "engine", "sym": [s.get("name") for s in (d.get("symptoms") or [])][:8]}
-    # icd -> farsi crosswalk from the DOID/wiki rows (real data, no machine guessing)
     xwalk: dict[str, str] = {}
     for r in seen.values():
         code = str(r.get("code", ""))
@@ -842,8 +805,6 @@ def _build_unified() -> list:
                 r["fa"] = xwalk[code]
             elif len(code) >= 3 and code[:3] in xwalk:
                 r["fa"] = xwalk[code[:3]]
-    # category-level inheritance: ICD subcodes (E11.x, J45.x ...) inherit the
-    # definition/symptoms of a sibling that has real data (DOID/wiki/engine)
     cat_best: dict[str, dict] = {}
     for r in seen.values():
         c = r.get("cat", "")
@@ -884,8 +845,6 @@ def _build_unified() -> list:
         if not r.get("drug") and b["drug"]:
             r["drug"] = b["drug"]
 
-    # every entry without a scientific definition gets a synthesized,
-    # informative description from its own name/chapter — never "not recorded"
     from synth_desc import synthesize_description as _synth
     for r in seen.values():
         if not (r.get("def") or r.get("sym") or r.get("drug")):
@@ -974,8 +933,6 @@ def drug_levels() -> list:
     return out
 
 
-# ---------- auto explanations for entries with no description ----------
-
 import re as _re
 
 DISEASE_FAMILY_PATTERNS = [
@@ -1061,7 +1018,6 @@ def explain_disease_entry(name: str, code: str = "", chapter_en: str = "", chapt
     for pat, en, fa, sym_en, sym_fa in DISEASE_FAMILY_PATTERNS:
         if pat.search(n):
             return {"note_en": en, "note_fa": fa, "sym_en": sym_en, "sym_fa": sym_fa, "family": True}
-    # توضیح عمومی مبتنی بر فصل
     if chapter_en:
         return {"note_en": f"A condition classified in the ICD-10 chapter '{chapter_en}'. No open-data description or symptom list is recorded for this specific code yet; if you have symptoms, the Symptoms module can rank likely causes.",
                 "note_fa": f"حالتی طبقه‌بندی‌شده در فصل «{chapter_fa or chapter_en}»ی ICD-10 است. هنوز توضیح یا فهرست علامت برای این کد خاص در داده‌های آزاد ثبت نشده؛ اگر علامت داری، ماژول «علائم» می‌تواند احتمالات را رتبه‌بندی کند.",
@@ -1092,8 +1048,6 @@ def _load_hpo_links() -> dict:
     return _HPO_LINKS_CACHE
 
 
-# ---------- symptom -> diseases index (wiki + engine data) ----------
-
 _SYM_DIS_CACHE: dict | None = None
 
 
@@ -1113,12 +1067,11 @@ def _sym_index() -> dict:
             ent = idx.setdefault(k, {"en": s, "fa": "", "diseases": []})
             if len(ent["diseases"]) < 15:
                 ent["diseases"].append({"en": e.get("en", ""), "fa": e.get("fa", "")})
-    # جفت‌های HPO (بیماری‌های نادر)
     from common_2077 import normalize as _n2
     _seen_dis = set()
     for dname, syms in _load_hpo_links().items():
         if dname.startswith("omim") or dname.startswith("orpha") or dname.startswith("decipher"):
-            continue  # کلید خام شناسه، نه نام بیماری
+            continue
         pretty = dname.strip()
         pk = _norm_key(pretty)
         if not pk or pk in _seen_dis or len(pretty) < 4:
@@ -1132,7 +1085,6 @@ def _sym_index() -> dict:
             if len(ent["diseases"]) < 12 and {"en": pretty, "fa": ""} not in ent["diseases"]:
                 ent["diseases"].append({"en": pretty, "fa": ""})
 
-    # فارسی‌سازی نام علائم wiki از طریق دیکشنری موتور (en -> fa)
     rev_en = {}
     for sid, en in SYMPTOM_NAMES_EN.items():
         rev_en[normalize(en)] = SYMPTOM_NAMES_FA.get(sid, "")
@@ -1163,9 +1115,6 @@ def search_symptom_diseases(query: str, limit: int = 25) -> list[dict]:
 
 def symptom_index_count() -> int:
     return len(_sym_index())
-
-
-# ---------- expanded tickable checklist + bank matcher ----------
 
 
 def symptom_checklist(limit: int = 240) -> list[dict]:
@@ -1221,8 +1170,6 @@ def match_diseases_by_symptoms(sym_names: list, limit: int = 12) -> list:
     scored.sort(key=lambda x: -x["score"])
     return scored[:limit]
 
-
-# ---------- full bilingual disease profile ----------
 
 _TREATMENT_FA = {
     "infection": "آنتی‌بیوتیک (با تجویز پزشک)", "viral": "درمان حمایتی و استراحت",
@@ -1345,10 +1292,6 @@ def icd_about(code: str) -> tuple[str, str] | None:
     return None
 
 
-# ---------- guaranteed full profile for EVERY disease ----------
-
-# ICD chapter-level clinical summaries (en, fa) used when no specific data exists.
-# These give every one of the ~28k ICD rows a real medical "About" paragraph.
 _CHAPTER_CLINICAL = {
     "A00-B99": ("An infectious disease caused by bacteria, viruses, fungi or parasites entering the body. General signs are fever, fatigue and local symptoms depending on the affected organ (cough, diarrhea, rash or pain). Most bacterial infections respond to antibiotics; viral ones need supportive care. Serious signs are high fever, confusion, spreading redness or breathing difficulty.",
                 "بیماری عفونی ناشی از ورود باکتری، ویروس، قارچ یا انگل به بدن. نشانه‌های عمومی تب، خستگی و علائم موضعی بسته به اندام درگیر است (سرفه، اسهال، جوش یا درد). بیشتر عفونت‌های باکتریایی با آنتی‌بیوتیک بهتر می‌شوند و ویروسی‌ها نیاز به درمان حمایتی دارند. علائم جدی: تب بالا، گیجی، قرمزی گسترده یا تنگی نفس."),
@@ -1392,7 +1335,6 @@ _CHAPTER_CLINICAL = {
                 "عامل وضعیت سلامت: ثبت غربالگری، واکسیناسیون، سابقه یا وضعیتی که بر مراقبت سلامت اثر دارد، نه یک بیماری فعال. به پزشکان برای برنامه‌ریزی پیشگیری و پیگیری کمک می‌کند."),
 }
 
-# chapter-level common symptom sets (en, fa) used when no specific symptoms exist
 _CHAPTER_SYMPTOMS = {
     "A00-B99": ("fever, fatigue, local pain or discharge depending on the organ", "تب، خستگی، درد یا ترشح موضعی بسته به اندام"),
     "C00-D49": ("unexplained weight loss, night sweats, fatigue, lump, unusual bleeding", "کاهش وزن بی‌دلیل، عرق شبانه، خستگی، توده، خونریزی غیرطبیعی"),
@@ -1430,7 +1372,6 @@ def full_profile(name: str, code: str = "", ch_key: str = "",
         _c = icd_chapter(code)
         ch = _c.get("key", "")
     if not ch:
-        # guess chapter from the name itself
         _low = (name or "").lower()
         _guess = {
             "M00-M99": ("arthr", "joint", "muscle", "bone", "fracture", "back pain", "osteopor", "rheuma"),
@@ -1452,10 +1393,8 @@ def full_profile(name: str, code: str = "", ch_key: str = "",
             if any(_w in _low for _w in _words):
                 ch = _ck
                 break
-    # --- about ---
     about_en, about_fa = definition, definition
     if about_en and not any("\u0600" <= _c2 <= "\u06ff" for _c2 in about_en):
-        # definition is english-only: pair it with the chapter's farsi clinical text when available
         _cl = _CHAPTER_CLINICAL.get(ch)
         if _cl:
             about_fa = _cl[1]
@@ -1468,13 +1407,10 @@ def full_profile(name: str, code: str = "", ch_key: str = "",
     if not about_en:
         from synth_desc import synthesize_description
         about_fa, about_en = synthesize_description(name, code, ch)
-    # --- symptoms ---
     s_list = [str(s) for s in (syms or [])][:14]
     sym_fallback = _CHAPTER_SYMPTOMS.get(ch) or ("depends on the affected organ — check the Symptoms module", "بسته به اندام درگیر — از ماژول علائم بررسی کن")
-    # --- drugs ---
     d_list = [str(d) for d in (drugs or [])][:14]
     drug_fb_fa, drug_fb_en = chapter_drugs(ch)
-    # --- treatment ---
     tr_fa, tr_en = guess_treatment(name)
     ch_clin = _CHAPTER_CLINICAL.get(ch)
     if ch_clin and tr_en == "treatment as determined by a doctor":
@@ -1492,7 +1428,6 @@ def full_profile(name: str, code: str = "", ch_key: str = "",
     }
 
 
-# chapter → typical medication classes (fa, en)
 _CHAPTER_DRUGS = {
     "A00-B99": ("آنتی‌بیوتیک‌ها (مثل آموکسی‌سیلین)، آنتی‌ویروس‌ها، آنتی‌قارچ‌ها بسته به عامل", "antibiotics (e.g. amoxicillin), antivirals or antifungals depending on the organism"),
     "C00-D49": ("داروهای شیمی‌درمانی، داروهای هدف‌مندی و مسکن‌های اوپیوئید زیر نظر انکولوژیست", "chemotherapy, targeted therapy and opioid pain relief under an oncologist"),

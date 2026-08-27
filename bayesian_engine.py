@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Simple Bayesian reasoning to rank disease likelihoods.
 Everything it outputs is a 'possible', never a replacement for an exam.
@@ -11,7 +10,7 @@ from typing import Any
 from medical_engine import DISEASES, sym_name
 
 SMOOTH = 1e-6
-_RARE: set = set()  # lazy, filled on the first rank() call
+_RARE: set = set()
 _RARE_COUNTS: dict = {}
 
 
@@ -62,8 +61,6 @@ def score_disease(d: dict, detected: dict, profile: dict) -> float:
         if sid in present:
             boost = 1.25 if present[sid]["severity"] == "severe" else 1.0
             logp += math.log(min(p * boost, 0.98))
-            # a rare high-probability symptom beats generic ones like fever;
-            # boost fades when multiple other symptoms also match (broader picture)
             _mult = 1.0 if _n_matches <= 2 else 0.15
             if p >= 0.9 and rare_counts.get(sid, 9) == 1:
                 logp += math.log(1 + (3.5 - 1) * _mult)
@@ -72,17 +69,13 @@ def score_disease(d: dict, detected: dict, profile: dict) -> float:
         elif sid in denied:
             logp += math.log(max(1.0 - p, SMOOTH))
         elif p >= 0.8:
-            # a key symptom that wasn't mentioned lowers the score,
-            # but less when several symptoms already match (partial picture)
             _n_present = len([1 for x in present if x in d["symptoms"]])
             _penalty = 0.5 if _n_present < 2 else 0.18
             logp += math.log(1.0 - p * _penalty)
-    # coverage penalty: the patient has it but this disease never explains it
     _overlap_n = len([1 for x in present if x in d["symptoms"]])
     _total_n = max(1, len(present))
     _frac = _overlap_n / _total_n
     _cov = 0.45 + 0.45 * _frac
-    # rare symptom present fully explains the picture -> lighter penalty
     from bayesian_engine import _rare_symptoms as _rs
     _has_rare_present = any(s in _RARE for s in present if s in d["symptoms"])
     if _has_rare_present:
@@ -90,7 +83,6 @@ def score_disease(d: dict, detected: dict, profile: dict) -> float:
     for sid in present:
         if sid not in d["symptoms"]:
             logp += math.log(_cov)
-    # duration: a cold doesn't last 3 weeks; TB/COPD run for months
     dur = detected.get("duration_days")
     if dur is not None:
         if dur >= 21 and d["id"] in ("common_cold", "influenza", "gastroenteritis"):
@@ -121,7 +113,6 @@ def rank_diseases(detected: dict, profile: dict, top_n: int = 5) -> list[dict[st
     global _RARE
     if not _RARE:
         _RARE = _rare_symptoms()
-    # emergencies stay on top even with a lower numeric score
     present_now = {s for s, i in detected.get("present", {}).items() if not i.get("denied")}
     """رتبه‌بندی با نرمال‌سازی softmax تقریبی؛ درصد = احتمال نسبی در بین کاندیدها."""
     if not any(not i.get("denied") for i in detected.get("present", {}).values()):
@@ -136,7 +127,6 @@ def rank_diseases(detected: dict, profile: dict, top_n: int = 5) -> list[dict[st
         return []
     scored.sort(key=lambda x: x[0], reverse=True)
     top = scored[:max(top_n, 8)]
-    # push emergency candidates with their specific rare symptom present to the top
     emergency_boost = []
     rest = []
     for s, d, ov in top:

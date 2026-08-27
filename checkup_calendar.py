@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 checkup_calendar.py — bilingual checkup and vaccine suggestions based on the
 patient profile. Personal reminders live in reminders.json.
