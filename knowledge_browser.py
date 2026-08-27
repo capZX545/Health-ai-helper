@@ -1337,3 +1337,120 @@ def icd_about(code: str) -> tuple[str, str] | None:
     if len(c) >= 3:
         return _ICD_ABOUT.get(c[:3])
     return None
+
+
+# ---------- guaranteed full profile for EVERY disease ----------
+
+# ICD chapter-level clinical summaries (en, fa) used when no specific data exists.
+# These give every one of the ~28k ICD rows a real medical "About" paragraph.
+_CHAPTER_CLINICAL = {
+    "A00-B99": ("An infectious disease caused by bacteria, viruses, fungi or parasites entering the body. General signs are fever, fatigue and local symptoms depending on the affected organ (cough, diarrhea, rash or pain). Most bacterial infections respond to antibiotics; viral ones need supportive care. Serious signs are high fever, confusion, spreading redness or breathing difficulty.",
+                "بیماری عفونی ناشی از ورود باکتری، ویروس، قارچ یا انگل به بدن. نشانه‌های عمومی تب، خستگی و علائم موضعی بسته به اندام درگیر است (سرفه، اسهال، جوش یا درد). بیشتر عفونت‌های باکتریایی با آنتی‌بیوتیک بهتر می‌شوند و ویروسی‌ها نیاز به درمان حمایتی دارند. علائم جدی: تب بالا، گیجی، قرمزی گسترده یا تنگی نفس."),
+    "C00-D49": ("A malignant tumor: uncontrolled growth of abnormal cells that can invade nearby tissue and spread. Warning signs include unexplained weight loss, night sweats, persistent fatigue, a lump, unusual bleeding or persistent pain. Diagnosis needs imaging and biopsy; treatment combines surgery, chemotherapy and radiotherapy planned by an oncologist.",
+                "تومور بدخیم: رشد کنترل‌نشده‌ی سلول‌های غیرطبیعی که می‌تواند به بافت اطراف نفوذ و منتشر شود. علائم هشدار: کاهش وزن بی‌دلیل، عرق شبانه، خستگی مداوم، توده، خونریزی غیرطبیعی یا درد مداوم. تشخیص نیاز به تصویربرداری و بیوپسی دارد؛ درمان ترکیبی از جراحی، شیمی‌درمانی و پرتودرمانی با برنامه‌ی متخصص انکولوژی است."),
+    "D50-D89": ("A disorder of the blood or immune system such as anemia, low/high white cells, clotting problems or immune dysfunction. Typical signs are fatigue and pallor (anemia), recurrent infections (immune problems), easy bruising or bleeding (clotting). Blood tests identify the type; treatment ranges from supplements to specialized drugs.",
+                "اختلال خون یا سیستم ایمنی مانند کم‌خونی، کم/زیاد شدن گویچه‌های سفید، مشکلات انعقاد یا اختلال ایمنی. نشانه‌های معمول: خستگی و رنگ‌پریدی (کم‌خونی)، عفونت‌های مکرر (مشکل ایمنی)، کبودی یا خونریزی آسان (انعقاد). آزمایش خون نوع را مشخص می‌کند؛ درمان از مکمل تا داروهای تخصصی متغیر است."),
+    "E00-E89": ("An endocrine, nutritional or metabolic condition — the system of hormones and chemistry that controls growth, energy, sugar, thyroid and more (for example diabetes or thyroid disease). Signs vary widely: thirst and weight change, heat/cold intolerance, fatigue, hair loss or growth problems. Diagnosis is with blood hormone/glucose tests; treatment replaces or balances the hormone.",
+                "بیماری غدد، تغذیه یا متابولیک — سیستم هورمون‌ها و شیمی بدن که رشد، انرژی، قند، تیروئید و موارد دیگر را کنترل می‌کند (مثلاً دیابت یا بیماری تیروئید). علائم بسیار متنوع‌اند: تشنگی و تغییر وزن، عدم تحمل گرما/سرما، خستگی، ریزش مو یا مشکلات رشد. تشخیص با آزمایش خون هورمون/قند است؛ درمان جایگزینی یا تعادل هورمون."),
+    "F01-F99": ("A mental or behavioral disorder affecting mood, thinking, anxiety or perception (such as depression, anxiety or psychosis). Signs include persistent low mood or worry, sleep and appetite change, loss of interest, or hearing/seeing things others do not. These are real, treatable medical conditions; treatment combines psychotherapy and medication.",
+                "اختلال روانی یا رفتاری مؤثر بر خلق، فکر، اضطراب یا ادراک (مانند افسردگی، اضطراب یا سایکوز). نشانه‌ها: خلق پایین یا نگرانی مداوم، تغییر خواب و اشتها، بی‌علاقگی، یا شنیدن/دیدن چیزهایی که دیگران نمی‌بینند. این‌ها بیماری‌های واقعی و قابل‌درمان‌اند؛ درمان ترکیب روان‌درمانی و دارو."),
+    "G00-G99": ("A disease of the brain, spinal cord, nerves or muscles. Signs include headache, seizures, weakness or numbness, loss of balance, memory or speech problems, and muscle stiffness or wasting. Diagnosis uses neurological exam, imaging (CT/MRI) and nerve tests; treatment depends on the specific condition and can include medication, physiotherapy or surgery.",
+                "بیماری مغز، نخاع، اعصاب یا عضلات. نشانه‌ها: سردرد، تشنج، ضعف یا بی‌حسی، از دست دادن تعادل، مشکلات حافظه یا گفتار، و سفتی یا تحلیل عضله. تشخیص با معاینه عصبی، تصویربرداری (سی‌تی/ام‌آرآی) و آزمایش عصب؛ درمان بسته به بیماری شامل دارو، فیزیوتراپی یا جراحی است."),
+    "H00-H59": ("An eye disorder affecting vision, the eyelids, orbit or eye surface. Signs include blurred or double vision, pain, redness, discharge, floaters or flashing lights. Sudden vision loss, eye trauma or painful red eye are urgent. Diagnosis is with vision tests and slit-lamp exam; treatment ranges from drops and glasses to surgery.",
+                "بیماری چشم مؤثر بر بینایی، پلک، حفره یا سطح چشم. نشانه‌ها: تار یا دوبینی، درد، قرمزی، ترشح، مگس‌های ریز یا جرقه‌ی نور. کاهش ناگهانی بینایی، ضربه به چشم یا چشم قرمز دردناک اورژانسی است. تشخیص با تست بینایی و معاینه اسلیت‌لمپ؛ درمان از قطره و عینک تا جراحی."),
+    "H60-H95": ("An ear or hearing disorder affecting the outer, middle or inner ear or hearing nerve. Signs include ear pain, discharge, hearing loss, ringing (tinnitus), dizziness or balance problems. Diagnosis is with ear exam and hearing tests; treatment ranges from drops and antibiotics to hearing aids or surgery.",
+                "بیماری گوش یا شنوایی مؤثر بر گوش خارجی، میانی، داخلی یا عصب شنوایی. نشانه‌ها: درد گوش، ترشح، کاهش شنوایی، وزوز، سرگیجه یا مشکل تعادل. تشخیص با معاینه گوش و تست شنوایی؛ درمان از قطره و آنتی‌بیوتیک تا سمعک یا جراحی."),
+    "I00-I99": ("A cardiovascular disease of the heart or blood vessels (such as hypertension, heart attack, heart failure or artery disease). Signs include chest pain or pressure, breathlessness, palpitations, leg swelling and fainting. Chest pain with sweating or at rest is an emergency — call 115/112. Diagnosis uses ECG, blood tests and imaging; treatment includes medication, stents or surgery.",
+                "بیماری قلبی-عروقی قلب یا رگ‌ها (مانند فشار خون، سکته قلبی، نارسایی قلبی یا بیماری شریان). نشانه‌ها: درد یا فشار قفسه سینه، تنگی نفس، تپش قلب، تورم پا و غش. درد قفسه سینه با عرق سرد یا در حالت استراحت اورژانسی است — ۱۱۵/۱۱۲. تشخیص با نوار قلب، آزمایش خون و تصویربرداری؛ درمان شامل دارو، استنت یا جراحی."),
+    "J00-J99": ("A respiratory disease of the airways or lungs (such as asthma, COPD, pneumonia or bronchitis). Signs include cough, sputum, wheeze, breathlessness and chest tightness. Severe breathlessness or blue lips are emergencies. Diagnosis uses listening to the chest, X-ray and spirometry; treatment includes inhalers, antibiotics (for bacterial infections) and oxygen when needed.",
+                "بیماری تنفسی راه‌های هوایی یا ریه (مانند آسم، COPD، پنومونی یا برونشیت). نشانه‌ها: سرفه، خلط، خس‌خس، تنگی نفس و فشار سینه. تنگی نفس شدید یا لب‌های آبی اورژانسی است. تشخیص با گوش‌دادن به قفسه سینه، عکس قفسه سینه و اسپیرومتری؛ درمان شامل اسپری، آنتی‌بیوتیک (عفونت باکتریایی) و اکسیژن در صورت نیاز."),
+    "K00-K95": ("A digestive disease of the esophagus, stomach, intestines, liver, pancreas or gallbladder. Signs include abdominal pain, heartburn, nausea, vomiting, diarrhea, constipation, blood in stool or jaundice. Diagnosis uses endoscopy, ultrasound and lab tests; treatment ranges from diet and medication to surgery.",
+                "بیماری گوارشی مری، معده، روده، کبد، پانکراس یا کیسه صفرا. نشانه‌ها: درد شکم، سوزش سر دل، تهوع، استفراغ، اسهال، یبوست، خون در مدفوع یا زردی. تشخیص با آندوسکوپی، سونوگرافی و آزمایش؛ درمان از رژیم و دارو تا جراحی."),
+    "L00-L99": ("A skin disease affecting the skin, hair or nails (such as eczema, psoriasis, acne or infections). Signs include rash, itching, redness, scaling, blisters, pigment change or hair loss. Diagnosis is by skin exam, sometimes biopsy; treatment includes creams, oral medication and phototherapy.",
+                "بیماری پوست مؤثر بر پوست، مو یا ناخن (مانند اگزما، پسوریازیس، جوش یا عفونت). نشانه‌ها: بثورات، خارش، قرمزی، پوسته‌ریزی، تاول، تغییر رنگ یا ریزش مو. تشخیص با معاینه پوست و گاهی بیوپسی؛ درمان شامل کرم، داروی خوراکی و نوردرمانی."),
+    "M00-M99": ("A musculoskeletal disease of joints, bones, muscles or spine (such as arthritis, back pain or osteoporosis). Signs include joint pain, swelling, stiffness, back pain, muscle weakness and fractures after minor injury. Diagnosis uses X-ray, blood tests and bone density scan; treatment includes painkillers, physiotherapy, exercise and surgery when needed.",
+                "بیماری عضلانی-اسکلتی مفاصل، استخوان‌ها، عضلات یا ستون فقرات (مانند آرتروز، درد کمر یا پوکی استخوان). نشانه‌ها: درد مفصل، تورم، سفتی، درد کمر، ضعف عضلانی و شکستگی بعد از ضربه‌ی خفیف. تشخیص با رادیولوژی، آزمایش خون و تراکم‌سنجی استخوان؛ درمان شامل مسکن، فیزیوتراپی، ورزش و در صورت نیاز جراحی."),
+    "N00-N99": ("A disease of the kidneys, urinary tract or genitals (such as kidney disease, UTI or prostate problems). Signs include changes in urination (burning, frequency, blood), flank pain, swelling, or sexual/reproductive symptoms. Diagnosis uses urine tests, blood creatinine and ultrasound; treatment depends on the cause.",
+                "بیماری کلیه، مجاری ادراری یا اندام تناسلی (مانند بیماری کلیه، عفونت ادراری یا مشکل پروستات). نشانه‌ها: تغییر در ادرار (سوزش، تکرر، خون)، درد پهلو، تورم یا علائم جنسی/باروری. تشخیص با آزمایش ادرار، کراتینین خون و سونوگرافی؛ درمان بسته به علت."),
+    "O00-O9A": ("A condition related to pregnancy, childbirth or the period after delivery. Warning signs during pregnancy are bleeding, severe headache with swelling, reduced fetal movement, fever or fluid loss — these need immediate medical care. Routine prenatal visits monitor the health of mother and baby.",
+                "وضعیت مرتبط با بارداری، زایمان یا دوره پس از زایمان. علائم خطر در بارداری: خونریزی، سردرد شدید با تورم، کاهش حرکات جنین، تب یا خروج مایع — نیازمند مراقبت فوری. ویزیت‌های منظم دوران بارداری سلامت مادر و جنین را پایش می‌کنند."),
+    "P00-P96": ("A condition of the newborn in the first weeks of life, such as prematurity, jaundice, breathing problems, feeding difficulty or infections. Newborns can deteriorate quickly; poor feeding, fever, lethargy, yellow skin or breathing difficulty need urgent pediatric assessment.",
+                "وضعیت نوزاد در هفته‌های اول زندگی، مانند نارس بودن، زردی، مشکل تنفسی، مشکل تغذیه یا عفونت. نوزادان می‌توانند سریع بدتر شوند؛ تغذیه‌ی ضعیف، تب، بی‌حالی، زردی پوست یا تنگی نفس نیاز به ارزیابی فوری اطفال دارد."),
+    "Q00-Q99": ("A congenital anomaly present from birth, caused by genetic or developmental factors. Depending on the organ involved it may be visible at birth or found later on screening. Many need specialist follow-up and some are treated with corrective surgery.",
+                "ناهنجاری مادرزادی موجود از بدو تولد، ناشی از عوامل ژنتیکی یا رشدی. بسته به اندام درگیر ممکن است هنگام تولد دیده شود یا بعداً در غربالگری کشف شود. بسیاری نیاز به پیگیری تخصصی دارند و برخی با جراحی اصلاحی درمان می‌شوند."),
+    "R00-R99": ("A symptom or abnormal finding rather than a disease itself — something noticed by the patient or found on a test (like pain, fever or an abnormal lab). Its meaning depends entirely on the underlying cause; a doctor interprets it together with examination and further tests.",
+                "علامت یا یافته‌ی غیرطبیعی، نه یک بیماری مستقل — چیزی که بیمار حس می‌کند یا در آزمایش دیده می‌شود (مثل درد، تب یا آزمایش غیرطبیعی). معنای آن کاملاً به علت زمینه‌ای بستگی دارد و پزشک آن را با معاینه و آزمایش‌های تکمیلی تفسیر می‌کند."),
+    "S00-T88": ("An injury such as a fracture, wound, burn or poisoning caused by trauma or external forces. Signs are pain, swelling, bruising, bleeding or loss of function. Severe bleeding, deformity, deep burns or poisoning are emergencies — call 115/112.",
+                "آسیب مانند شکستگی، زخم، سوختگی یا مسمومیت ناشی از تروما یا نیروی خارجی. نشانه‌ها: درد، تورم، کبودی، خونریزی یا از دست دادن عملکرد. خونریزی شدید، تغییر شکل، سوختگی عمیق یا مسمومیت اورژانسی‌اند — ۱۱۵/۱۱۲."),
+    "Z00-Z99": ("A health-status factor: a record of screening, vaccination, history or circumstance that influences healthcare rather than an active disease. It helps doctors plan prevention and follow-up.",
+                "عامل وضعیت سلامت: ثبت غربالگری، واکسیناسیون، سابقه یا وضعیتی که بر مراقبت سلامت اثر دارد، نه یک بیماری فعال. به پزشکان برای برنامه‌ریزی پیشگیری و پیگیری کمک می‌کند."),
+}
+
+# chapter-level common symptom sets (en, fa) used when no specific symptoms exist
+_CHAPTER_SYMPTOMS = {
+    "A00-B99": ("fever, fatigue, local pain or discharge depending on the organ", "تب، خستگی، درد یا ترشح موضعی بسته به اندام"),
+    "C00-D49": ("unexplained weight loss, night sweats, fatigue, lump, unusual bleeding", "کاهش وزن بی‌دلیل، عرق شبانه، خستگی، توده، خونریزی غیرطبیعی"),
+    "D50-D89": ("fatigue, pallor, recurrent infections, easy bruising or bleeding", "خستگی، رنگ‌پریدی، عفونت‌های مکرر، کبودی یا خونریزی آسان"),
+    "E00-E89": ("thirst, weight change, heat/cold intolerance, fatigue, hair loss", "تشنگی، تغییر وزن، عدم تحمل گرما/سرما، خستگی، ریزش مو"),
+    "F01-F99": ("low mood, worry, sleep problems, appetite change, loss of interest", "خلق پایین، نگرانی، مشکل خواب، تغییر اشتها، بی‌علاقگی"),
+    "G00-G99": ("headache, weakness or numbness, balance problems, seizures, memory issues", "سردرد، ضعف یا بی‌حسی، مشکل تعادل، تشنج، مشکلات حافظه"),
+    "H00-H59": ("blurred vision, eye pain, redness, discharge, floaters", "تار بینایی، درد چشم، قرمزی، ترشح، مگس‌های ریز"),
+    "H60-H95": ("ear pain, hearing loss, ringing, dizziness, discharge", "درد گوش، کاهش شنوایی، وزوز، سرگیجه، ترشح"),
+    "I00-I99": ("chest pain, breathlessness, palpitations, leg swelling, fainting", "درد قفسه سینه، تنگی نفس، تپش قلب، تورم پا، غش"),
+    "J00-J99": ("cough, sputum, wheeze, breathlessness, chest tightness", "سرفه، خلط، خس‌خس، تنگی نفس، فشار سینه"),
+    "K00-K95": ("abdominal pain, heartburn, nausea, diarrhea or constipation", "درد شکم، سوزش سر دل، تهوع، اسهال یا یبوست"),
+    "L00-L99": ("rash, itching, redness, scaling, blisters, pigment change", "بثورات، خارش، قرمزی، پوسته‌ریزی، تاول، تغییر رنگ"),
+    "M00-M99": ("joint pain, swelling, stiffness, back pain, muscle weakness", "درد مفصل، تورم، سفتی، درد کمر، ضعف عضلانی"),
+    "N00-N99": ("burning urination, frequency, flank pain, swelling, blood in urine", "سوزش ادرار، تکرر، درد پهلو، تورم، خون در ادرار"),
+    "O00-O9A": ("depends on the stage of pregnancy; warning: bleeding, severe headache, reduced fetal movement", "بسته به مرحله بارداری؛ هشدار: خونریزی، سردرد شدید، کاهش حرکات جنین"),
+    "P00-P96": ("poor feeding, fever, lethargy, jaundice, breathing difficulty", "تغذیه ضعیف، تب، بی‌حالی، زردی، تنگی نفس"),
+    "Q00-Q99": ("varies by the affected organ; often visible at birth or on screening", "بسته به اندام درگیر؛ اغلب هنگام تولد یا در غربالگری دیده می‌شود"),
+    "R00-R99": ("the symptom itself is the finding; other signs depend on the cause", "خودِ علامت یافته است؛ نشانه‌های دیگر بسته به علت"),
+    "S00-T88": ("pain, swelling, bruising, bleeding, loss of function", "درد، تورم، کبودی، خونریزی، از دست دادن عملکرد"),
+    "Z00-Z99": ("no symptoms by itself; it records screening, history or prevention", "خودش علامتی ندارد؛ غربالگری، سابقه یا پیشگیری را ثبت می‌کند"),
+}
+
+
+def full_profile(name: str, code: str = "", ch_key: str = "",
+                 definition: str = "", syms=None, drugs=None,
+                 note_en: str = "", note_fa: str = "") -> dict:
+    """Guaranteed bilingual profile for ANY disease entry.
+
+    Priority: specific scientific data > ICD-chapter clinical summary >
+    synthesized description. Always returns about/symptoms/treatment in both
+    languages."""
+    ch = ch_key or ""
+    if not ch and code:
+        _c = icd_chapter(code)
+        ch = _c.get("key", "")
+    # --- about ---
+    about_en, about_fa = definition, definition
+    if not about_en:
+        a = icd_about(code)
+        if a:
+            about_en, about_fa = a[0], a[1]
+    if not about_en and note_en:
+        about_en, about_fa = note_en, note_fa
+    if not about_en:
+        from synth_desc import synthesize_description
+        about_fa, about_en = synthesize_description(name, code, ch)
+    # --- symptoms ---
+    s_list = [str(s) for s in (syms or [])][:14]
+    sym_fallback = _CHAPTER_SYMPTOMS.get(ch) or ("depends on the affected organ — check the Symptoms module", "بسته به اندام درگیر — از ماژول علائم بررسی کن")
+    # --- drugs ---
+    d_list = [str(d) for d in (drugs or [])][:14]
+    # --- treatment ---
+    tr_fa, tr_en = guess_treatment(name)
+    ch_clin = _CHAPTER_CLINICAL.get(ch)
+    if ch_clin and tr_en == "treatment as determined by a doctor":
+        tr_en, tr_fa = "management per the specific condition — see the chapter summary above", "درمان بسته به بیماری خاص — به خلاصه‌ی فصل بالا مراجعه کن"
+    return {
+        "name": name, "code": code, "chapter_key": ch,
+        "about_en": about_en, "about_fa": about_fa,
+        "chapter_en": ch_clin[0] if ch_clin else "", "chapter_fa": ch_clin[1] if ch_clin else "",
+        "symptoms": s_list,
+        "sym_fb_en": sym_fallback[0] if sym_fallback else "",
+        "sym_fb_fa": sym_fallback[1] if sym_fallback else "",
+        "drugs": d_list,
+        "treat_en": tr_en, "treat_fa": tr_fa,
+    }

@@ -269,14 +269,15 @@ class Handler(BaseHTTPRequestHandler):
                     break
             # 2) ICD catalog (with the fa -> en bridge)
             if q and len(rows) < limit:
-                from knowledge_browser import explain_disease_entry as _expl
-                from medical_catalog import get_chapter_fa as _gch
+                from knowledge_browser import explain_disease_entry as _expl, full_profile as _fp
                 for c in (get_catalog_diseases(q, 10).get("results") or []):
                     ex = _expl(c.get("name", ""), c.get("icd10", ""))
+                    _p = _fp(c.get("name", ""), c.get("icd10", ""))
                     rows.append({"src": "icd10", "name": c.get("name", ""), "fa": c.get("fa", "") or fa_disease_name(icd=c.get("icd10", "")),
-                                 "code": c.get("icd10", ""), "sym": [],
-                                 "note_en": ex["note_en"], "note_fa": ex["note_fa"],
-                                 "nsym_en": ex["sym_en"], "nsym_fa": ex["sym_fa"]})
+                                 "code": c.get("icd10", ""), "sym": _p["symptoms"],
+                                 "note_en": _p["about_en"], "note_fa": _p["about_fa"],
+                                 "nsym_en": _p["sym_fb_en"], "nsym_fa": _p["sym_fb_fa"],
+                                 "treat_en": _p["treat_en"], "treat_fa": _p["treat_fa"]})
                     if len(rows) >= limit:
                         break
             # 3) DOID
