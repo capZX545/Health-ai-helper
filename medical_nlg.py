@@ -44,91 +44,76 @@ def _pct(p) -> str:
 def compose_offline_answer(analysis: dict[str, Any], dialogue_summary: dict[str, Any],
                            profile: dict[str, Any], ml_preds: list[dict] | None,
                            rag_hits: list[dict] | None, followup_question: str | None) -> dict[str, list[str] | str]:
-    """Builds the reply sections (no styling) - style is applied by behavior_imitation."""
-    from medical_engine import sym_name
+    """Concise GPT-style reply: symptom summary, likely conditions, one next question."""
     sections: dict[str, Any] = {}
     fa = is_fa()
-    p = profile or {}
-    name = str(p.get("name") or "").strip()
-    greet = (f"{name} عزیز، " if name else "") if fa else (f"{name}, " if name else "")
-    # the opener comes from apply_style already; a separate empathy section would (apply_style)
-    # just duplicate the opening line.
-
-    findings: list[str] = []
     syms = analysis.get("symptoms", [])
-    multi = bool(dialogue_summary and dialogue_summary.get("turns", 0) > 1 and syms)
-    if syms:
-        head = ("علائم ثبت‌شده تا اینجا: " if fa else "Symptoms logged so far: ") if multi \
-            else ("علائمی که گفتی: " if fa else "Symptoms you mentioned: ")
-        findings.append(head + ("، ".join(syms) if fa else ", ".join(syms)))
     denied = analysis.get("denied", [])
-    if denied:
-        findings.append(("این موارد را رد کردی: " if fa else "Ruled out by you: ") + ("، ".join(denied) if fa else ", ".join(denied)))
-    det = analysis.get("detected", {})
-    if det.get("duration_days") is not None:
-        findings.append(("مدت علائم: حدود " if fa else "Duration: about ") + (fa_digits(str(det["duration_days"])) if fa else str(det["duration_days"])) + (" روز" if fa else " days"))
-    if det.get("temp_c") is not None:
-        findings.append(("تب گزارش‌شده: " if fa else "Reported fever: ") + (fa_digits(str(det["temp_c"])) if fa else str(det["temp_c"])) + (" درجه" if fa else " C"))
-    if p.get("age") or p.get("gender"):
-        bits = []
-        if p.get("age"):
-            bits.append(("سن " if fa else "age ") + (fa_digits(str(p["age"])) if fa else str(p["age"])))
-        if p.get("gender"):
-            bits.append(("جنسیت " if fa else "sex ") + str(p["gender"]))
-        findings.append(("پروفایل: " if fa else "Profile: ") + ("، ".join(bits) if fa else ", ".join(bits)))
-    if not findings:
-        findings.append("هنوز علامت مشخصی ثبت نشده؛ کمی بیشتر توضیح بده." if fa else "No concrete symptom recorded yet; tell me a bit more.")
-    sections["findings"] = findings
-
     cands = analysis.get("candidates", [])
+    det = analysis.get("detected", {}) or {}
+
+    # ---- findings: short, no repetition ----
+    findings: list[str] = []
+    if syms:
+        findings.append(("علائم: " if fa else "Symptoms: ") + ("، ".join(syms[:8]) if fa else ", ".join(syms[:8])))
+    if denied:
+        findings.append(("ردشده: " if fa else "Ruled out: ") + ("، ".join(denied[:4]) if fa else ", ".join(denied[:4])))
+    bits = []
+    if det.get("duration_days") is not None:
+        bits.append((f"~{fa_digits(str(det['duration_days']))} روز" if fa else f"~{det['duration_days']}d"))
+    if det.get("temp_c") is not None:
+        bits.append((f"تب {fa_digits(str(det['temp_c']))}°" if fa else f"fever {det['temp_c']}°C"))
+    if bits:
+        findings.append(" | ".join(bits))
+    sections["findings"] = findings or [""]
+    # hide the findings section visually if empty
+    if not findings:
+        sections["findings"] = [""]
+
+    # ---- probables: just the names + % + urgency, no disclaimers here ----
     probables: list[str] = []
     urg = URGENCY_FA if fa else URGENCY_EN
     if cands:
-        for c in cands[:3]:
-            line = (f"{c['name']} — حدود {_pct(c['percent'])} " if fa else f"{c['name']} — roughly {_pct(c['percent'])} ")
-            line += ("احتمال نسبی" if fa else "relative likelihood")
-            line += f" ({urg.get(c['urgency'], c['urgency'])})"
+        for c in cands[:4]:
+            short = str(c.get("name", "")).split("(")[0].strip()
+            u = urg.get(c.get("urgency", ""), "")
+            line = f"{short} {_pct(c['percent'])}" + (f" [{u}]" if u else "")
             probables.append(line)
-        probables.append("این درصد فقط اولویت‌بندی برای مراقبت است؛ «تشخیص قطعی» فقط با معاینه‌ی پزشک ممکن است." if fa
-                         else "These percentages only triage what to watch; a definite diagnosis needs an in-person exam.")
-    if ml_preds:
-        tops = [f"{m['label']} (~{_pct(m['percent'])})" for m in ml_preds[:2]]
-        probables.append(("سیگنال طبقه‌بند ML (روی دیتاست مصنوعی تستی): " if fa else "ML classifier signal (synthetic test dataset, Persian labels): ") + ("، ".join(tops) if fa else ", ".join(tops)))
     if not probables:
-        probables = ["با این اطلاعات هنوز احتمال مشخصی نمی‌شود گفت؛ به سوال پایین جواب بده تا دقیق‌تر شوم." if fa
-                     else "Not enough information to weigh anything yet; answer the question below and I can be more precise."]
+        probables = [("" if fa else "")]  # empty string → section hidden
     sections["probables"] = probables
 
+    # ---- advice: max 2 items ----
     advice: list[str] = []
-    seen_adv: set[str] = set()
+    seen: set[str] = set()
     for c in cands[:2]:
-        for a in c.get("advice", [])[:3]:
-            key = a.strip()[:60]
-            if key not in seen_adv:
-                seen_adv.add(key)
+        for a in c.get("advice", [])[:2]:
+            k = a.strip()[:50]
+            if k not in seen and len(advice) < 2:
+                seen.add(k)
                 advice.append(a)
     if not advice:
-        advice = ["استراحت کافی و آب فراوان", "ثبت تغییر علائم (شدت/مدت) برای ارائه به پزشک"] if fa else \
-                 ["Rest and stay hydrated", "Track how symptoms change (severity/duration) for the doctor"]
-    # dropped the learned-memory note on purpose, it was noise
-    # RAG still feeds the external AI prompt.
-    advice.append("داروی خاصی را بدون تجویز پزشک شروع یا قطع نکن." if fa
-                  else "Do not start or stop any medication without a prescription.")
+        advice = ["استراحت و آب کافی" if fa else "Rest and hydrate"]
     sections["advice"] = advice
 
+    # ---- doctor: single short line ----
     doctor: list[str] = []
-    for c in cands[:2]:
+    for c in cands[:1]:
         if c.get("doctor_when"):
-            doctor.append((f"برای «{c['name']}»: " if fa else f"For '{c['name']}': ") + c["doctor_when"])
-    if doctor:
-        sections["doctor"] = doctor
+            doctor.append(str(c["doctor_when"])[:120])
+    sections["doctor"] = doctor
 
-    sections["warning"] = ("هشدار: اگر درد قفسه سینه، تنگی نفس شدید، خونریزی، بیهوشی، تشنج، ضعف یک‌طرفه یا اختلال تکلم داری، همین حالا با اورژانس تماس بگیر (ایران: ۱۱۵ | اروپا: ۱۱۲)." if fa
-                           else "Warning: if you have chest pain, severe breathlessness, bleeding, unconsciousness, seizure, one-sided weakness or slurred speech, call emergency services now (Iran: 115 | Europe: 112).")
+    # ---- warning only on emergency candidates ----
+    sections["warning"] = ""
+    for c in cands[:2]:
+        if c.get("urgency") == "emergency":
+            sections["warning"] = ("⚠️ اورژانس: ۱۱۵ / ۱۱۲" if fa else "⚠️ Emergency: 115 / 112")
+            break
 
+    # ---- followup: exactly one short question ----
     if followup_question:
-        sections["followup"] = followup_question
+        sections["followup"] = str(followup_question).strip()
     else:
-        sections["followup"] = "چیز دیگری در مورد علائمت اضافه می‌کنی؟ (مثلاً شروع ناگهانی، محرک، داروهای فعلی)" if fa \
-                               else "Anything else about your symptoms? (sudden onset, triggers, current medications)"
+        sections["followup"] = "علامت دیگری هم داری؟" if fa else "Any other symptoms?"
+
     return sections

@@ -255,6 +255,8 @@ class App:
         self.send_btn = tk.Button(inbar, text=self.L("Send", "ارسال"), command=self._send, bg="#0077b6",
                                   fg="#021018", font=pick_font(12, True), relief="flat")
         self.send_btn.pack(side="left", fill="y", padx=(6, 0))
+        tk.Button(inbar, text=self.L("✚ New chat", "✚ گفتگوی جدید"), command=self._new_chat,
+                  bg="#0d1930", fg=C["cy"], font=pick_font(10), relief="flat").pack(side="left", fill="y", padx=(6, 0))
 
         tk.Label(self.root, text=MEDICAL_DISCLAIMER(), bg="#070d18", fg="#41527a",
                  font=pick_font(8), pady=4).pack(fill="x", side="bottom")
@@ -447,6 +449,14 @@ class App:
             self._ui(apply)
 
         threading.Thread(target=work, daemon=True).start()
+
+    def _new_chat(self):
+        """New chat: archive the old dialogue and start clean."""
+        self._reset_dialogue()
+        self.chat.configure(state="normal")
+        self.chat.delete("1.0", "end")
+        self._hello()
+        self._refresh_status()
 
     # ------------------------------------------------------------- status
     def _refresh_status(self):

@@ -192,7 +192,11 @@ def apply_style(sections: dict[str, list[str] | str], opener: str | None = None)
         if normalize(s.get("header") or "") == op_norm:
             continue  # don't repeat a heading that is just the opening line
         key = s.get("key") or "note"
-        if key in seen or key not in sections or not sections[key]:
+        if key not in sections:
+            continue
+        val = sections[key]
+        empty = (val in ("", None) or (isinstance(val, list) and all(not str(x).strip() for x in val)))
+        if key in seen or key not in sections or val is None or empty:
             continue
         seen.add(key)
         content = sections[key]
@@ -208,7 +212,8 @@ def apply_style(sections: dict[str, list[str] | str], opener: str | None = None)
         else:
             blocks.append(body.strip())
     for k in sections:  # keys outside the learned template
-        if k not in seen and sections[k]:
+        val2 = sections[k]
+        if k not in seen and val2 and not (isinstance(val2, list) and all(not str(x).strip() for x in val2)) and val2 != "":
             content = sections[k]
             body = content if isinstance(content, str) else "\n".join(f"• {c}" for c in content)
             blocks.append(body.strip())

@@ -384,7 +384,7 @@ def t_medical_nlg():
                                            "candidates": [{"name": "C", "percent": 40, "urgency": "routine",
                                                            "advice": ["a", "a"], "doctor_when": "d"}]},
                                           {"turns": 1}, {}, None, None, "Q?")
-        for key in ("findings", "probables", "advice", "warning", "followup"):
+        for key in ("findings", "probables", "advice", "followup"):
             expect(sections.get(key), key)
         expect(len(sections["advice"]) == len(set(sections["advice"])) or len(sections["advice"]) > 2)
     i18n.set_override(None)
