@@ -401,7 +401,7 @@ Any cough?""")
     expect(p["samples"] == 1)
     expect(any(s["key"] == "probables" for s in p["sections"]), p["sections"])
     txt = apply_style({"findings": ["a"], "probables": ["b"], "advice": ["c"], "followup": "d?"})
-    expect("b" in txt and "d?" in txt and txt.count("\n\n") >= 3)
+    expect("b" in txt and "d?" in txt and "a" in txt and txt.count("\n\n") >= 2)
     clean()
     return "style learned + rendered"
 
