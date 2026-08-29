@@ -191,6 +191,8 @@ def apply_style(sections: dict[str, list[str] | str], opener: str | None = None)
         empty = (val in ("", None) or (isinstance(val, list) and all(not str(x).strip() for x in val)))
         if key in seen or key not in sections or val is None or empty:
             continue
+        if key in ("advice", "doctor", "warning"):
+            continue
         seen.add(key)
         content = sections[key]
         header = s.get("header") or ""
@@ -200,11 +202,13 @@ def apply_style(sections: dict[str, list[str] | str], opener: str | None = None)
             b = prof.get("bullet", "•")
             body = "\n".join(f"{b} {str(line)}" for line in content)
         header_text = pick(header) if isinstance(header, (dict, tuple, list)) else header
-        if header_text:
+        if header_text and key in ("findings", "probables", "followup"):
             blocks.append(f"{header_text}:\n{body}".strip())
         else:
             blocks.append(body.strip())
     for k in sections:
+        if k in ("advice", "doctor", "warning"):
+            continue
         val2 = sections[k]
         if k not in seen and val2 and not (isinstance(val2, list) and all(not str(x).strip() for x in val2)) and val2 != "":
             content = sections[k]

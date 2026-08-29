@@ -269,9 +269,6 @@ class HybridEngine:
                     + "\n\n"+ tt("(Background learning from external AI replies stays active.)", "(یادگیری پس‌زمینه از پاسخ‌های AI خارجی همچنان فعال است.)"))
             return text, {"candidates": []}
         text = apply_style(sections)
-        disc = MEDICAL_DISCLAIMER()
-        if disc not in text:
-            text += "\n\n"+ disc
         return text, {"candidates": analysis.get("candidates", [])}
 
     def _remember(self, role: str, content: str):
