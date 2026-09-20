@@ -1,0 +1,23 @@
+[
+ {
+  "id": 1,
+  "drug": "آسپرین",
+  "times": [
+   "08:00",
+   "20:00"
+  ],
+  "days": "daily",
+  "active": true,
+  "created": "2026-09-20T13:23:07"
+ },
+ {
+  "id": 2,
+  "drug": "تست",
+  "times": [
+   "23:59"
+  ],
+  "days": "daily",
+  "active": true,
+  "created": "2026-09-20T13:27:31"
+ }
+]

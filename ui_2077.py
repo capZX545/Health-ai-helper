@@ -190,6 +190,9 @@ class App:
             (("Research & articles", "پژوهش و مقالات"), self._panel_research),
             (("Laboratory", "آزمایشگاه"), self._panel_lab),
             (("Health tools", "ابزار سلامت"), self._panel_tools),
+            (("Vitals charts", "نمودار روند"), self._panel_charts),
+            (("Profiles", "پروفایل‌ها"), self._panel_profiles),
+            (("LM Studio", "LM Studio"), self._panel_lmstudio),
             (("Mental health", "سلامت روان"), self._panel_mental),
             (("Sleep analysis", "تحلیل خواب"), self._panel_sleep),
             (("Checkup calendar", "تقویم چکاپ"), self._panel_checkup),
@@ -2193,6 +2196,114 @@ class App:
         tk.Button(f10, text=_L("Backup now", "بکاپ بگیر"), command=bk_go, bg="#0d5a4a", fg="#c8ffe9",
                   font=pick_font(9, True), relief="flat").pack(pady=2, ipadx=12)
 
+    def _panel_charts(self):
+        from vitals_chart import save_chart_html
+        w, top, inner, bottom = self._win_list(self.L("Vitals trends", "نمودار روند علائم حیاتی"))
+        box = scrolledtext.ScrolledText(bottom, bg="#070d18", fg=C["tx"], font=pick_font(10),
+                                        height=6, relief="flat", wrap="word")
+        box.pack(fill="both", expand=True, padx=16, pady=(4, 8))
+        def gen():
+            from i18n import get_lang
+            fa = get_lang() == "fa"
+            import tempfile, os, webbrowser
+            path = os.path.join(tempfile.gettempdir(), "nexusmed_charts.html")
+            if save_chart_html(path, 30, fa):
+                box.delete("1.0", "end")
+                box.insert("1.0", self.L("Charts generated — opening in browser...", "نمودارها ساخته شد — در مرورگر باز می‌شود..."))
+                webbrowser.open("file://" + path)
+            else:
+                box.delete("1.0", "end")
+                box.insert("1.0", self.L("No vitals data yet — record some in the Vitals module first.", "هنوز داده‌ای ثبت نشده — اول از ماژول علائم حیاتی ثبت کن."))
+        tk.Button(top, text=self.L("Generate charts", "ساخت نمودار"), command=gen,
+                  bg="#0077b6", fg="#021018", font=pick_font(11, True), relief="flat").pack(pady=10, ipadx=14)
+        box.insert("1.0", self.L("Click the button to generate trend charts for blood pressure, glucose and weight.", "دکمه را بزن تا نمودار روند فشار خون، قند و وزن ساخته شود."))
+
+    def _panel_profiles(self):
+        import multi_profile as mp
+        w, top, inner, bottom = self._win_list(self.L("User profiles", "پروفایل‌های کاربران"))
+        box = scrolledtext.ScrolledText(bottom, bg="#070d18", fg=C["tx"], font=pick_font(10),
+                                        height=4, relief="flat", wrap="word")
+        box.pack(fill="both", expand=True, padx=16, pady=(4, 8))
+        def refresh():
+            for c in inner.winfo_children():
+                c.destroy()
+            act = mp.get_active()
+            tk.Label(inner, text=self.L("Active: ", "فعال: ") + act["name"],
+                     bg=C["panel2"], fg=C["gr"], font=pick_font(11, True), anchor="e").pack(fill="x", padx=10, pady=5)
+            for p in mp.list_profiles():
+                row = tk.Frame(inner, bg=C["panel2"])
+                lbl = p["name"] + (("  (" + str(p.get("age","")) + "/" + str(p.get("gender","")) + ")") if p.get("age") else "")
+                b = tk.Button(row, text=lbl,
+                              command=lambda pid=p["id"]: do_switch(pid),
+                              anchor="e", bg="#101c36", fg=C["tx"], relief="flat", font=pick_font(10),
+                              activebackground="#101c36", activeforeground=C["cy"], cursor="hand2")
+                b.pack(side="right", fill="x", expand=True)
+                tk.Button(row, text="✕", command=lambda pid=p["id"]: do_delete(pid),
+                          bg="#101c36", fg="#ff2a6d", relief="flat", font=pick_font(9),
+                          cursor="hand2").pack(side="right", padx=4)
+                row.pack(fill="x", padx=10, pady=1)
+        def do_switch(pid):
+            r = mp.switch_profile(pid)
+            if r.get("ok") and r.get("switched"):
+                self._reset_dialogue()
+                self._refresh_status()
+            refresh()
+        def do_delete(pid):
+            mp.delete_profile(pid)
+            refresh()
+        def do_create():
+            tl = tk.Toplevel(w)
+            tl.title(self.L("New profile", "پروفایل جدید"))
+            tl.geometry("320x200")
+            tl.transient(w)
+            for lbl, row in ((self.L("Name:", "نام:"), 0), (self.L("Age:", "سن:"), 1), (self.L("Gender:", "جنسیت:"), 2)):
+                tk.Label(tl, text=lbl, bg=C["panel2"], fg=C["tx"]).grid(row=row, column=0, padx=8, pady=4, sticky="e")
+            e1 = tk.Entry(tl, bg="#0a1424", fg=C["tx"], relief="flat", justify="right"); e1.grid(row=0, column=1, padx=8, ipady=2)
+            e2 = tk.Entry(tl, bg="#0a1424", fg=C["tx"], relief="flat", justify="right"); e2.grid(row=1, column=1, padx=8, ipady=2)
+            e3 = tk.Entry(tl, bg="#0a1424", fg=C["tx"], relief="flat", justify="right"); e3.grid(row=2, column=1, padx=8, ipady=2)
+            def save():
+                mp.create_profile(e1.get(), e2.get(), e3.get())
+                tl.destroy()
+                refresh()
+            tk.Button(tl, text=self.L("Save", "ذخیره"), command=save,
+                      bg="#0077b6", fg="#021018", font=pick_font(10, True), relief="flat").grid(row=3, column=0, columnspan=2, pady=10, ipadx=14)
+        tk.Button(top, text=self.L("+ New profile", "+ پروفایل جدید"), command=do_create,
+                  bg="#0d5a4a", fg="#c8ffe9", font=pick_font(10, True), relief="flat").pack(pady=6, ipadx=10)
+        refresh()
+
+    def _panel_lmstudio(self):
+        import local_lm_connector as lmc
+        w, top, inner, bottom = self._win_list(self.L("LM Studio (local AI)", "LM Studio (هوش مصنوعی محلی)"))
+        box = scrolledtext.ScrolledText(bottom, bg="#070d18", fg=C["tx"], font=pick_font(10),
+                                        height=5, relief="flat", wrap="word")
+        box.pack(fill="both", expand=True, padx=16, pady=(4, 8))
+        tk.Label(inner, text=self.L("Connect to LM Studio for free, offline, unlimited AI.",
+                                    "LM Studio را وصل کن — هوش مصنوعی رایگان، آفلاین و نامحدود."),
+                 bg=C["panel2"], fg=C["dim"], font=pick_font(9), anchor="e", wraplength=600, justify="right").pack(fill="x", padx=10, pady=6)
+        for step in ("1. Download LM Studio from lmstudio.ai",
+                     "2. Load any model (Qwen 2.5 7B, Llama 3.2 8B, Phi-4)",
+                     "3. Developer tab → Start Server (port 1234)",
+                     "4. Toggle the switch below and Test"):
+            tk.Label(inner, text=step, bg=C["panel2"], fg=C["tx"], font=pick_font(9), anchor="w").pack(fill="x", padx=14)
+        var_on = tk.BooleanVar(value=lmc.is_enabled())
+        def toggle():
+            lmc.set_enabled(var_on.get())
+            box.delete("1.0", "end")
+            box.insert("1.0", self.L("Enabled" if var_on.get() else "Disabled",
+                                     "فعال شد" if var_on.get() else "غیرفعال شد"))
+        tk.Checkbutton(inner, text=self.L("Use LM Studio for AI responses", "استفاده از LM Studio برای پاسخ‌ها"),
+                       variable=var_on, command=toggle, bg=C["panel2"], fg=C["tx"],
+                       selectcolor="#0a1424", activebackground=C["panel2"],
+                       activeforeground=C["cy"], font=pick_font(10), anchor="e").pack(fill="x", padx=10, pady=6)
+        def test():
+            r = lmc.test_connection()
+            box.delete("1.0", "end")
+            box.insert("1.0", r["message_fa"])
+            if r.get("models"):
+                box.insert("end", "\n" + self.L("Models: ", "مدل‌ها: ") + ", ".join(r["models"]))
+        tk.Button(inner, text=self.L("Test connection", "تست اتصال"), command=test,
+                  bg="#0077b6", fg="#021018", font=pick_font(10, True), relief="flat").pack(pady=6, ipadx=12)
+
     def _panel_referral(self):
         from doctor_referral import generate
         from patient_profile import load_profile
@@ -2205,6 +2316,10 @@ class App:
             box.delete("1.0", "end")
             if r.get("ok"):
                 box.insert("1.0", self.L("Report generated: ", "گزارش ساخته شد: ") + r["path"] + self.L("\n(open it in the browser and press Ctrl+P)", "\n(در مرورگر باز کنید و Ctrl+P بزنید)"))
+                from pdf_export import referral_pdf
+                pdf_r = referral_pdf(r["path"])
+                if pdf_r.get("ok"):
+                    box.insert("1.0", self.L("PDF saved: ", "PDF ساخته شد: ") + pdf_r["path"] + "\n")
                 try:
                     import webbrowser
                     webbrowser.open("file://"+ r["path"])
@@ -2345,6 +2460,20 @@ class App:
                   bg="#0d1930", fg=C["cy"], relief="flat", font=pick_font(10)).pack(side="left", padx=4)
 
 
+def _start_reminder_service(app):
+    from med_reminder_service import ReminderService, toast
+    from i18n import is_fa
+    def on_due(due):
+        fa = is_fa()
+        msg = (f"وقت دارو: {due['drug']} ({due['time']})" if fa
+               else f"Medication time: {due['drug']} ({due['time']})")
+        toast("NexusMed 2077", msg)
+        app._ui(lambda: app._bot("⏰ " + msg, "emg"))
+    svc = ReminderService(callback=on_due, interval=60)
+    svc.start()
+    return svc
+
+
 def run_app() -> int:
     try:
         from common_2077 import DATA_DIR as _DD
@@ -2365,8 +2494,15 @@ def run_app() -> int:
         ttk.Style(root).theme_use("clam")
     except Exception:
         pass
-    App(root)
+    app = App(root)
+    svc = None
+    try:
+        svc = _start_reminder_service(app)
+    except Exception:
+        pass
     root.mainloop()
+    if svc:
+        svc.stop()
     return 0
 
 

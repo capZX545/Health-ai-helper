@@ -195,9 +195,20 @@ class HybridEngine:
                 r = local_chat(msgs)
                 if r.get("ok"):
                     return r
-        order = [p for p in s["provider_order"] if p != "local" and get_api_key(p)]
+        order = [p for p in s["provider_order"] if p != "local" and (get_api_key(p) or p == "lmstudio")]
         last_err = None
         for p in order:
+            if p == "lmstudio":
+                try:
+                    from local_lm_connector import chat as lm_chat, is_enabled
+                    if is_enabled():
+                        r = lm_chat(msgs)
+                        if r.get("ok"):
+                            r["provider"] = "lmstudio"
+                            return r
+                except Exception:
+                    pass
+                continue
             from ai_client import chat as ext_chat
             kw = {"reasoning_enabled": bool(s.get("reasoning_enabled")) and p == "openrouter"}
             r = ext_chat(p, msgs, model=(s.get("openrouter_model") if p == "openrouter"else None), **kw)

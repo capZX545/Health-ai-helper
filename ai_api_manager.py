@@ -21,7 +21,7 @@ KEY_FIELDS = {
 }
 
 DEFAULT_SETTINGS: dict[str, Any] = {
-    "provider_order": ["openrouter", "openai", "deepseek", "local"],
+    "provider_order": ["openrouter", "openai", "deepseek", "local", "lmstudio"],
     "openrouter_model": "nvidia/nemotron-3-super-120b-a12b:free",
     "reasoning_enabled": False,
     "brain_enabled": True,
