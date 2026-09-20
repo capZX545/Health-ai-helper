@@ -197,6 +197,8 @@ if("serviceWorker" in navigator){
     <textarea id="txt"></textarea>
     <button id="send" onclick="sendMsg()">Send</button>
     <button class="hbtn" onclick="newConversation()" id="newchat" style="font-size:11px">✚ New chat</button>
+    <button class="hbtn" onclick="speakLast()" id="speakbtn" style="font-size:11px">Speak</button>
+    <button class="hbtn" onclick="micInput()" id="micbtn" style="font-size:11px">Mic</button>
   </div>
 </main>
 <footer id="foot"></footer>
@@ -222,16 +224,20 @@ T.en = {
        ["vitals","Vitals"],["labs","Lab analysis"],["rx","Prescription scan"],["drugs","Drugs & interactions"],
        ["mental","Mental health"],["sleep","Sleep analysis"],["checkup","Checkup calendar"],
        ["aid","First aid / CPR"],["referral","Doctor referral report"],["symptoms_browser","Symptoms"],["diseases_browser","Diseases"],["drugs_browser","Drugs"],["research","Research & articles"],["lab","Laboratory"],["tools","Health tools"],["brain","Brain & learning"],
+       ["charts","Vitals charts"],["risk","Risk scores"],["renal","Renal dosing"],["sidefx","Drug side effects"],["vaccine","Vaccination"],["ice","Emergency card"],["import","Import data"],["vault","Data vault"],["lmstudio","LM Studio (local AI)"],
        ["gpu","Local AI (Ollama)"],["settings","API settings"]],
   ph:"Describe your symptoms... (Enter = send, Shift+Enter = new line)", send:"Send",
   attach:"Attach a medical image", rmimg:"remove",
+  speakbtn:"Speak", micbtn:"Mic", voice_na:"Speech synthesis is not available in this browser.",
+  mic_na:"Voice input needs Chrome/Edge. In the desktop app it works on Windows.",
+  upd_btn:"Check for updates", upd_latest:"You are on the latest version: ", upd_new:"New version available: ", upd_dl:"Download and run the installer", upd_offline:"Could not reach GitHub (offline?).", upd_dl_started:"Download started; when it finishes the installer will run on the machine running the server.",
   hello:"Nexus online.\nHello, I am Nexus, the Persian/English medical assistant of NexusMed 2077.\n\nTo start:\n- Describe your symptoms with details (onset, severity, duration)\n- Or open one of the tools in the side panel\n- You can attach a medical photo too\n\nIn an emergency (chest pain, severe breathlessness, unconsciousness, seizure, one-sided weakness...) you will get emergency guidance immediately.\nThis software never replaces a doctor.",
   typing:"Nexus is thinking...", imgtyping:"Analyzing image and text...",
   src_emg:"EMERGENCY RESPONSE", src_int:"offline brain", learned:" - learned",
   foot:"NexusMed 2077 is an informational assistant; it does not replace a doctor and gives no definitive diagnosis. Emergency: Iran 115 | Europe/Finland 112",
   p_titles:{settings:"API settings",profile:"Patient profile",vitals:"Vitals",labs:"Lab analysis",rx:"Prescription & lab terms",
     drugs:"Drugs & interactions",mental:"Mental health",sleep:"Sleep analysis",checkup:"Checkup & vaccines",aid:"First aid",
-    referral:"Printable referral report", symptoms_browser:"Symptoms Browser", diseases_browser:"Diseases Database", drugs_browser:"Drugs Database", research:"Research & articles (PubMed + ClinicalTrials)", lab:"Laboratory — tests & interpretation", tools:"Health tools — 10 practical calculators & trackers",brain:"Internal brain & learning",gpu:"Local AI (Ollama)",image:"Medical image + text",assess:"Disease likelihood assessment"},
+    referral:"Printable referral report", symptoms_browser:"Symptoms Browser", diseases_browser:"Diseases Database", drugs_browser:"Drugs Database", research:"Research & articles (PubMed + ClinicalTrials)", lab:"Laboratory — tests & interpretation", tools:"Health tools — 10 practical calculators & trackers",brain:"Internal brain & learning",gpu:"Local AI (Ollama)",image:"Medical image + text",assess:"Disease likelihood assessment",risk:"Clinical risk scores (heart + diabetes)",renal:"Kidney function & drug dosing",sidefx:"Is it a side effect of my drug?",vaccine:"Child vaccination (Iran program)",ice:"Emergency card (ICE)",import:"Import smartwatch / app data",vault:"Health data vault (encryption)",charts:"Vitals trend charts",lmstudio:"LM Studio — local AI"},
   keys:"API keys", keys_note:"Keys are stored only in a local .env file on your machine. They never enter the code, the ZIP or the installer.",
   getkey:"Get a free key", testconn:"Test connection", savekeys:"Save keys (no restart)", savemodel:"Save model",
   model:"OpenRouter model", model_list:"pick from the free/suggested list", model_manual:"or type a model id manually",
@@ -284,16 +290,20 @@ T.fa = {
        ["vitals","علائم حیاتی"],["labs","تحلیل آزمایش"],["rx","اسکن نسخه"],["drugs","دارو و تداخلات"],
        ["mental","سلامت روان"],["sleep","تحلیل خواب"],["checkup","تقویم چکاپ"],
        ["aid","کمک‌های اولیه / CPR"],["referral","گزارش ارجاع به پزشک"],["symptoms_browser","علائم"],["diseases_browser","بیماری‌ها"],["drugs_browser","داروها"],["research","پژوهش و مقالات"],["lab","آزمایشگاه"],["tools","ابزار سلامت"],["brain","مغز داخلی / یادگیری"],
+       ["charts","نمودار روند"],["risk","ریسک قلب و دیابت"],["renal","دوز کلیوی"],["sidefx","عارضه دارویی"],["vaccine","واکسیناسیون"],["ice","کارت اضطراری"],["import","ورود داده"],["vault","قفل داده‌ها"],["lmstudio","LM Studio (هوش محلی)"],
        ["gpu","هوش محلی (Ollama)"],["settings","تنظیمات API"]],
   ph:"علائمت را بنویس... (Enter=ارسال، Shift+Enter=خط جدید)", send:"ارسال",
   attach:"ضمیمه عکس پزشکی", rmimg:"حذف",
+  speakbtn:"قرائت صوتی", micbtn:"میکروفون", voice_na:"قرائت صوتی در این مرورگر در دسترس نیست.",
+  mic_na:"ورودی صوتی نیاز به کروم/اج دارد. در نسخه‌ی دسکتاپ روی ویندوز کار می‌کند.",
+  upd_btn:"بررسی به‌روزرسانی", upd_latest:"آخرین نسخه را داری: ", upd_new:"نسخه‌ی جدید موجود است: ", upd_dl:"دانلود و اجرای نصب", upd_offline:"اتصال به گیت‌هاب ممکن نشد (آفلاین؟).", upd_dl_started:"دانلود شروع شد؛ بعد از پایان، نصب روی سیستم سرور اجرا می‌شود.",
   hello:"نکسوس آنلاین است.\nسلام! من نکسوس هستم — دستیار پزشکی فارسی/انگلیسی NexusMed 2077.\n\nبرای شروع:\n- علائمت را با جزئیات بنویس (شروع، شدت، مدت)\n- یا یکی از ابزارهای ستون کنار را باز کن\n- عکس پزشکی هم می‌توانی ضمیمه کنی\n\nدر علائم اورژانسی (درد سینه، تنگی نفس شدید، بیهوشی، تشنج، ضعف یک‌طرفه...) فوراً راهنمایی اورژانس می‌گیری.\nاین برنامه هرگز جایگزین پزشک نیست.",
   typing:"نکسوس در حال فکر کردن است...", imgtyping:"در حال تحلیل تصویر و متن...",
   src_emg:"پاسخ اورژانسی", src_int:"مغز داخلی آفلاین", learned:" - یادگیری ثبت شد",
   foot:"NexusMed 2077 یک دستیار اطلاعاتی است؛ جایگزین پزشک نیست و تشخیص قطعی نمی‌دهد — اورژانس: ایران ۱۱۵ | اروپا/فنلاند ۱۱۲",
   p_titles:{settings:"تنظیمات API",profile:"پروفایل بیمار",vitals:"علائم حیاتی",labs:"تحلیل آزمایش",rx:"اسکن نسخه و اصطلاحات",
     drugs:"دارو و تداخلات دارویی",mental:"سلامت روان",sleep:"تحلیل خواب",checkup:"تقویم چکاپ و واکسن",aid:"کمک‌های اولیه",
-    referral:"گزارش ارجاع قابل چاپ", symptoms_browser:"مرور علائم", diseases_browser:"بانک بیماری‌ها", drugs_browser:"بانک داروها", research:"پژوهش و مقالات (PubMed + کارآزمایی‌ها)", lab:"آزمایشگاه — آزمون‌ها و تفسیر نتایج", tools:"ابزار سلامت — ۱۰ ماشین‌حساب و ابزار کاربردی",brain:"مغز داخلی و یادگیری",gpu:"هوش مصنوعی محلی (Ollama)",image:"تحلیل تصویر پزشکی",assess:"ارزیابی احتمال بیماری‌ها"},
+    referral:"گزارش ارجاع قابل چاپ", symptoms_browser:"مرور علائم", diseases_browser:"بانک بیماری‌ها", drugs_browser:"بانک داروها", research:"پژوهش و مقالات (PubMed + کارآزمایی‌ها)", lab:"آزمایشگاه — آزمون‌ها و تفسیر نتایج", tools:"ابزار سلامت — ۱۰ ماشین‌حساب و ابزار کاربردی",brain:"مغز داخلی و یادگیری",gpu:"هوش مصنوعی محلی (Ollama)",image:"تحلیل تصویر پزشکی",assess:"ارزیابی احتمال بیماری‌ها",risk:"ریسک‌سنجی بالینی (قلب و دیابت)",renal:"عملکرد کلیه و تنظیم دوز دارو",sidefx:"عارضه داروی من هست؟",vaccine:"واکسیناسیون کودک (برنامه ایران)",ice:"کارت اضطراری (ICE)",import:"ورود داده ساعت هوشمند / اپ",vault:"قفل داده‌های سلامت (رمزنگاری)",charts:"نمودار روند علائم حیاتی",lmstudio:"LM Studio — هوش مصنوعی محلی"},
   keys:"کلیدهای API", keys_note:"کلیدها فقط در فایل .env روی سیستم خودتان ذخیره می‌شوند و هرگز داخل کد، ZIP یا بسته‌ی نصبی قرار نمی‌گیرند.",
   getkey:"گرفتن کلید رایگان", testconn:"تست اتصال", savekeys:"ذخیره‌ی کلیدها (بدون ری‌استارت)", savemodel:"ذخیره‌ی مدل",
   model:"مدل OpenRouter", model_list:"انتخاب از لیست مدل‌های رایگان/پیشنهادی", model_manual:"یا نوشتن دستی model id",
@@ -364,9 +374,9 @@ function buildNav(){
   var addSep=function(k){var s=document.createElement("div");s.className="nsep";s.textContent=t(k);nav.appendChild(s)};
   addSep("nav_main");
   ["chat","image"].forEach(function(k,i){if(i===1)addSep("nav_clinical");nav.appendChild(mkNav(k))});
-  ["profile","vitals","labs","rx","drugs","mental","sleep","checkup","aid"].forEach(function(k){nav.appendChild(mkNav(k))});
+  ["profile","vitals","charts","labs","rx","drugs","sidefx","renal","risk","mental","sleep","checkup","vaccine","ice","aid","import","vault"].forEach(function(k){nav.appendChild(mkNav(k))});
   addSep("nav_system");
-  ["referral","brain","gpu","settings"].forEach(function(k){nav.appendChild(mkNav(k))});
+  ["referral","brain","lmstudio","gpu","settings"].forEach(function(k){nav.appendChild(mkNav(k))});
   document.querySelectorAll(".nbtn").forEach(function(b){b.addEventListener("click",function(){
     document.querySelectorAll(".nbtn").forEach(function(x){x.classList.remove("act")});b.classList.add("act");openPanel(b.dataset.p)})});
 }
@@ -378,6 +388,7 @@ function mkNav(k){
 function applyLang(){
   document.documentElement.lang=LANG;document.documentElement.dir=LANG==="fa"?"rtl":"ltr";
   $("langbtn").textContent=t("langbtn");$("emgbtn").textContent=t("emgbtn");$("setbtn").textContent=t("setbtn");
+  $("speakbtn").textContent=t("speakbtn");$("micbtn").textContent=t("micbtn");
   $("txt").placeholder=t("ph");$("send").textContent=t("send");$("attachbtn").title=t("attach");
   $("rmimg").textContent=t("rmimg");$("foot").textContent=t("foot");
   var h=$("hello");if(h)h.textContent=t("hello");
@@ -419,7 +430,29 @@ async function sendMsg(){
   if(res.image_type&&res.image_type.label)src+=" | "+res.image_type.label;
   if(res.learned)src+=t("learned");
   addMsg(res.red_flag?"bot emg":"bot",res.text||res.message_fa||"...",src);
+  lastBot=res.text||"";
   refreshStatus();
+}
+var lastBot="";
+function speakLast(){
+  try{
+    var u=new SpeechSynthesisUtterance((lastBot||"").slice(0,1500));
+    u.lang=LANG==="fa"?"fa-IR":"en-US";
+    speechSynthesis.cancel();speechSynthesis.speak(u);
+  }catch(e){alert(t("voice_na"))}
+}
+function micInput(){
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){alert(t("mic_na"));return}
+  try{
+    var r=new SR();r.lang=LANG==="fa"?"fa-IR":"en-US";r.interimResults=false;
+    $("micbtn").textContent="...";
+    r.onresult=function(ev){var said=(ev.results[0][0]||{}).transcript||"";
+      if(said){$("txt").value=($("txt").value+" "+said).trim()}};
+    r.onend=function(){$("micbtn").textContent=t("micbtn")};
+    r.onerror=function(){$("micbtn").textContent=t("micbtn")};
+    r.start();
+  }catch(e){$("micbtn").textContent=t("micbtn");alert(t("mic_na"))}
 }
 function quickEmg(){openPanel("aid");loadFirstAid("cpr")}
 async function doctorMode(){
@@ -455,7 +488,8 @@ function openPanel(k){
   currentPanel=k;if(k==="chat"){closePanel();return}
   $("panel").classList.add("open");$("ptitle").textContent=t("p_titles")[k]||k;
   var P={settings:uiSettings,profile:uiProfile,vitals:uiVitals,labs:uiLabs,rx:uiRx,drugs:uiDrugs,symptoms_browser:uiSymptomsBrowser,diseases_browser:uiDiseasesBrowser,drugs_browser:uiDrugsBrowser,research:uiResearch,lab:uiLab,tools:uiTools,
-    mental:uiMental,sleep:uiSleep,checkup:uiCheckup,aid:uiAid,referral:uiReferral,brain:uiBrain,gpu:uiGpu,image:uiImage,assess:uiAssess};
+    mental:uiMental,sleep:uiSleep,checkup:uiCheckup,aid:uiAid,referral:uiReferral,brain:uiBrain,gpu:uiGpu,image:uiImage,assess:uiAssess,
+    risk:uiRisk,renal:uiRenal,sidefx:uiSidefx,vaccine:uiVaccine,ice:uiIce,import:uiImport,vault:uiVault,charts:uiCharts,lmstudio:uiLmstudio};
   (P[k]||function(){})();
 }
 function closePanel(){$("panel").classList.remove("open")}
@@ -475,7 +509,9 @@ async function uiSettings(){
     }
     return '<label class="fl">'+esc(label)+'</label><input class="f" id="set-'+key+'" value="'+esc(val)+'">';
   }
-  var h='<div class="card"><h3>'+(lang==="fa"?"API Keys":"API Keys")+'</h3>';
+  var h='<div class="card"><h3>'+(lang==="fa"?"به‌روزرسانی":"Updates")+'</h3>'+
+  '<button class="btn pri" onclick="chkUpd()">'+t("upd_btn")+'</button><div id="updRes" style="margin-top:8px;font-size:12px"></div></div>';
+  h+='<div class="card"><h3>'+(lang==="fa"?"API Keys":"API Keys")+'</h3>';
   h+='<p style="font-size:11.5px;color:var(--dim)">'+(lang==="fa"?"Keys stored only on your machine":"Keys stored only on your machine")+'</p>';
   var provs=[["openrouter","OpenRouter (free)"],["openai","OpenAI"],["deepseek","DeepSeek"]];
   for(var i=0;i<provs.length;i++){
@@ -1676,6 +1712,220 @@ function newConversation(){
   applyLang();
   refreshStatus();
 }
+async function uiRisk(){
+  var L=LANG==="fa";
+  var h='<div class="card"><h3>'+(L?"ریسک قلبی — فرامینگهام ۱۰ ساله":"Heart risk — Framingham 10-year")+'</h3>';
+  h+='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">';
+  h+='<input class="f" id="frA" placeholder="'+(L?"سن":"age")+'" style="width:64px">';
+  h+='<select class="f" id="frS"><option value="m">'+(L?"مرد":"male")+'</option><option value="f">'+(L?"زن":"female")+'</option></select>';
+  h+='<input class="f" id="frC" placeholder="'+(L?"چربی کل":"total chol")+'" style="width:90px">';
+  h+='<input class="f" id="frH" placeholder="HDL" style="width:60px">';
+  h+='<input class="f" id="frB" placeholder="'+(L?"فشار":"SBP")+'" style="width:60px">';
+  h+='<label style="font-size:11px"><input type="checkbox" id="frSm">'+(L?"سیگاری":"smoker")+'</label>';
+  h+='<label style="font-size:11px"><input type="checkbox" id="frTx">'+(L?"داروی فشار":"BP med")+'</label>';
+  h+='<label style="font-size:11px"><input type="checkbox" id="frDb">'+(L?"دیابت":"diabetes")+'</label>';
+  h+='<button class="btn pri" onclick="frGo()">'+(L?"محاسبه":"Calculate")+'</button></div><div id="frRes" style="margin-top:8px"></div></div>';
+  h+='<div class="card"><h3>'+(L?"ریسک دیابت — FINDRISC ۱۰ ساله":"Diabetes risk — FINDRISC 10-year")+'</h3>';
+  h+='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">';
+  h+='<input class="f" id="fdA" placeholder="'+(L?"سن":"age")+'" style="width:64px">';
+  h+='<select class="f" id="fdS"><option value="m">'+(L?"مرد":"male")+'</option><option value="f">'+(L?"زن":"female")+'</option></select>';
+  h+='<input class="f" id="fdB" placeholder="BMI" style="width:60px">';
+  h+='<input class="f" id="fdW" placeholder="'+(L?"دور کمر":"waist cm")+'" style="width:80px">';
+  h+='<label style="font-size:11px"><input type="checkbox" id="fdAct" checked>'+(L?"فعالیت روزانه":"active")+'</label>';
+  h+='<label style="font-size:11px"><input type="checkbox" id="fdVeg" checked>'+(L?"میوه/سبزی روزانه":"veg daily")+'</label>';
+  h+='<label style="font-size:11px"><input type="checkbox" id="fdBP">'+(L?"داروی فشار":"BP med")+'</label>';
+  h+='<label style="font-size:11px"><input type="checkbox" id="fdGlu">'+(L?"قند بالا":"high glucose")+'</label>';
+  h+='<select class="f" id="fdFam"><option value="0">'+(L?"سابقه خانوادگی: ندارم":"family: none")+'</option><option value="1">'+(L?"فرد دور":"2nd degree")+'</option><option value="2">'+(L?"درجه یک":"1st degree")+'</option></select>';
+  h+='<button class="btn pri" onclick="fdGo()">'+(L?"محاسبه":"Calculate")+'</button></div><div id="fdRes" style="margin-top:8px"></div></div>';
+  $("pbody").innerHTML=h;
+}
+async function frGo(){
+  var r=await api("/api/risk",{type:"framingham",age:$("frA").value,sex:$("frS").value,total_cholesterol:$("frC").value,hdl:$("frH").value,systolic_bp:$("frB").value,smoker:$("frSm").checked,bp_treated:$("frTx").checked,diabetes:$("frDb").checked});
+  $("frRes").innerHTML=r.ok?('<div class="b">'+(LANG==="fa"?"امتیاز: ":"points: ")+r.points+" → "+(LANG==="fa"?"ریسک ":"risk ")+r.risk_percent+"% — "+esc(r.category_fa)+'</div><div style="font-size:12px">'+esc(r.advice_fa||"")+'</div>'):esc(r.message_fa);
+}
+async function fdGo(){
+  var r=await api("/api/risk",{type:"findrisc",age:$("fdA").value,bmi:$("fdB").value,waist:$("fdW").value,sex:$("fdS").value,activity_daily:$("fdAct").checked,veggies_daily:$("fdVeg").checked,bp_medication:$("fdBP").checked,high_glucose:$("fdGlu").checked,family_history:$("fdFam").value});
+  $("fdRes").innerHTML=r.ok?('<div class="b">'+(LANG==="fa"?"امتیاز: ":"score: ")+r.score+"/26 → "+(LANG==="fa"?"ریسک ۱۰ ساله ":"10-year risk ")+r.risk_percent+"% — "+esc(r.category_fa)+'</div><div style="font-size:12px">'+esc(r.advice_fa||"")+'</div>'):esc(r.message_fa);
+}
+async function uiRenal(){
+  var L=LANG==="fa";
+  var h='<div class="card"><h3>'+(L?"کلیرانس کراتینین (کاککرافت-گالت) + دوز دارو":"Creatinine clearance (Cockcroft-Gault) + drug dosing")+'</h3>';
+  h+='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">';
+  h+='<input class="f" id="rnA" placeholder="'+(L?"سن":"age")+'" style="width:64px">';
+  h+='<select class="f" id="rnS"><option value="m">'+(L?"مرد":"male")+'</option><option value="f">'+(L?"زن":"female")+'</option></select>';
+  h+='<input class="f" id="rnW" placeholder="'+(L?"وزن kg":"weight kg")+'" style="width:80px">';
+  h+='<input class="f" id="rnH" placeholder="'+(L?"قد cm (اختیاری)":"height cm")+'" style="width:90px">';
+  h+='<input class="f" id="rnCr" placeholder="'+(L?"کراتینین mg/dL":"creatinine")+'" style="width:110px">';
+  h+='<input class="f" id="rnD" placeholder="'+(L?"دارو (اختیاری)":"drug (optional)")+'" style="width:120px">';
+  h+='<button class="btn pri" onclick="rnGo()">'+(L?"محاسبه":"Calculate")+'</button></div><div id="rnRes" style="margin-top:8px"></div></div>';
+  $("pbody").innerHTML=h;
+}
+async function rnGo(){
+  var r=await api("/api/renal",{age:$("rnA").value,sex:$("rnS").value,weight:$("rnW").value,height:$("rnH").value,creatinine:$("rnCr").value,drug:$("rnD").value});
+  if(!r.ok){$("rnRes").innerHTML=esc(r.message_fa);return}
+  var L=LANG==="fa";
+  var h='<div class="b">'+(L?"کلیرانس: ":"clearance: ")+r.crcl+" mL/min — "+esc(r.band)+'</div>';
+  if(r.drug_check){h+='<div style="margin-top:6px;font-size:12px">'+esc(r.drug_check.drug||"")+": "+esc(r.drug_check.message_fa||"")+'</div>'}
+  h+='<div style="margin-top:6px;font-size:11px;color:var(--dim)">'+(L?"تغییر دوز نهایی را پزشک/داروساز تعیین می‌کند.":"Final dosing is decided by the doctor/pharmacist.")+'</div>';
+  $("rnRes").innerHTML=h;
+}
+async function uiSidefx(){
+  var L=LANG==="fa";
+  var h='<div class="card"><h3>'+(L?"عارضه داروی من هست؟":"Is it a side effect of my drug?")+'</h3>';
+  h+='<p style="font-size:11.5px;color:var(--dim)">'+(L?"برچسب FDA چهارده هزار دارو به‌صورت آفلاین بررسی می‌شود.":"Checks 14,259 FDA drug labels offline.")+'</p>';
+  h+='<div style="display:flex;gap:6px;flex-wrap:wrap">';
+  h+='<input class="f" id="sxD" placeholder="'+(L?"دارو (مثلاً متفورمین)":"drug (e.g. metformin")+'" style="flex:1;min-width:110px">';
+  h+='<input class="f" id="sxS" placeholder="'+(L?"علامت جدید (مثلاً اسهال)":"new symptom (e.g. diarrhea)")+'" style="flex:1;min-width:110px">';
+  h+='<button class="btn pri" onclick="sxGo()">'+(L?"بررسی":"Check")+'</button></div><div id="sxRes" style="margin-top:8px;white-space:pre-wrap;font-size:12px"></div></div>';
+  $("pbody").innerHTML=h;
+}
+async function sxGo(){
+  var r=await api("/api/sidefx",{drug:$("sxD").value,symptom:$("sxS").value});
+  var h=r.ok?esc(r.message_fa||""):"";
+  if(r.ok&&r.symptom===null&&r.common_fa)h+=(h?"\n":"")+esc((LANG==="fa"?"عوارض شایع: ":"Common reactions: ")+r.common_fa);
+  (r.adv_snippets||[]).slice(0,2).forEach(function(x){h+="\n- "+esc(x)});
+  $("sxRes").textContent=h||"...";
+}
+async function uiVaccine(){
+  var L=LANG==="fa";
+  var h='<div class="card"><h3>'+(L?"واکسیناسیون کودک — برنامه کشوری ایران":"Child vaccination — Iran national program")+'</h3>';
+  h+='<div style="display:flex;gap:6px;flex-wrap:wrap">';
+  h+='<input class="f" id="vxB" placeholder="2025-05-10" style="flex:1;min-width:120px">';
+  h+='<button class="btn pri" onclick="vxGo()">'+(L?"نمایش برنامه":"Show schedule")+'</button></div>';
+  h+='<div id="vxRes" style="margin-top:10px"></div></div>';
+  $("pbody").innerHTML=h;
+}
+async function vxGo(){
+  var L=LANG==="fa";
+  try{
+    var r=await (await fetch("/api/vaccines?birth="+encodeURIComponent($("vxB").value.trim()))).json();
+  }catch(e){$("vxRes").textContent="...";return}
+  if(!r.ok){$("vxRes").textContent=r.message_fa||"";return}
+  var marks={past:(L?"گذشته":"passed"),due:(L?"الان موعدش است":"due now"),due_soon:(L?"نزدیک است":"due soon"),upcoming:(L?"در آینده":"upcoming")};
+  var h='<div class="b">'+(L?"سن: ":"age: ")+fa(r.age_months)+(L?" ماه":" months")+'</div>';
+  r.visits.forEach(function(v){
+    h+='<div style="margin-top:8px;padding:6px 10px;border:1px solid var(--bd);border-radius:8px">';
+    h+='<div class="b">'+esc(v.label)+' <span style="color:'+(v.status==="due"?"#ff2a6d":v.status==="due_soon"?"#ffd60a":"var(--dim)")+'">['+marks[v.status]+']</span></div>';
+    h+='<div style="font-size:12px">'+esc(v.vaccines.join("، "))+'</div></div>';
+  });
+  if(r.next)h+='<div class="b" style="margin-top:10px">'+(L?"نوبت بعدی: ":"Next visit: ")+esc(r.next.label)+'</div>';
+  h+='<div style="font-size:11px;color:var(--dim);margin-top:8px">'+esc(r.catchup_fa||"")+'</div>';
+  $("vxRes").innerHTML=h;
+}
+async function uiIce(){
+  var L=LANG==="fa";
+  var r=await api("/api/ice");
+  var ice=r.ice||{};
+  var h='<div class="card"><h3>'+(L?"کارت اضطراری پزشکی (ICE)":"Medical emergency card (ICE)")+'</h3>';
+  h+='<p style="font-size:11.5px;color:var(--dim)">'+(L?"نام، حساسیت‌ها، بیماری‌ها و داروها از پروفایل بیمار می‌آیند.":"Name, allergies, conditions and medications come from the patient profile.")+'</p>';
+  h+='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">';
+  h+='<select class="f" id="icB"><option value="">'+(L?"گروه خونی":"blood type")+'</option>'+["A+","A-","B+","B-","AB+","AB-","O+","O-"].map(function(x){return '<option '+(ice.blood_type===x?"selected":"")+'>'+x+'</option>'}).join("")+'</select>';
+  h+='<input class="f" id="icN" placeholder="'+(L?"نام تماس اضطراری":"contact name")+'" value="'+esc(ice.contact_name||"")+'" style="flex:1;min-width:100px">';
+  h+='<input class="f" id="icP" placeholder="'+(L?"شماره تماس":"contact phone")+'" value="'+esc(ice.contact_phone||"")+'" style="width:120px">';
+  h+='<button class="btn pri" onclick="icSave()">'+(L?"ذخیره":"Save")+'</button></div>';
+  h+='<div style="display:flex;gap:8px;margin-top:10px;align-items:flex-start;flex-wrap:wrap">';
+  h+='<img src="/api/ice/qr" alt="QR" style="width:150px;background:#fff;padding:6px;border-radius:8px">';
+  h+='<div style="flex:1;min-width:180px"><textarea class="f" id="icCard" rows="6" readonly style="width:100%;font-size:11px">'+esc(r.card||"")+'</textarea>';
+  h+='<button class="btn" onclick="window.open(\'/api/ice/card\')">'+(L?"کارت قابل چاپ":"Printable card")+'</button></div></div></div>';
+  $("pbody").innerHTML=h;
+}
+async function icSave(){
+  var r=await api("/api/ice",{blood_type:$("icB").value,contact_name:$("icN").value,contact_phone:$("icP").value});
+  if(r.ok)uiIce();
+}
+async function uiImport(){
+  var L=LANG==="fa";
+  var h='<div class="card"><h3>'+(L?"ورود داده ساعت هوشمند / اپ سلامت":"Import smartwatch / health app data")+'</h3>';
+  h+='<p style="font-size:11.5px;color:var(--dim)">'+(L?"فایل CSV را انتخاب کن یا محتوایش را بچسبان. ستون‌ها خودکار شناسایی می‌شوند: تاریخ، فشار، ضربان، قند، وزن، اکسیژن، دما، قدم.":"Pick a CSV file or paste its content. Columns are auto-detected: date, BP, heart rate, glucose, weight, oxygen, temperature, steps.")+'</p>';
+  h+='<input type="file" id="impFile" accept=".csv,text/csv" onchange="impRead(this)" class="f">';
+  h+='<textarea class="f" id="impCsv" rows="5" placeholder="date,systolic,diastolic,heart rate,glucose\n2026-09-01,125,82,72,98" style="width:100%;margin-top:6px"></textarea>';
+  h+='<div style="display:flex;gap:6px;margin-top:6px">';
+  h+='<button class="btn" onclick="impPreview()">'+(L?"پیش‌نمایش":"Preview")+'</button>';
+  h+='<button class="btn pri" onclick="impCommit()">'+(L?"ورود به تاریخچه":"Import into history")+'</button></div>';
+  h+='<div id="impRes" style="margin-top:8px;white-space:pre-wrap;font-size:12px"></div></div>';
+  $("pbody").innerHTML=h;
+}
+function impRead(inp){
+  var f=inp.files[0];if(!f)return;
+  var rd=new FileReader();
+  rd.onload=function(){$("impCsv").value=String(rd.result||"").slice(0,400000)};
+  rd.readAsText(f);
+}
+async function impPreview(){
+  var r=await api("/api/healthimport",{csv:$("impCsv").value});
+  $("impRes").textContent=r.message_fa||JSON.stringify(r.sample||{},null,1);
+}
+async function impCommit(){
+  var r=await api("/api/healthimport",{action:"commit",csv:$("impCsv").value});
+  $("impRes").textContent=r.message_fa||"";
+}
+async function uiVault(){
+  var L=LANG==="fa";
+  var st=await api("/api/vault");
+  var h='<div class="card"><h3>'+(L?"قفل داده‌های سلامت":"Health data vault")+'</h3>';
+  h+='<div id="vtStat" class="b" style="color:'+(st.locked?"#ffd60a":"#3bff9e")+'">'+esc(st.message_fa||"")+'</div>';
+  h+='<p style="font-size:11.5px;color:var(--dim);margin-top:6px">'+(L?"پروفایل، تاریخچه علائم حیاتی، یادآورها، دفترچه علائم و تاریخچه گفتگو با ChaCha20 رمزنگاری می‌شوند. رمز را گم کنی، هیچ راه بازیابی نیست.":"Profile, vitals history, reminders, diary and chat history get encrypted with ChaCha20. If you forget the password there is NO recovery.")+'</p>';
+  h+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">';
+  h+='<input class="f" id="vtPw" type="password" placeholder="'+(L?"رمز":"password")+'" style="flex:1;min-width:120px">';
+  h+='<button class="btn" onclick="vtLock()" style="border-color:#7a1836;color:#ff8fab">'+(L?"قفل کن":"Lock")+'</button>';
+  h+='<button class="btn pri" onclick="vtUnlock()">'+(L?"باز کن":"Unlock")+'</button></div>';
+  h+='<div id="vtRes" style="margin-top:8px;font-size:12px"></div></div>';
+  $("pbody").innerHTML=h;
+}
+async function vtLock(){
+  var r=await api("/api/vault",{action:"lock",password:$("vtPw").value});
+  $("vtRes").textContent=r.message_fa||"";
+  uiVault();
+}
+async function vtUnlock(){
+  var r=await api("/api/vault",{action:"unlock",password:$("vtPw").value});
+  $("vtRes").textContent=r.message_fa||"";
+  uiVault();
+}
+async function uiCharts(){
+  var L=LANG==="fa";
+  $("pbody").innerHTML='<div class="card"><h3>'+(L?"نمودار روند علائم حیاتی":"Vitals trend charts")+'</h3><div id="chRes">'+(L?"در حال ساخت...":"building...")+'</div></div>';
+  var r=await api("/api/charts");
+  var el=$("chRes");
+  if(!r.ok||!(r.svgs||[]).length){el.textContent=L?"هنوز داده‌ای ثبت نشده — اول از ماژول علائم حیاتی ثبت کن.":"No data yet - record some vitals first.";return}
+  el.innerHTML=(r.svgs||[]).join('<hr style="border-color:var(--bd);margin:14px 0">');
+}
+async function uiLmstudio(){
+  var L=LANG==="fa";
+  var r=await api("/api/lmstudio");
+  var cfg=r.config||{};
+  var h='<div class="card"><h3>LM Studio — '+(L?"هوش مصنوعی محلی":"local AI")+'</h3>';
+  h+='<p style="font-size:11.5px;color:var(--dim)">'+(L?"LM Studio را نصب کن (lmstudio.ai)، مدل را لود کن، از تب Developer سرور را روی پورت ۱۲۳۴ روشن کن.":"Install LM Studio (lmstudio.ai), load a model, start the server on port 1234 from the Developer tab.")+'</p>';
+  h+='<label style="font-size:12px"><input type="checkbox" id="lmOn" '+(r.enabled?"checked":"")+' onchange="lmToggle(this.checked)"> '+(L?"استفاده از LM Studio برای پاسخ‌ها":"Use LM Studio for AI responses")+'</label>';
+  h+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">';
+  h+='<input class="f" id="lmUrl" value="'+esc(cfg.base_url||"http://localhost:1234")+'" style="flex:1;min-width:160px">';
+  h+='<button class="btn" onclick="lmTest()">'+(L?"تست اتصال":"Test connection")+'</button></div>';
+  h+='<div id="lmRes" style="margin-top:8px;font-size:12px;white-space:pre-wrap"></div></div>';
+  $("pbody").innerHTML=h;
+}
+async function lmToggle(on){
+  var r=await api("/api/lmstudio",{action:"toggle",enabled:on});
+  $("lmRes").textContent=r.message_fa||JSON.stringify(r);
+}
+async function lmTest(){
+  var r=await api("/api/lmstudio",{action:"config",base_url:$("lmUrl").value,model:""});
+  var t=await api("/api/lmstudio",{action:"test"});
+  $("lmRes").textContent=t.message_fa||JSON.stringify(t);
+}
+async function chkUpd(){
+  var el=$("updRes");if(el)el.textContent="...";
+  var r=await api("/api/update/check");
+  var L=LANG==="fa";
+  if(!r.ok){if(el)el.textContent=t("upd_offline");return}
+  if(!r.newer){if(el)el.textContent=t("upd_latest")+r.latest;return}
+  if(el)el.innerHTML='<div class="b">'+esc(t("upd_new")+r.latest)+'</div><button class="btn pri" onclick="updDl(\''+esc(r.download_url||"")+'\')">'+t("upd_dl")+'</button>';
+}
+async function updDl(url){
+  var el=$("updRes");if(el)el.textContent=t("upd_dl_started");
+  var r=await api("/api/update/download",{url:url});
+  if(el)el.textContent=r.message_fa||"";
+}
+
 (function boot(){
   applyLang();
   api("/api/sleep/questions").then(function(r){window._QS={phq9:r.phq9||[],gad7:r.gad7||[]}});

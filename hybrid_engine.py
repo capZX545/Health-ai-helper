@@ -112,6 +112,12 @@ class HybridEngine:
                 if not _ans:
                     _ans = answer_lifestyle_question(user_text)
                 if not _ans:
+                    try:
+                        from side_effect_checker import check_message
+                        _ans = check_message(user_text)
+                    except Exception:
+                        _ans = None
+                if not _ans:
                     intent = classify(user_text)
                     if intent == "greeting":
                         _ans = answer_greeting(user_text)

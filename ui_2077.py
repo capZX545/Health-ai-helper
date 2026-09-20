@@ -91,9 +91,28 @@ class App:
         root.configure(bg=C["bg"])
         self.engine = None
         self.img_path = None
+        self.last_answer = ""
         self._build()
         self._refresh_status()
         self._hello()
+        self.root.after(6000, self._startup_update_check)
+
+    def _startup_update_check(self):
+        def work():
+            try:
+                from updater import check_latest
+                r = check_latest(timeout=6)
+                if r.get("ok") and r.get("newer"):
+                    msg = self.L(
+                        f"A new version ({r.get('latest')}) is available - check it in API settings.",
+                        f"نسخه‌ی جدید ({r.get('latest')}) موجود است — از تنظیمات API دانلود کن.")
+                    def apply():
+                        self._bot(msg, "meta")
+                    self._ui(apply)
+            except Exception:
+                pass
+        import threading
+        threading.Thread(target=work, daemon=True).start()
 
     def L(self, en: str, fa: str) -> str:
         from i18n import tt
@@ -190,6 +209,13 @@ class App:
             (("Research & articles", "پژوهش و مقالات"), self._panel_research),
             (("Laboratory", "آزمایشگاه"), self._panel_lab),
             (("Health tools", "ابزار سلامت"), self._panel_tools),
+            (("Risk scores", "ریسک قلب و دیابت"), self._panel_risk),
+            (("Renal dosing", "دوز کلیوی"), self._panel_renal),
+            (("Drug side effects", "عارضه دارویی"), self._panel_sidefx),
+            (("Child vaccination", "واکسیناسیون کودک"), self._panel_vaccine),
+            (("Emergency card", "کارت اضطراری"), self._panel_ice),
+            (("Import health data", "ورود داده سلامت"), self._panel_import),
+            (("Data vault", "قفل داده‌ها"), self._panel_vault),
             (("Vitals charts", "نمودار روند"), self._panel_charts),
             (("Profiles", "پروفایل‌ها"), self._panel_profiles),
             (("LM Studio", "LM Studio"), self._panel_lmstudio),
@@ -253,6 +279,10 @@ class App:
         self.send_btn.pack(side="left", fill="y", padx=(6, 0))
         tk.Button(inbar, text=self.L(" New chat", " گفتگوی جدید"), command=self._new_chat,
                   bg="#0d1930", fg=C["cy"], font=pick_font(10), relief="flat").pack(side="left", fill="y", padx=(6, 0))
+        tk.Button(inbar, text=self.L("Speak", "قرائت صوتی"), command=self._speak_last,
+                  bg="#0d1930", fg=C["yl"], font=pick_font(10), relief="flat").pack(side="left", fill="y", padx=(6, 0))
+        tk.Button(inbar, text=self.L("Mic", "میکروفون"), command=self._mic_input,
+                  bg="#0d1930", fg=C["gr"], font=pick_font(10), relief="flat").pack(side="left", fill="y", padx=(6, 0))
 
         tk.Label(self.root, text=MEDICAL_DISCLAIMER(), bg="#070d18", fg="#41527a",
                  font=pick_font(8), pady=4).pack(fill="x", side="bottom")
@@ -286,13 +316,46 @@ class App:
 
     def _hello(self):
         ver = f"\n===== NexusMed 2077 v{APP_VERSION} =====\n"
-        new_mods = "\n🆕 NEW MODULES:\n  • Health tools (10 calculators)\n  • Laboratory (96 tests)\n  • Expanded symptoms (240)\n  • Research (PubMed + Trials)\n================================"
+        new_mods = "\n" + self.L(
+            "NEW in v8: risk scores, renal dosing, drug side effects, vaccination, emergency card, voice, import, vault, auto-update",
+            "جدید در نسخه ۸: ریسک قلب/دیابت، دوز کلیوی، عارضه دارویی، واکسیناسیون، کارت اضطراری، صدا، ورود داده، قفل داده‌ها، به‌روزرسانی خودکار")
         self._bot(ver + new_mods + "\n\n")
         self._bot(self.L(
             "Hello, I am Nexus, the bilingual medical assistant of NexusMed 2077.\n" "Describe your symptoms with details (onset, severity, duration) and we will go through them step by step.\n" "Emergency signs get immediate emergency guidance.\n" "To connect an external AI, open 'API settings' and paste your OpenRouter key.",
             "سلام من نکسوس هستم — دستیار پزشکی دوزبانه NexusMed 2077.\n" "علائمت را با جزئیات (شروع، شدت، مدت) بنویس تا مرحله‌به‌مرحله بررسی کنیم.\n" "در علائم اورژانسی فوراً راهنمایی اورژانس می‌گیری.\n" "برای اتصال به AI خارجی، از دکمه‌ی «تنظیمات API» کلید OpenRouter را وارد کن."))
 
+    def _speak_last(self):
+        import voice_io
+        txt = getattr(self, "last_answer", "")
+        if not txt:
+            txt = self.chat.get("1.0", "end").strip().split("\n\n")[-1]
+        if not txt:
+            self._bot(self.L("Nothing to read yet.", "چیزی برای قرائت نیست."), "meta")
+            return
+        self._bot(self.L("[reading aloud]", "[قرائت صوتی]"), "meta")
+        voice_io.speak_async(txt)
+
+    def _mic_input(self):
+        import voice_io
+        if not voice_io.stt_available():
+            self._bot(self.L("Voice input needs Windows SAPI; on other systems type instead.",
+                             "ورودی صوتی روی ویندوز کار می‌کند؛ در سیستم‌های دیگر تایپ کن."), "meta")
+            return
+        self._bot(self.L("[listening... speak now]", "[در حال شنیدن... حالا صحبت کن]"), "meta")
+
+        def work():
+            r = voice_io.listen(10)
+            def apply():
+                if r.get("ok") and r.get("text"):
+                    self.entry.insert("1.0", r["text"] + " ")
+                else:
+                    self._bot(r.get("message_fa") or "", "meta")
+            self._ui(apply)
+        import threading
+        threading.Thread(target=work, daemon=True).start()
+
     def _bot(self, text: str, tag: str = "bot", meta: str = ""):
+        self.last_answer = text
         self.chat.config(state="normal")
         self.chat.insert("end", text + "\n", tag)
         if meta:
@@ -2238,7 +2301,7 @@ class App:
                               anchor="e", bg="#101c36", fg=C["tx"], relief="flat", font=pick_font(10),
                               activebackground="#101c36", activeforeground=C["cy"], cursor="hand2")
                 b.pack(side="right", fill="x", expand=True)
-                tk.Button(row, text="✕", command=lambda pid=p["id"]: do_delete(pid),
+                tk.Button(row, text="x", command=lambda pid=p["id"]: do_delete(pid),
                           bg="#101c36", fg="#ff2a6d", relief="flat", font=pick_font(9),
                           cursor="hand2").pack(side="right", padx=4)
                 row.pack(fill="x", padx=10, pady=1)
@@ -2303,6 +2366,354 @@ class App:
                 box.insert("end", "\n" + self.L("Models: ", "مدل‌ها: ") + ", ".join(r["models"]))
         tk.Button(inner, text=self.L("Test connection", "تست اتصال"), command=test,
                   bg="#0077b6", fg="#021018", font=pick_font(10, True), relief="flat").pack(pady=6, ipadx=12)
+
+    def _panel_risk(self):
+        import risk_scores as rsk
+        w, top, inner, bottom = self._win_list(self.L("Clinical risk scores", "ریسک‌سنجی بالینی"))
+        box = scrolledtext.ScrolledText(bottom, bg="#070d18", fg=C["tx"], font=pick_font(10),
+                                        height=7, relief="flat", wrap="word")
+        box.pack(fill="both", expand=True, padx=16, pady=(4, 8))
+        wrap1 = tk.Frame(inner, bg=C["panel2"])
+        wrap1.pack(fill="x", padx=10, pady=6)
+        tk.Label(wrap1, text=self.L("Heart disease risk (Framingham 10-year)", "ریسک بیماری قلبی (فرامینگهام ۱۰ ساله)"),
+                 bg=C["panel2"], fg=C["cy"], font=pick_font(11, True), anchor="e").pack(fill="x", pady=(4, 0))
+        f1 = tk.Frame(wrap1, bg=C["panel2"])
+        f1.pack(fill="x")
+
+        def row(parent, label, row_i, combo=None):
+            tk.Label(parent, text=label, bg=C["panel2"], fg=C["tx"], font=pick_font(9)).grid(row=row_i, column=0, padx=8, pady=3, sticky="e")
+            if combo is not None:
+                e = ttk.Combobox(parent, values=combo, width=14, font=pick_font(9))
+                e.current(0)
+            else:
+                e = tk.Entry(parent, bg="#0a1424", fg=C["tx"], relief="flat", width=16, justify="right", insertbackground=C["cy"])
+            e.grid(row=row_i, column=1, padx=8, pady=3)
+            return e
+
+        e_age = row(f1, self.L("Age", "سن"), 0)
+        c_sex = row(f1, self.L("Sex", "جنسیت"), 1, [self.L("Male", "مرد"), self.L("Female", "زن")])
+        e_tc = row(f1, self.L("Total cholesterol (mg/dL)", "چربی خون کل (mg/dL)"), 2)
+        e_hdl = row(f1, self.L("HDL (mg/dL)", "HDL (mg/dL)"), 3)
+        e_sbp = row(f1, self.L("Systolic BP", "فشار سیستولیک"), 4)
+        v_smoke = tk.BooleanVar(value=False)
+        v_treated = tk.BooleanVar(value=False)
+        v_diab = tk.BooleanVar(value=False)
+        for txt, var, r_i in ((self.L("Smoker", "سیگاری"), v_smoke, 5),
+                              (self.L("On BP medication", "داروی فشار مصرف می‌کنم"), v_treated, 6),
+                              (self.L("Diabetes", "دیابت"), v_diab, 7)):
+            tk.Checkbutton(f1, text=txt, variable=var, bg=C["panel2"], fg=C["tx"], selectcolor="#0a1424",
+                           activebackground=C["panel2"], activeforeground=C["cy"], font=pick_font(9),
+                           anchor="e").grid(row=r_i, column=1, padx=8, sticky="w")
+
+        def run_heart():
+            try:
+                r = rsk.framingham(e_age.get(), "m" if c_sex.current() == 0 else "f",
+                                   e_tc.get(), e_hdl.get(), e_sbp.get(), v_smoke.get(),
+                                   v_treated.get(), v_diab.get())
+            except Exception as ex:
+                r = {"ok": False, "message_fa": str(ex)}
+            box.delete("1.0", "end")
+            if not r.get("ok"):
+                box.insert("1.0", r.get("message_fa", ""))
+                return
+            box.insert("1.0", self.L("Framingham 10-year heart risk", "ریسک ۱۰ ساله قلبی (فرامینگهام)") + "\n"
+                       + self.L("Points: ", "امتیاز: ") + str(r["points"])
+                       + "  ->  " + self.L("risk ", "ریسک ") + str(r["risk_percent"]) + "%\n"
+                       + r.get("category_fa", "") + " — " + r.get("advice_fa", "") + "\n"
+                       + ("\n" + r.get("diabetes_note_fa", "") if r.get("diabetes_note_fa") else ""))
+
+        tk.Button(f1, text=self.L("Calculate heart risk", "محاسبه ریسک قلبی"), command=run_heart,
+                  bg="#0077b6", fg="#021018", font=pick_font(10, True), relief="flat").grid(row=8, column=0, columnspan=2, pady=8, ipadx=10)
+
+        wrap2 = tk.Frame(inner, bg=C["panel2"])
+        wrap2.pack(fill="x", padx=10, pady=6)
+        tk.Label(wrap2, text=self.L("Diabetes risk (FINDRISC 10-year)", "ریسک دیابت (FINDRISC ۱۰ ساله)"),
+                 bg=C["panel2"], fg=C["yl"], font=pick_font(11, True), anchor="e").pack(fill="x", pady=(4, 0))
+        f2 = tk.Frame(wrap2, bg=C["panel2"])
+        f2.pack(fill="x")
+        d_age = row(f2, self.L("Age", "سن"), 0)
+        d_sex = row(f2, self.L("Sex", "جنسیت"), 1, [self.L("Male", "مرد"), self.L("Female", "زن")])
+        d_bmi = row(f2, self.L("BMI (kg/m2)", "BMI (kg/m2)"), 2)
+        d_waist = row(f2, self.L("Waist (cm)", "دور کمر (cm)"), 3)
+        v_act = tk.BooleanVar(value=True)
+        v_veg = tk.BooleanVar(value=True)
+        v_bp = tk.BooleanVar(value=False)
+        v_glu = tk.BooleanVar(value=False)
+        for txt, var, r_i in ((self.L("30 min activity daily", "۳۰ دقیقه فعالیت روزانه"), v_act, 4),
+                              (self.L("Vegetables/fruit daily", "میوه و سبزیجات روزانه"), v_veg, 5),
+                              (self.L("On BP medication", "داروی فشار مصرف می‌کنم"), v_bp, 6),
+                              (self.L("History of high blood sugar", "سابقه قند بالا"), v_glu, 7)):
+            tk.Checkbutton(f2, text=txt, variable=var, bg=C["panel2"], fg=C["tx"], selectcolor="#0a1424",
+                           activebackground=C["panel2"], activeforeground=C["cy"], font=pick_font(9),
+                           anchor="e").grid(row=r_i, column=1, padx=8, sticky="w")
+        c_fam = row(f2, self.L("Family history of diabetes", "سابقه خانوادگی دیابت"), 8,
+                    [self.L("None", "ندارم"), self.L("Second-degree", "فرد دور"), self.L("First-degree", "درجه یک")])
+
+        def run_diab():
+            try:
+                r = rsk.findrisc(d_age.get(), d_bmi.get(), d_waist.get(),
+                                 "m" if d_sex.current() == 0 else "f",
+                                 activity_daily=v_act.get(), veggies_daily=v_veg.get(),
+                                 bp_medication=v_bp.get(), high_glucose=v_glu.get(),
+                                 family_history=c_fam.current())
+            except Exception as ex:
+                r = {"ok": False, "message_fa": str(ex)}
+            box.insert("end", "\n\n" + self.L("FINDRISC diabetes risk", "ریسک دیابت (FINDRISC)") + "\n"
+                       + self.L("Score: ", "امتیاز: ") + str(r.get("score", "?")) + "/26"
+                       + "  ->  " + self.L("10-year risk ", "ریسک ۱۰ ساله ") + str(r.get("risk_percent", "?")) + "%\n"
+                       + (r.get("category_fa", "") + " — " + r.get("advice_fa", "")) if r.get("ok") else r.get("message_fa", ""))
+
+        tk.Button(f2, text=self.L("Calculate diabetes risk", "محاسبه ریسک دیابت"), command=run_diab,
+                  bg="#0d5a4a", fg="#c8ffe9", font=pick_font(10, True), relief="flat").grid(row=9, column=0, columnspan=2, pady=8, ipadx=10)
+        box.insert("1.0", self.L("Fill the form and calculate. These are validated screening scores, not a diagnosis.",
+                                 "فرم را پر کن و محاسبه کن. این‌ها امتیاز غربالگری معتبرند، نه تشخیص."))
+
+    def _panel_renal(self):
+        import renal_dosing as rd
+        w, top, inner, bottom = self._win_list(self.L("Kidney function & drug dosing", "عملکرد کلیه و تنظیم دوز دارو"))
+        box = scrolledtext.ScrolledText(bottom, bg="#070d18", fg=C["tx"], font=pick_font(10),
+                                        height=7, relief="flat", wrap="word")
+        box.pack(fill="both", expand=True, padx=16, pady=(4, 8))
+        f = tk.Frame(inner, bg=C["panel2"])
+        f.pack(fill="x", padx=10, pady=8)
+
+        def row(label, r_i, combo=None):
+            tk.Label(f, text=label, bg=C["panel2"], fg=C["tx"], font=pick_font(9)).grid(row=r_i, column=0, padx=8, pady=3, sticky="e")
+            if combo is not None:
+                e = ttk.Combobox(f, values=combo, width=14, font=pick_font(9))
+                e.current(0)
+            else:
+                e = tk.Entry(f, bg="#0a1424", fg=C["tx"], relief="flat", width=16, justify="right", insertbackground=C["cy"])
+            e.grid(row=r_i, column=1, padx=8, pady=3)
+            return e
+
+        e_age = row(self.L("Age", "سن"), 0)
+        c_sex = row(self.L("Sex", "جنسیت"), 1, [self.L("Male", "مرد"), self.L("Female", "زن")])
+        e_w = row(self.L("Weight (kg)", "وزن (kg)"), 2)
+        e_h = row(self.L("Height (cm) — optional", "قد (cm) — اختیاری"), 3)
+        e_scr = row(self.L("Serum creatinine (mg/dL)", "کراتینین خون (mg/dL)"), 4)
+        e_drug = row(self.L("Drug to check — optional", "دارو برای بررسی — اختیاری"), 5)
+
+        def run():
+            r = rd.cockcroft_gault(e_age.get(), e_w.get(), e_scr.get(),
+                                   "m" if c_sex.current() == 0 else "f", e_h.get() or None)
+            box.delete("1.0", "end")
+            if not r.get("ok"):
+                box.insert("1.0", r.get("message_fa", ""))
+                return
+            box.insert("1.0", self.L("Creatinine clearance (Cockcroft-Gault): ", "کلیرانس کراتینین (کاککرافت-گالت): ")
+                       + str(r["crcl"]) + " mL/min\n"
+                       + r.get("band", "") + "\n")
+            if r.get("crcl_adjusted") is not None:
+                box.insert("end", self.L("Adjusted weight used (obesity): ", "وزن اصلاح‌شده استفاده شد (چاقی): ")
+                           + str(r.get("weight_adjusted")) + " kg\n")
+            if e_drug.get().strip():
+                d = rd.drug_check(e_drug.get(), r["crcl"])
+                box.insert("end", "\n" + (d.get("drug", "") + ": " if d.get("known") else "") + d.get("message_fa", ""))
+            box.insert("end", "\n\n" + self.L("Dose changes are decided by the doctor/pharmacist.",
+                                                "تغییر دوز نهایی را پزشک/داروساز تعیین می‌کند."))
+
+        tk.Button(f, text=self.L("Calculate", "محاسبه"), command=run,
+                  bg="#0077b6", fg="#021018", font=pick_font(10, True), relief="flat").grid(row=6, column=0, columnspan=2, pady=8, ipadx=14)
+        box.insert("1.0", self.L("Creatinine is in the lab report (normal roughly 0.7-1.3).",
+                                 "کراتینین در جواب آزمایش است (طبیعی تقریباً ۰٫۷ تا ۱٫۳)."))
+
+    def _panel_sidefx(self):
+        import side_effect_checker as se
+        w = self._win(self.L("Is it a side effect of my drug?", "عارضه داروی من هست؟"))
+        f = tk.Frame(w, bg=C["panel2"])
+        f.pack(fill="x", padx=16, pady=10)
+        tk.Label(f, text=self.L("Medication", "دارو"), bg=C["panel2"], fg=C["tx"], font=pick_font(10)).grid(row=0, column=0, padx=8, pady=4, sticky="e")
+        e_drug = tk.Entry(f, bg="#0a1424", fg=C["tx"], relief="flat", width=30, justify="right", insertbackground=C["cy"])
+        e_drug.grid(row=0, column=1, padx=8, ipady=3)
+        tk.Label(f, text=self.L("New symptom", "علامت جدید"), bg=C["panel2"], fg=C["tx"], font=pick_font(10)).grid(row=1, column=0, padx=8, pady=4, sticky="e")
+        e_sym = tk.Entry(f, bg="#0a1424", fg=C["tx"], relief="flat", width=30, justify="right", insertbackground=C["cy"])
+        e_sym.grid(row=1, column=1, padx=8, ipady=3)
+        box = self._result_box(w)
+        box.configure(height=10)
+
+        def run():
+            r = se.check(e_drug.get().strip(), e_sym.get().strip())
+            box.delete("1.0", "end")
+            if not r.get("ok"):
+                box.insert("1.0", r.get("message_fa", ""))
+                return
+            lines = [r.get("message_fa", "")]
+            if r.get("symptom") is None and r.get("common_fa"):
+                lines.append(self.L("Common adverse reactions: ", "عوارض شایع: ") + str(r["common_fa"]))
+            for sn in (r.get("adv_snippets") or [])[:2]:
+                lines.append("- " + sn)
+            lines.append("\n" + self.L("Source: FDA drug label bank (offline).",
+                                        "منبع: بانک برچسب دارویی FDA (آفلاین)."))
+            box.insert("1.0", "\n".join(lines))
+
+        tk.Button(f, text=self.L("Check", "بررسی"), command=run,
+                  bg="#0077b6", fg="#021018", font=pick_font(10, True), relief="flat").grid(row=2, column=0, columnspan=2, pady=8, ipadx=16)
+        box.insert("1.0", self.L("Example: metformin + diarrhea — checks the FDA label of 14,259 drugs.",
+                                 "مثال: متفورمین + اسهال — برچسب FDA چهارده هزار دارو بررسی می‌شود."))
+
+    def _panel_vaccine(self):
+        import vaccine_schedule as vs
+        w, top, inner, bottom = self._win_list(self.L("Child vaccination (Iran program)", "واکسیناسیون کودک (برنامه ایران)"))
+        box = scrolledtext.ScrolledText(bottom, bg="#070d18", fg=C["tx"], font=pick_font(10),
+                                        height=8, relief="flat", wrap="word")
+        box.pack(fill="both", expand=True, padx=16, pady=(4, 8))
+        f = tk.Frame(inner, bg=C["panel2"])
+        f.pack(fill="x", padx=10, pady=8)
+        tk.Label(f, text=self.L("Birth date (YYYY-MM-DD)", "تاریخ تولد (YYYY-MM-DD)"), bg=C["panel2"], fg=C["tx"], font=pick_font(10)).pack(side="right", padx=8)
+        e_b = tk.Entry(f, bg="#0a1424", fg=C["tx"], relief="flat", width=14, justify="right", insertbackground=C["cy"])
+        e_b.pack(side="right", padx=8, ipady=3)
+
+        def run():
+            r = vs.for_child(e_b.get())
+            box.delete("1.0", "end")
+            if not r.get("ok"):
+                box.insert("1.0", r.get("message_fa", ""))
+                return
+            box.insert("1.0", self.L("Age: ", "سن: ") + r.get("age_fa", "") + "\n" + "=" * 46 + "\n")
+            marks = {"past": self.L("o passed", "گذشته"), "due": self.L("! due now", "! الان موعدش است"),
+                     "due_soon": self.L("~ due soon", "~ نزدیک است"), "upcoming": self.L("- upcoming", "- در آینده")}
+            for v in r["visits"]:
+                mark = marks.get(v["status"], "")
+                box.insert("end", v["label"] + "  [" + mark + "]\n")
+                box.insert("end", "   " + "، ".join(v["vaccines"][:5]) + "\n\n")
+            if r.get("next"):
+                box.insert("end", "=" * 46 + "\n" + self.L("Next visit: ", "نوبت بعدی: ") + r["next"]["label"] + "\n")
+            box.insert("end", "\n" + r.get("catchup_fa", ""))
+
+        tk.Button(f, text=self.L("Show schedule", "نمایش برنامه"), command=run,
+                  bg="#0077b6", fg="#021018", font=pick_font(10, True), relief="flat").pack(side="right", pady=4, ipadx=10)
+        box.insert("1.0", self.L("The child's vaccination card and the health center are the final authority.",
+                                 "کارت واکسیناسیون کودک و مرکز بهداشت، مرجع نهایی هستند."))
+
+    def _panel_ice(self):
+        import emergency_card as ec
+        import webbrowser
+        w = self._win(self.L("Emergency card (ICE)", "کارت اضطراری (ICE)"))
+        ice = ec.load_ice()
+        f = tk.Frame(w, bg=C["panel2"])
+        f.pack(fill="x", padx=16, pady=10)
+        e_blood = None
+        e_contact = None
+        e_phone = None
+        fields = [(self.L("Blood type", "گروه خونی"), ice.get("blood_type", ""), 0, ec.BLOOD_TYPES),
+                  (self.L("Emergency contact name", "نام تماس اضطراری"), ice.get("contact_name", ""), 1, None),
+                  (self.L("Emergency contact phone", "شماره تماس اضطراری"), ice.get("contact_phone", ""), 2, None)]
+        entries = {}
+        for label, val, r_i, combo in fields:
+            tk.Label(f, text=label, bg=C["panel2"], fg=C["tx"], font=pick_font(10)).grid(row=r_i, column=0, padx=8, pady=4, sticky="e")
+            if combo:
+                e = ttk.Combobox(f, values=combo, width=16, font=pick_font(10))
+                e.set(val or "")
+            else:
+                e = tk.Entry(f, bg="#0a1424", fg=C["tx"], relief="flat", width=28, justify="right", insertbackground=C["cy"])
+                e.insert(0, val)
+            e.grid(row=r_i, column=1, padx=8, ipady=3)
+            entries[r_i] = e
+        box = self._result_box(w)
+        box.configure(height=9)
+
+        def do_save():
+            ec.save_ice({"blood_type": entries[0].get(), "contact_name": entries[1].get(), "contact_phone": entries[2].get()})
+            box.delete("1.0", "end")
+            box.insert("1.0", ec.card_text())
+
+        def do_card():
+            r = ec.save_card()
+            box.delete("1.0", "end")
+            box.insert("1.0", r.get("message_fa", ""))
+            if r.get("ok"):
+                webbrowser.open("file://" + r["path"])
+
+        tk.Button(f, text=self.L("Save", "ذخیره"), command=do_save,
+                  bg="#0d5a4a", fg="#c8ffe9", font=pick_font(10, True), relief="flat").grid(row=3, column=0, pady=8, ipadx=12)
+        tk.Button(f, text=self.L("Make printable card + QR", "ساخت کارت قابل چاپ + QR"), command=do_card,
+                  bg="#0077b6", fg="#021018", font=pick_font(10, True), relief="flat").grid(row=3, column=1, pady=8, ipadx=12)
+        from patient_profile import load_profile
+        p = load_profile()
+        box.insert("1.0", self.L("Name, allergies, conditions and medications come from the patient profile; blood type and contact are saved here.",
+                                 "نام، حساسیت‌ها، بیماری‌ها و داروها از پروفایل بیمار می‌آیند؛ گروه خونی و تماس اینجا ذخیره می‌شوند.")
+                   + ("\n" + self.L("Profile is empty — fill it first for a complete card.", "پروفایل خالی است — اول آن را کامل کن.") if not p.get("name") else ""))
+
+    def _panel_import(self):
+        import health_import as hi
+        w, top, inner, bottom = self._win_list(self.L("Import smartwatch / app data", "ورود داده ساعت هوشمند / اپ"))
+        box = scrolledtext.ScrolledText(bottom, bg="#070d18", fg=C["tx"], font=pick_font(10),
+                                        height=8, relief="flat", wrap="word")
+        box.pack(fill="both", expand=True, padx=16, pady=(4, 8))
+        self._csv_path = ""
+
+        def pick():
+            pth = filedialog.askopenfilename(title=self.L("Choose CSV export", "انتخاب فایل CSV"),
+                                             filetypes=[("CSV", "*.csv"), (self.L("All", "همه"), "*.*")])
+            if pth:
+                self._csv_path = pth
+                r = hi.import_file(pth)
+                box.delete("1.0", "end")
+                box.insert("1.0", (pth + "\n\n" if r.get("ok") else "") + r.get("message_fa", ""))
+                if r.get("ok"):
+                    box.insert("end", "\n" + self.L("Detected metrics: ", "متریک‌های شناسایی‌شده: ")
+                               + ", ".join(r.get("detected_metrics", []))
+                               + "\n" + self.L("Rows: ", "تعداد ردیف: ") + str(r.get("total_rows", 0))
+                               + "\n\n" + self.L("Press Import to add them to the vitals history.",
+                                                   "دکمه‌ی ورود را بزن تا به تاریخچه‌ی علائم حیاتی اضافه شوند."))
+
+        def do_import():
+            if not self._csv_path:
+                box.insert("1.0", self.L("First choose a CSV file.", "اول یک فایل CSV انتخاب کن."))
+                return
+            r = hi.import_file(self._csv_path, do_commit=True)
+            box.delete("1.0", "end")
+            box.insert("1.0", r.get("message_fa", ""))
+
+        tk.Button(top, text=self.L("Choose CSV file", "انتخاب فایل CSV"), command=pick,
+                  bg="#0077b6", fg="#021018", font=pick_font(10, True), relief="flat").pack(pady=8, ipadx=10)
+        tk.Button(top, text=self.L("Import into history", "ورود به تاریخچه"), command=do_import,
+                  bg="#0d5a4a", fg="#c8ffe9", font=pick_font(10, True), relief="flat").pack(pady=8, ipadx=10)
+        box.insert("1.0", self.L("Works with CSV exports of Google Fit, Apple Health apps, blood-pressure meters and glucose meters.",
+                                 "با خروجی CSV گوگل‌فیت، اپ‌های سلامت، فشارسنج‌ها و قندسنج‌ها کار می‌کند.")
+                   + "\n" + self.L("Columns are auto-detected: date, systolic, diastolic, heart rate, glucose, weight, spo2, temperature, steps.",
+                                   "ستون‌ها خودکار شناسایی می‌شوند: تاریخ، فشار بالا/پایین، ضربان، قند، وزن، اکسیژن، دما، قدم."))
+
+    def _panel_vault(self):
+        import secure_store as ss
+        w = self._win(self.L("Health data vault (encryption)", "قفل داده‌های سلامت (رمزنگاری)"))
+        f = tk.Frame(w, bg=C["panel2"])
+        f.pack(fill="x", padx=16, pady=10)
+        st = ss.status()
+        lbl = tk.Label(w, text=st.get("message_fa", ""), bg=C["panel2"], fg=(C["gr"] if not st.get("locked") else C["yl"]),
+                       font=pick_font(11, True), anchor="e")
+        lbl.pack(fill="x", padx=16)
+        tk.Label(f, text=self.L("Password", "رمز"), bg=C["panel2"], fg=C["tx"], font=pick_font(10)).grid(row=0, column=0, padx=8, pady=4, sticky="e")
+        e_pw = tk.Entry(f, bg="#0a1424", fg=C["tx"], relief="flat", width=24, justify="right", show="*", insertbackground=C["cy"])
+        e_pw.grid(row=0, column=1, padx=8, ipady=3)
+        box = self._result_box(w)
+        box.configure(height=8)
+
+        def refresh():
+            s2 = ss.status()
+            lbl.config(text=s2.get("message_fa", ""), fg=(C["gr"] if not s2.get("locked") else C["yl"]))
+
+        def do_lock():
+            r = ss.lock(e_pw.get())
+            box.delete("1.0", "end")
+            box.insert("1.0", r.get("message_fa", ""))
+            refresh()
+
+        def do_unlock():
+            r = ss.unlock(e_pw.get())
+            box.delete("1.0", "end")
+            box.insert("1.0", r.get("message_fa", ""))
+            refresh()
+
+        tk.Button(f, text=self.L("Lock", "قفل کن"), command=do_lock,
+                  bg="#7a1836", fg="#ffd6e2", font=pick_font(10, True), relief="flat").grid(row=1, column=0, pady=8, ipadx=14)
+        tk.Button(f, text=self.L("Unlock", "باز کن"), command=do_unlock,
+                  bg="#0d5a4a", fg="#c8ffe9", font=pick_font(10, True), relief="flat").grid(row=1, column=1, pady=8, ipadx=14)
+        box.insert("1.0", self.L("Locking encrypts profile, vitals history, reminders, diary and chat history with ChaCha20. "
+                                 "If you forget the password there is NO recovery.",
+                                 "قفل کردن، پروفایل، تاریخچه علائم حیاتی، یادآورها، دفترچه علائم و تاریخچه گفتگو را با ChaCha20 رمزنگاری می‌کند. "
+                                 "اگر رمز را فراموش کنی هیچ راه بازیابی وجود ندارد."))
 
     def _panel_referral(self):
         from doctor_referral import generate
@@ -2422,6 +2833,48 @@ class App:
                        activeforeground=C["cy"], font=pick_font(10), anchor="e", justify="right").pack(fill="x", padx=16)
         box = self._result_box(w)
         box.insert("1.0", self.L("Tip: get a free OpenRouter key at openrouter.ai/keys and paste it here.", "راهنما: کلید رایگان OpenRouter را از openrouter.ai/keys بگیر و همین‌جا وارد کن."))
+
+        def check_update():
+            box.delete("1.0", "end")
+            box.insert("1.0", self.L("Checking GitHub...", "در حال بررسی گیت‌هاب..."))
+
+            def work():
+                from updater import check_latest, download_and_run
+                r = check_latest()
+
+                def apply():
+                    if not box.winfo_exists():
+                        return
+                    box.delete("1.0", "end")
+                    if not r.get("ok"):
+                        box.insert("1.0", r.get("message_fa", ""))
+                        return
+                    if not r.get("newer"):
+                        box.insert("1.0", self.L("You are on the latest version: ", "آخرین نسخه را داری: ") + str(r.get("latest")))
+                        return
+                    if messagebox.askyesno(APP_NAME, self.L(
+                            f"A new version ({r.get('latest')}) is available. Download and run the installer now?",
+                            f"نسخه‌ی جدید ({r.get('latest')}) موجود است. الان دانلود و اجرا شود؟")):
+                        box.insert("1.0", self.L("Downloading...", "در حال دانلود..."))
+
+                        def dl():
+                            d = download_and_run(r.get("download_url") or "")
+                            def apply2():
+                                if box.winfo_exists():
+                                    box.delete("1.0", "end")
+                                    box.insert("1.0", d.get("message_fa", ""))
+                            self._ui(apply2)
+                        import threading
+                        threading.Thread(target=dl, daemon=True).start()
+                    else:
+                        box.insert("1.0", self.L("Update skipped. ", "به‌روزرسانی رد شد.") + str(r.get("release_url", "")))
+                self._ui(apply)
+            import threading
+            threading.Thread(target=work, daemon=True).start()
+
+        ub = tk.Button(w, text=self.L("Check for updates", "بررسی به‌روزرسانی"), command=check_update,
+                       bg="#0d1930", fg=C["yl"], font=pick_font(10, True), relief="flat")
+        ub.pack(pady=4, ipadx=10)
 
         def save():
             for provider, e in keys.items():

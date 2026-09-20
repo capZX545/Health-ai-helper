@@ -28,7 +28,8 @@ _EMOJI = re.compile("[\u2600-\u27BF\U0001F000-\U0001FAFF\uFE0F]")
 
 PERSONAL_FILES = ["learned_knowledge.json", "ai_behavior_profile.json", "patient_profile.json",
                   "vitals_history.json", "app_settings.json", ".reasoning_state.json",
-                  "referral_report.html", "lab_report.html", "reminders.json"]
+                  "referral_report.html", "lab_report.html", "reminders.json",
+                  "ice_card.json", "health_vault.nmv", "med_reminders.json", "symptom_diary.json"]
 
 
 def clean():
@@ -778,6 +779,195 @@ def t_misc_infra():
     return "ports/build_exe/dataset/db"
 
 
+
+def t_risk_scores():
+    from i18n import set_override
+    import risk_scores as rs
+    set_override("fa")
+    r = rs.framingham(50, "m", 200, 45, 130, True)
+    expect(r["ok"] and r["points"] == 14 and r["risk_percent"] == 16, r)
+    r = rs.framingham(60, "f", 250, 55, 150, False, bp_treated=True)
+    expect(r["ok"] and r["points"] == 18 and r["risk_percent"] == 6, r)
+    r = rs.framingham(30, "f", 210, 35, 125, True)
+    expect(r["ok"] and r["points"] == 13 and r["risk_percent"] == 2, r)
+    r = rs.framingham(10, "m", 200, 45, 130, True)
+    expect(not r["ok"])
+    r = rs.findrisc(50, 32, 105, "m", activity_daily=False, veggies_daily=False,
+                    bp_medication=True, high_glucose=True, family_history=2)
+    expect(r["ok"] and r["score"] == 24 and r["category"] == "very high", r)
+    r = rs.findrisc(30, 22, 75, "f")
+    expect(r["ok"] and r["score"] == 0 and r["risk_percent"] == 1, r)
+    r = rs.findrisc(58, 31, 90, "f", activity_daily=False)
+    expect(r["ok"] and r["score"] == 12, r)
+    set_override("en")
+    r = rs.findrisc(45, 27, 96, "m", family_history=1)
+    expect(r["ok"] and r["score"] == 9 and "slightly elevated" in r["category_fa"], r)
+    set_override(None)
+    return "framingham + findrisc vectors"
+
+
+def t_renal_dosing():
+    from i18n import set_override
+    set_override("fa")
+    import renal_dosing as rd
+    c = rd.cockcroft_gault(70, 70, 1.0, "m")
+    expect(c["ok"] and abs(c["crcl"] - 68.1) < 0.15, c)
+    c = rd.cockcroft_gault(70, 70, 1.0, "f")
+    expect(c["ok"] and abs(c["crcl"] - 57.9) < 0.2, c)
+    c = rd.cockcroft_gault(60, 120, 1.2, "m", height_cm=175)
+    expect(c["ok"] and "crcl_adjusted" in c and c["crcl"] < 90 and c["weight_mode"] == "adjusted", c)
+    c = rd.cockcroft_gault(70, 70, 2.5, "m")
+    expect(c["ok"] and c["crcl"] < 30, c)
+    d = rd.drug_check("metformin", 25)
+    expect(d["known"] and d["level"] == "red", d)
+    d = rd.drug_check("metformin", 75)
+    expect(d["known"] and d["level"] == "green", d)
+    d = rd.drug_check("ژلوفن", 25)
+    expect(d["known"] and "پرهیز" in d["message_fa"], d)
+    d = rd.drug_check("unknownxyz", 50)
+    expect(not d["known"], d)
+    expect(abs(rd.ibw_kg("m", 175) - 72.6) < 0.2)
+    set_override(None)
+    return "cockcroft-gault + 30 drug rules"
+
+
+def t_side_effect_checker():
+    from i18n import set_override
+    set_override("fa")
+    import side_effect_checker as se
+    r = se.check("lisinopril", "سرفه")
+    expect(r["ok"] and r["found"], r)
+    r = se.check("metformin", "diarrhea")
+    expect(r["ok"] and r["found"] and r["adv_snippets"], r)
+    r = se.check("sertraline", "suicidal thoughts")
+    expect(r["ok"] and r["found"], r)
+    r = se.check("metformin", "خارش")
+    expect(r["ok"] and not r["found"], r)
+    r = se.check("atorvastatin", "")
+    expect(r["ok"] and r["common_fa"], r)
+    m = se.check_message("من متفورمین مصرف می‌کنم و اسهال دارم")
+    expect(m and "متفورمین" in m, m)
+    m = se.check_message("I take sertraline and I have nausea")
+    expect(m and "sertraline" in m.lower(), m)
+    expect(se.check_message("سردرد دارم") is None)
+    set_override(None)
+    return "fda label matching fa+en"
+
+
+def t_vaccine_schedule():
+    from i18n import set_override
+    set_override("fa")
+    import vaccine_schedule as vs
+    r = vs.for_child("2025-11-15")
+    expect(r["ok"] and r["visits"][0]["status"] == "past" and r["next"]["age_months"] == 12, r)
+    r = vs.for_child("2026-07-01")
+    expect(r["ok"] and r["next"]["age_months"] == 2 and r["next"]["status"] == "due", r)
+    r = vs.for_child("2024-05-10")
+    expect(r["ok"] and [v["status"] for v in r["visits"]].count("past") >= 5, r)
+    expect(not vs.for_child("bad")["ok"])
+    expect(not vs.for_child("2099-01-01")["ok"])
+    set_override("en")
+    r = vs.for_child("2026-01-01")
+    expect(r["ok"] and all(v["vaccines_en"] for v in r["visits"]), r)
+    set_override(None)
+    return "iran epi 7 visits"
+
+
+def t_emergency_card():
+    from i18n import set_override
+    set_override("fa")
+    import emergency_card as ec
+    ec.save_ice({"blood_type": "O+", "contact_name": "Ali", "contact_phone": "0912"})
+    txt = ec.card_text()
+    expect("O+" in txt and "0912" in txt, txt)
+    svg = ec.qr_svg(txt)
+    expect(svg and svg.startswith("<?xml") and "<svg" in svg)
+    html = ec.build_html("fa")
+    expect("کارت اضطراری" in html and "<svg" in html)
+    html_en = ec.build_html("en")
+    expect("Medical Emergency Card" in html_en and "کارت اضطراری" not in html_en)
+    r = ec.save_card()
+    expect(r["ok"] and os.path.exists(r["path"]), r)
+    os.remove(r["path"])
+    set_override(None)
+    return "ice card + qr svg"
+
+
+def t_health_import():
+    from i18n import set_override
+    set_override("fa")
+    import health_import as hi
+    csv1 = "date,systolic,diastolic,heart rate,glucose,weight\n2026-09-01 08:00,125,82,72,98,80.2\n2026-09-02 08:00,130,85,75,101,80.0\n"
+    pv = hi.preview(csv1)
+    expect(pv["ok"] and pv["total_rows"] == 2 and "glucose" in pv["detected_metrics"], pv)
+    pv = hi.preview("تاریخ,فشار بالا,فشار پایین,ضربان\n2026/09/03,135,88,78\n")
+    expect(pv["ok"] and "systolic_bp" in pv["detected_metrics"], pv)
+    pv = hi.preview("date;glucose;weight\n2026-09-04;99;79.5\n")
+    expect(pv["ok"] and pv["total_rows"] == 1, pv)
+    expect(not hi.preview("foo,bar\n1,2\n")["ok"])
+    backup = None
+    if os.path.exists("vitals_history.json"):
+        backup = open("vitals_history.json", encoding="utf-8").read()
+    r = hi.commit(csv1)
+    expect(r["ok"] and r["added"] == 2, r)
+    if backup is not None:
+        with open("vitals_history.json", "w", encoding="utf-8") as f:
+            f.write(backup)
+    set_override(None)
+    return "csv autodetect fa/en + commit"
+
+
+def t_secure_store():
+    import tempfile
+    import secure_store as ss
+    key = bytes(range(32))
+    ks = ss.chacha20_block(key, bytes.fromhex("000000090000004a00000000"), 1)
+    expect(ks == bytes.fromhex("10f1e7e4d13b5915500fdd1fa32071c4c7d1f4c733c068030422aa9ac3d46c4ed2826446079faa0914c2d705d98b02a2b5129cd1de164eb9cbd083e8a2503c4e"), ks.hex())
+    plain = b"Ladies and Gentlemen of the class of '99: If I could offer you only one tip for the future, sunscreen would be it."
+    ct = ss.chacha20_xor(key, bytes.fromhex("000000000000004a00000000"), plain)
+    expect(ct == bytes.fromhex("6e2e359a2568f98041ba0728dd0d6981e97e7aec1d4360c20a27afccfd9fae0bf91b65c5524733ab8f593dabcd62b3571639d624e65152ab8f530c359f0861d807ca0dbf500d6a6156a38e088a22b65e52bc514d16ccf806818ce91ab77937365af90bbf74a35be6b40b8eedf2785e42874d"), ct.hex())
+    expect(ss.chacha20_xor(key, bytes.fromhex("000000000000004a00000000"), ct) == plain)
+    tmp = tempfile.mkdtemp()
+    p1 = os.path.join(tmp, "patient_profile.json")
+    with open(p1, "w", encoding="utf-8") as f:
+        f.write('{"name": "تست"}')
+    vp = os.path.join(tmp, "vault.nmv")
+    r = ss.lock("pw1234", paths=[p1], vault_path=vp)
+    expect(r["ok"] and r["locked_files"] == 1 and not os.path.exists(p1), r)
+    r = ss.unlock("WRONG", vault_path=vp, out_dir=tmp)
+    expect(not r["ok"], r)
+    r = ss.unlock("pw1234", vault_path=vp, out_dir=tmp)
+    expect(r["ok"] and r["restored"] == 1 and os.path.exists(p1), r)
+    blob = ss.encrypt_bytes("k", os.urandom(200))
+    expect(blob.startswith(ss.MAGIC))
+    try:
+        ss.decrypt_bytes("k2", blob)
+        expect(False, "bad password accepted")
+    except ValueError:
+        pass
+    return "rfc8439 vectors + vault roundtrip"
+
+
+def t_updater():
+    import updater as up
+    expect(up._ver_tuple("8.0.0") > up._ver_tuple("7.9.9"))
+    expect(up._ver_tuple("7.0.0") < up._ver_tuple("10.0.0"))
+    expect(up._ver_tuple("v8.0.1") == (8, 0, 1))
+    r = up.check_latest(timeout=8)
+    expect(isinstance(r, dict) and ("offline" in r or "latest" in r), r)
+    return "version compare + github check"
+
+
+def t_voice_io():
+    import voice_io as vo
+    expect(vo._clean_for_speech("**bold** http://x.com text") == "bold text")
+    expect(vo.has_persian("سلام") and not vo.has_persian("hello"))
+    expect(isinstance(vo.tts_available(), bool))
+    r = vo.speak("", wait=True)
+    expect(not r["ok"])
+    return "tts/stt platform probes"
+
+
 def main():
     clean()
     t0 = time.time()
@@ -813,6 +1003,15 @@ def main():
     run_module("builders/ui/run scripts", t_builders)
     run_module("clinic_2077.html i18n+routes", t_html_i18n)
     run_module("ui_2077 structure", t_ui_structure)
+    run_module("risk_scores (framingham+findrisc)", t_risk_scores)
+    run_module("renal_dosing (cockcroft-gault)", t_renal_dosing)
+    run_module("side_effect_checker (FDA labels)", t_side_effect_checker)
+    run_module("vaccine_schedule (Iran EPI)", t_vaccine_schedule)
+    run_module("emergency_card (ICE + QR)", t_emergency_card)
+    run_module("health_import (CSV)", t_health_import)
+    run_module("secure_store (ChaCha20 vault)", t_secure_store)
+    run_module("updater (github)", t_updater)
+    run_module("voice_io (tts/stt)", t_voice_io)
     run_module("infrastructure (ports/builders)", t_misc_infra)
     clean()
     total = len(RESULTS)

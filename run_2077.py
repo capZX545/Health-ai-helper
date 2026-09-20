@@ -52,6 +52,24 @@ import ecg_analyzer
 import openfda_connector
 import clinical_trials_connector
 import who_connector
+import intent_router
+import knowledge_answer
+import medical_qa
+import lab_answer
+import med_reminder_service
+import vitals_chart
+import pdf_export
+import multi_profile
+import local_lm_connector
+import risk_scores
+import renal_dosing
+import side_effect_checker
+import vaccine_schedule
+import emergency_card
+import voice_io
+import health_import
+import secure_store
+import updater
 
 
 def main() -> int:

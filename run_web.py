@@ -154,6 +154,46 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/localllm":
                 from local_llm import get_config
                 return self._json({"ok": True, "config": get_config()})
+            if path == "/api/lmstudio":
+                import local_lm_connector as lmc
+                return self._json({"ok": True, "enabled": lmc.is_enabled(), "config": lmc.get_config()})
+            if path == "/api/update/check":
+                from updater import check_latest
+                return self._json(check_latest())
+            if path == "/api/charts":
+                from i18n import is_fa
+                from vitals_chart import all_charts
+                return self._json({"ok": True, "svgs": all_charts(60, is_fa())})
+            if path == "/api/profiles":
+                import multi_profile as mp
+                return self._json({"ok": True, "profiles": mp.list_profiles(), "active": mp.get_active()})
+            if path == "/api/vault":
+                import secure_store as ss
+                return self._json(ss.status())
+            if path == "/api/vaccines":
+                from urllib.parse import parse_qs
+                from vaccine_schedule import for_child
+                qs = parse_qs(urlparse(self.path).query)
+                birth = (qs.get("birth") or [""])[0]
+                return self._json(for_child(birth))
+            if path.startswith("/api/ice"):
+                import emergency_card as ec
+                if path == "/api/ice":
+                    return self._json({"ok": True, "ice": ec.load_ice(), "card": ec.card_text()})
+                if path == "/api/ice/qr":
+                    svg = ec.qr_svg(ec.card_text())
+                    if not svg:
+                        return self._json({"ok": False, "message_fa": "QR library not available."}, 503)
+                    body = svg.encode("utf-8")
+                    self.send_response(200)
+                    self.send_header("Content-Type", "image/svg+xml")
+                    self.send_header("Content-Length", str(len(body)))
+                    self.send_header("Access-Control-Allow-Origin", "*")
+                    self.end_headers()
+                    self.wfile.write(body)
+                    return
+                if path == "/api/ice/card":
+                    return self._html(ec.build_html())
             if path == "/api/who/profile":
                 from who_connector import get_country_profile
                 country = "IRN"
@@ -985,6 +1025,79 @@ Answer in Farsi. Be specific about medications (name them) but always note presc
             if path == "/api/dialogue/reset":
                 get_engine().dialogue.reset()
                 return self._json({"ok": True})
+            if path == "/api/risk":
+                import risk_scores as rsk
+                kind = str(data.get("type") or "framingham")
+                if kind == "findrisc":
+                    return self._json(rsk.findrisc(
+                        data.get("age"), data.get("bmi"), data.get("waist"), data.get("sex"),
+                        activity_daily=bool(data.get("activity_daily", True)),
+                        veggies_daily=bool(data.get("veggies_daily", True)),
+                        bp_medication=bool(data.get("bp_medication")),
+                        high_glucose=bool(data.get("high_glucose")),
+                        family_history=int(data.get("family_history") or 0)))
+                return self._json(rsk.framingham(
+                    data.get("age"), data.get("sex"), data.get("total_cholesterol"),
+                    data.get("hdl"), data.get("systolic_bp"), bool(data.get("smoker")),
+                    bp_treated=bool(data.get("bp_treated")), diabetes=bool(data.get("diabetes"))))
+            if path == "/api/renal":
+                import renal_dosing as rd
+                r = rd.cockcroft_gault(data.get("age"), data.get("weight"), data.get("creatinine"),
+                                       data.get("sex"), data.get("height") or None)
+                if r.get("ok") and str(data.get("drug") or "").strip():
+                    r["drug_check"] = rd.drug_check(str(data.get("drug")), r["crcl"])
+                return self._json(r)
+            if path == "/api/sidefx":
+                from side_effect_checker import check
+                return self._json(check(str(data.get("drug") or ""), str(data.get("symptom") or "")))
+            if path == "/api/healthimport":
+                import health_import as hi
+                csv_text = str(data.get("csv") or "")
+                if not csv_text.strip():
+                    return self._json({"ok": False, "message_fa": "CSV content is empty."}, 400)
+                if data.get("action") == "commit":
+                    return self._json(hi.commit(csv_text))
+                return self._json(hi.preview(csv_text))
+            if path == "/api/profiles":
+                import multi_profile as mp
+                action = str(data.get("action") or "list")
+                if action == "create":
+                    return self._json(mp.create_profile(str(data.get("name") or ""), str(data.get("age") or ""),
+                                                        str(data.get("gender") or "")))
+                if action == "switch":
+                    r = mp.switch_profile(str(data.get("id") or ""))
+                    get_engine().dialogue.reset()
+                    return self._json(r)
+                if action == "delete":
+                    return self._json(mp.delete_profile(str(data.get("id") or "")))
+                return self._json({"ok": True, "profiles": mp.list_profiles(), "active": mp.get_active()})
+            if path == "/api/vault":
+                import secure_store as ss
+                action = str(data.get("action") or "status")
+                if action == "lock":
+                    return self._json(ss.lock(str(data.get("password") or "")))
+                if action == "unlock":
+                    return self._json(ss.unlock(str(data.get("password") or "")))
+                return self._json(ss.status())
+            if path == "/api/ice":
+                import emergency_card as ec
+                return self._json(ec.save_ice(data))
+            if path == "/api/lmstudio":
+                import local_lm_connector as lmc
+                action = str(data.get("action") or "status")
+                if action == "toggle":
+                    lmc.set_enabled(bool(data.get("enabled")))
+                    return self._json({"ok": True, "enabled": lmc.is_enabled()})
+                if action == "config":
+                    lmc.set_config(str(data.get("base_url") or "http://localhost:1234"),
+                                   str(data.get("model") or ""))
+                    return self._json({"ok": True, "config": lmc.get_config()})
+                if action == "test":
+                    return self._json(lmc.test_connection())
+                return self._json({"ok": True, "enabled": lmc.is_enabled(), "config": lmc.get_config()})
+            if path == "/api/update/download":
+                from updater import download_and_run
+                return self._json(download_and_run(str(data.get("url") or "")))
             return self._json({"ok": False, "message_fa": "مسیر یافت نشد"}, 404)
         except Exception as e:
             return self._json({"ok": False, "message_fa": "خطای سرور: "+ str(e)[:150]}, 500)

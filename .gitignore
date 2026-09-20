@@ -54,3 +54,12 @@ node_modules/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# v8 personal data
+profiles/
+med_reminders.json
+symptom_diary.json
+ice_card.json
+health_vault.nmv
+conversation_history.json
+VERSION_STAMP.txt
