@@ -105,6 +105,7 @@ class App:
         self._refresh_status()
         self._hello()
         self.root.after(6000, self._startup_update_check)
+        self.root.after(1600, self._maybe_onboard)
 
     def _startup_update_check(self):
         def work():
@@ -2150,6 +2151,25 @@ class App:
         tk.Label(top, text=_L("All offline — data stays on your machine", "همه آفلاین — اطلاعات فقط روی سیستم خودت می‌ماند"),
                  bg=C["panel2"], fg=C["dim"], font=pick_font(8), anchor="e").pack(fill="x", padx=16, pady=(8, 4))
 
+        def export_ics():
+            import calendar_export as cx
+            import tempfile, os, webbrowser
+            st = cx.stats()
+            if not st.get("reminders"):
+                messagebox.showinfo(APP_NAME, st.get("message_fa", ""))
+                return
+            path = os.path.join(tempfile.gettempdir(), "nexusmed_reminders.ics")
+            try:
+                with open(path, "w", encoding="utf-8") as f:
+                    f.write(cx.build_ics())
+                webbrowser.open("file://" + path)
+                messagebox.showinfo(APP_NAME, st.get("message_fa", "") + "\n" + _L("Calendar file created — import it into Google/Apple Calendar.", "فایل تقویم ساخته شد — در گوگل/اپل کلندر ایمپورت کن."))
+            except Exception as e:
+                messagebox.showerror(APP_NAME, str(e))
+
+        tk.Button(top, text=_L("Export reminders to calendar (.ics)", "خروجی یادآورها به تقویم (.ics)"),
+                  command=export_ics, bg="#0d5a4a", fg="#c8ffe9", font=pick_font(9, True), relief="flat").pack(pady=4, ipadx=8)
+
         box = scrolledtext.ScrolledText(bottom, bg="#070d18", fg=C["tx"], font=pick_font(10), height=10, relief="flat", wrap="word")
         box.pack(fill="both", expand=True, padx=16, pady=(4, 8))
 
@@ -2671,6 +2691,91 @@ class App:
                   command=make, bg="#0077b6", fg="#021018", font=pick_font(11, True), relief="flat").pack(pady=10, ipadx=10)
         box.insert("1.0", self.L("One printable HTML file with everything a doctor needs, including your trend charts.",
                                  "یک فایل HTML قابل چاپ با همه‌چیزی که پزشک لازم دارد، از جمله نمودارهای روند تو."))
+
+    def _maybe_onboard(self):
+        if getattr(self, "_onboard_done", False):
+            return
+        try:
+            from patient_profile import load_profile
+            if (load_profile().get("name") or "").strip():
+                return
+        except Exception:
+            return
+        self._onboard_done = True
+        self._panel_onboarding()
+
+    def _panel_onboarding(self):
+        from patient_profile import save_profile
+        w = self._win(self.L("Welcome to NexusMed 2077", "به NexusMed 2077 خوش آمدی"))
+        step = {"n": 1}
+        body = tk.Frame(w, bg=C["panel2"])
+        body.pack(fill="both", expand=True, padx=12, pady=8)
+
+        def render():
+            for c in body.winfo_children():
+                c.destroy()
+            if step["n"] == 1:
+                tk.Label(body, text=self.L("Step 1 of 2 — about you", "مرحله‌ی ۱ از ۲ — درباره‌ی تو"),
+                         bg=C["panel2"], fg=C["cy"], font=pick_font(12, True), anchor="e").pack(fill="x", pady=(2, 8))
+                entries = {}
+                for key, lbl, wid in (("name", self.L("Name", "نام"), 26), ("age", self.L("Age", "سن"), 8),
+                                       ("gender", self.L("Gender (M/F)", "جنسیت (م/ز)"), 10),
+                                       ("height_cm", self.L("Height (cm)", "قد (سانتی‌متر)"), 10),
+                                       ("weight_kg", self.L("Weight (kg)", "وزن (کیلوگرم)"), 10)):
+                    row = tk.Frame(body, bg=C["panel2"])
+                    row.pack(fill="x", pady=3)
+                    tk.Label(row, text=lbl, bg=C["panel2"], fg=C["tx"], font=pick_font(10), width=18, anchor="e").pack(side="right")
+                    e = tk.Entry(row, bg="#0a1424", fg=C["tx"], relief="flat", width=wid, justify="right", insertbackground=C["cy"])
+                    e.pack(side="right", padx=6, ipady=3)
+                    entries[key] = e
+                tk.Label(body, text=self.L("This stays only on your machine.", "این اطلاعات فقط روی سیستم خودت می‌ماند."),
+                         bg=C["panel2"], fg=C["dim"], font=pick_font(8), anchor="e").pack(fill="x", pady=(6, 0))
+
+                def next_step():
+                    if not entries["name"].get().strip():
+                        return
+                    save_profile({k: e.get() for k, e in entries.items()})
+                    step["n"] = 2
+                    render()
+
+                tk.Button(body, text=self.L("Next", "بعدی"), command=next_step,
+                          bg="#0077b6", fg="#021018", font=pick_font(11, True), relief="flat").pack(pady=10, ipadx=18)
+            else:
+                tk.Label(body, text=self.L("Step 2 of 2 — medical background (optional)", "مرحله‌ی ۲ از ۲ — سوابق پزشکی (اختیاری)"),
+                         bg=C["panel2"], fg=C["yl"], font=pick_font(12, True), anchor="e").pack(fill="x", pady=(2, 8))
+                big = {}
+                for key, lbl, ph in (("conditions", self.L("Conditions (comma separated)", "بیماری‌ها (با کاما)"), self.L("e.g. diabetes, hypertension", "مثلاً دیابت، فشار خون")),
+                                     ("allergies", self.L("Allergies", "حساسیت‌ها"), self.L("e.g. penicillin", "مثلاً پنی‌سیلین")),
+                                     ("medications", self.L("Current medications", "داروهای فعلی"), self.L("e.g. metformin 500", "مثلاً متفورمین ۵۰۰"))):
+                    tk.Label(body, text=lbl, bg=C["panel2"], fg=C["tx"], font=pick_font(10), anchor="e").pack(fill="x")
+                    e = tk.Entry(body, bg="#0a1424", fg=C["tx"], relief="flat", font=pick_font(11), justify="right", insertbackground=C["cy"])
+                    e.insert(0, ph)
+                    e._ph = ph
+                    def _clear_ph(ev, ee=None):
+                        if ee.get() == getattr(ee, "_ph", ""):
+                            ee.delete(0, "end")
+                    e.bind("<FocusIn>", lambda ev, ee=e: _clear_ph(ev, ee))
+                    e.pack(fill="x", padx=6, ipady=3, pady=(0, 8))
+                    big[key] = e
+                tk.Label(body, text=self.L("Everything can be edited later in the Patient profile panel.", "همه‌چیز بعداً از پنل پروفایل بیمار قابل ویرایش است."),
+                         bg=C["panel2"], fg=C["dim"], font=pick_font(8), anchor="e").pack(fill="x")
+
+                def finish():
+                    data = {}
+                    for k, e in big.items():
+                        v = e.get().strip()
+                        if v and not v.startswith(("مثلاً", "e.g.")):
+                            data[k] = v
+                    if data:
+                        save_profile(data)
+                    w.destroy()
+                    self._bot(self.L("Profile saved. Now describe your symptoms in the chat, or explore the tools in the side panel.",
+                                     "پروفایل ذخیره شد. حالا علائمت را در چت بنویس، یا ابزارهای ستون کنار را ببین."), "meta")
+
+                tk.Button(body, text=self.L("Finish", "تمام"), command=finish,
+                          bg="#0d5a4a", fg="#c8ffe9", font=pick_font(11, True), relief="flat").pack(pady=10, ipadx=18)
+
+        render()
 
     def _panel_risk(self):
         import risk_scores as rsk

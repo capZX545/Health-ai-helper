@@ -76,6 +76,7 @@ import pregnancy_tracker
 import family_risk
 import second_opinion
 import health_passport
+import calendar_export
 
 
 def main() -> int:

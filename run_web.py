@@ -175,6 +175,20 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/passport":
                 import health_passport as hp
                 return self._html(hp.build_html())
+            if path == "/api/reminders/ics":
+                import calendar_export as cx
+                body = cx.build_ics().encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type", "text/calendar; charset=utf-8")
+                self.send_header("Content-Disposition", 'attachment; filename="nexusmed_reminders.ics"')
+                self.send_header("Content-Length", str(len(body)))
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
+                self.wfile.write(body)
+                return
+            if path == "/api/reminders/ics/stats":
+                import calendar_export as cx
+                return self._json(cx.stats())
             if path == "/api/charts":
                 from i18n import is_fa
                 from vitals_chart import all_charts

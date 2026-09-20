@@ -78,6 +78,18 @@ Things got added over time as I needed them:
   an encrypted health-data vault (pure-python ChaCha20, no new dependencies) and
   auto-update from GitHub releases. The web version got full parity: charts,
   profiles, LM Studio and all new tools are in `http://localhost:2077` too.
+[![Deploy to Render](https://img.shields.io/badge/Deploy_to-Render-46a2f7.svg)](https://render.com/deploy?repo=https://github.com/capZX545/Health-ai-helper)
+
+- **v9.1 adds:** an onboarding wizard for first-time users (desktop + web), a
+  curated offline QA brain of ~50 high-value health questions in both languages
+  (blood pressure, fasting glucose, HbA1c, lipids, TSH, B12, ferritin, WBC,
+  creatinine, electrolytes, liver enzymes, CRP, pregnancy testing, folic acid,
+  fever in adults and children, paracetamol/ibuprofen safety, antibiotic
+  misuse, flu vs cold, water/sleep/exercise/salt/caffeine, BMI and waist,
+  smoking cessation, headache red flags, dizziness, leg swelling, nosebleed,
+  diarrhea, constipation, heartburn, UTI, kidney stones, back pain, tetanus,
+  rabies, honey in infants, weight-loss rate, colonoscopy age) and one-click
+  .ics export of medication reminders into Google/Apple/Outlook Calendar.
 - **v9 adds:** GPT-style streaming answers (word by word, desktop + web, with
   graceful fallback), photo OCR for lab reports using the OCR engine built into
   Windows (photo -> text -> lab analysis, no new dependencies), a pattern

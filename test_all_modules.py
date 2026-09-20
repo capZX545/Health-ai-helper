@@ -1185,6 +1185,71 @@ def t_elder_mode():
     return "settings roundtrip + web class + desktop scale"
 
 
+
+def t_medical_qa_bank():
+    from i18n import set_override
+    set_override("fa")
+    import medical_qa
+    expect(len(medical_qa._QA) >= 48, len(medical_qa._QA))
+    fa_qs = ["فشار خون نرمال چنده", "قند ناشتا چقدر", "هموگلوبین a1c چنده", "کلسترول نرمال چنده",
+             "tsh نرمال چنده", "ویتامین ب۱۲ چقدر", "هموگلوبین چقدر", "فریتین چقدر", "wbc بالا یعنی چی",
+             "پلاکت چقدر", "کراتینین نرمال", "اسید اوریک بالا", "پتاسیم نرمال", "کبد چرب چیه",
+             "crp بالا یعنی چی", "تست بارداری چند روزگی جواب میده", "اسید فولیک بارداری",
+             "تب کودک چیکار کنم", "استامینوفن چقدر بخورم", "عوارض ایبوپروفن", "آسپرین روزانه",
+             "آنتی بیوتیک برای سرماخوردگی لازمه", "فرق آنفولانزا و سرماخوردگی", "چقدر آب بخورم",
+             "چند ساعت خواب لازمه", "ورزش در هفته چقدر", "bmi چنده", "دور کمر نرمال", "نمک چقدر",
+             "قهوه در روز چقدر", "چطور سیگار رو ترک کنم", "سردرد چه زمانی خطرناکه", "سرگیجه چرا میشه",
+             "پاهام متورمه", "خونریزی بینی چیکار کنم", "اسهال چیکار کنم", "یبوست چیکار",
+             "سوزش سر دل چیکار", "سوزش ادرار", "سنگ کلیه چیه", "کمردرد چیکار", "زخم کزاز واکسن",
+             "سگ گاز گرفت", "عسل به نوزاد دادم", "هفته‌ای چقدر وزن کم کنم", "کولونوسکوپی چه سنی"]
+    for q in fa_qs:
+        expect(medical_qa.answer_from_qa(q) is not None, q)
+    hijack = ["سردرد دارم از دیروز", "دلم درد میکنه", "تب دارم و سرفه", "متفورمین مصرف می‌کنم", "وزنم شده ۹۰"]
+    for q in hijack:
+        expect(medical_qa.answer_from_qa(q) is None, q)
+    set_override("en")
+    for q in ["normal blood pressure", "fasting glucose normal", "tsh normal", "fever in children",
+              "when to get colonoscopy", "dog bite what to do", "how much water"]:
+        expect(medical_qa.answer_from_qa(q) is not None, q)
+    set_override(None)
+    return f"{len(medical_qa._QA)} qa entries, 46 fa + 7 en probes, no hijacks"
+
+
+def t_calendar_export():
+    import calendar_export as cx
+    from med_reminder_service import add, remove, _load
+    for r in _load():
+        remove(r["id"])
+    try:
+        add("تست دارو", ["08:00", "20:00"], "daily")
+        ics = cx.build_ics(14)
+        expect(ics.startswith("BEGIN:VCALENDAR") and ics.rstrip().endswith("END:VCALENDAR"))
+        expect(ics.count("BEGIN:VEVENT") == 2 * 15, ics.count("BEGIN:VEVENT"))
+        expect("SUMMARY:" in ics and "TRIGGER:-PT10M" in ics)
+        expect("\r\n" in ics)
+        expect("DTSTART:20" in ics)
+        st = cx.stats()
+        expect(st["ok"] and st["reminders"] == 1 and st["times"] == 2, st)
+    finally:
+        for r in _load():
+            remove(r["id"])
+    empty = cx.build_ics()
+    expect(empty.count("BEGIN:VEVENT") == 0)
+    return "ics events + alarms + empty case"
+
+
+def t_onboarding_wiring():
+    import ui_2077
+    expect(hasattr(ui_2077.App, "_panel_onboarding"))
+    expect(hasattr(ui_2077.App, "_maybe_onboard"))
+    src = open("ui_2077.py", encoding="utf-8").read()
+    expect("after(1600, self._maybe_onboard)" in src)
+    html = open("clinic_2077.html", encoding="utf-8").read()
+    expect("uiOnboarding" in html and 'openPanel("onboarding")' in html)
+    expect("ob_title" in html)
+    return "desktop panel + web overlay + auto-open"
+
+
 def main():
     clean()
     t0 = time.time()
@@ -1238,6 +1303,9 @@ def main():
     run_module("health_passport", t_health_passport)
     run_module("secure_store backup", t_backup_restore)
     run_module("elder mode + streaming settings", t_elder_mode)
+    run_module("medical_qa curated bank", t_medical_qa_bank)
+    run_module("calendar_export (ics)", t_calendar_export)
+    run_module("onboarding wiring", t_onboarding_wiring)
     run_module("infrastructure (ports/builders)", t_misc_infra)
     clean()
     total = len(RESULTS)
