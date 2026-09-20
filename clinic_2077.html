@@ -158,6 +158,11 @@ kbd{background:#101c36;border:1px solid var(--bd);border-radius:5px;padding:1px 
   .tag{font-size:10px;padding:2px 8px}
   .spin{width:28px;height:28px;border-width:3px}
 }
+body.elder{font-size:17px}
+body.elder .msg{font-size:16px;line-height:1.75}
+body.elder .f,body.elder select,body.elder textarea,body.elder input{font-size:15px;padding:10px}
+body.elder .nbtn{font-size:14px;padding:11px 14px}
+body.elder .meta{font-size:12px}
 </style>
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#00f0ff">
@@ -225,19 +230,28 @@ T.en = {
        ["mental","Mental health"],["sleep","Sleep analysis"],["checkup","Checkup calendar"],
        ["aid","First aid / CPR"],["referral","Doctor referral report"],["symptoms_browser","Symptoms"],["diseases_browser","Diseases"],["drugs_browser","Drugs"],["research","Research & articles"],["lab","Laboratory"],["tools","Health tools"],["brain","Brain & learning"],
        ["charts","Vitals charts"],["risk","Risk scores"],["renal","Renal dosing"],["sidefx","Drug side effects"],["vaccine","Vaccination"],["ice","Emergency card"],["import","Import data"],["vault","Data vault"],["lmstudio","LM Studio (local AI)"],
+       ["pregnancy","Pregnancy / period"],["family","Family risk"],["correlate","Correlations"],["second","Second opinion"],["passport","Health passport"],
        ["gpu","Local AI (Ollama)"],["settings","API settings"]],
   ph:"Describe your symptoms... (Enter = send, Shift+Enter = new line)", send:"Send",
   attach:"Attach a medical image", rmimg:"remove",
   speakbtn:"Speak", micbtn:"Mic", voice_na:"Speech synthesis is not available in this browser.",
   mic_na:"Voice input needs Chrome/Edge. In the desktop app it works on Windows.",
   upd_btn:"Check for updates", upd_latest:"You are on the latest version: ", upd_new:"New version available: ", upd_dl:"Download and run the installer", upd_offline:"Could not reach GitHub (offline?).", upd_dl_started:"Download started; when it finishes the installer will run on the machine running the server.",
+  elder_btn:"Elder mode", elder_on:"large fonts + high contrast — click to turn off", elder_off:"click to enlarge fonts and boost contrast",
+  preg_log:"Log period", preg_stats:"Cycle stats", preg_lmp:"Set pregnancy mode", preg_off:"Turn off", preg_wk:"Week ", preg_due:"Due date: ", preg_size:"Baby size: ", preg_fertile:"Fertile window: ", preg_next:"Next expected: ", preg_avg:"Average cycle: ", preg_logged:"Logged periods: ",
+  fam_add:"Add", fam_rel:"relation", fam_cond:"condition", fam_age:"age at diagnosis", fam_recs:"Screening recommendations from your family history",
+  corr_btn:"Analyze my data", corr_empty:"No data to analyze yet - log symptoms in Health tools and vitals in the Vitals panel.",
+  so_ask:"Ask both", so_ph:"type your medical question...", so_a:"first AI", so_b:"second AI", so_asking:"Asking both...",
+  pp_btn:"Build health passport", pp_note:"One printable HTML file with profile, medications, vitals and trend charts for your doctor.",
+  ocr_btn:"From photo (OCR)", ocr_reading:"Reading the photo...",
+  bk_path:"backup file path (e.g. C:\backup.nmv or ~/backup.nmv)", bk_make:"Make encrypted backup", bk_restore:"Restore from backup",
   hello:"Nexus online.\nHello, I am Nexus, the Persian/English medical assistant of NexusMed 2077.\n\nTo start:\n- Describe your symptoms with details (onset, severity, duration)\n- Or open one of the tools in the side panel\n- You can attach a medical photo too\n\nIn an emergency (chest pain, severe breathlessness, unconsciousness, seizure, one-sided weakness...) you will get emergency guidance immediately.\nThis software never replaces a doctor.",
   typing:"Nexus is thinking...", imgtyping:"Analyzing image and text...",
   src_emg:"EMERGENCY RESPONSE", src_int:"offline brain", learned:" - learned",
   foot:"NexusMed 2077 is an informational assistant; it does not replace a doctor and gives no definitive diagnosis. Emergency: Iran 115 | Europe/Finland 112",
   p_titles:{settings:"API settings",profile:"Patient profile",vitals:"Vitals",labs:"Lab analysis",rx:"Prescription & lab terms",
     drugs:"Drugs & interactions",mental:"Mental health",sleep:"Sleep analysis",checkup:"Checkup & vaccines",aid:"First aid",
-    referral:"Printable referral report", symptoms_browser:"Symptoms Browser", diseases_browser:"Diseases Database", drugs_browser:"Drugs Database", research:"Research & articles (PubMed + ClinicalTrials)", lab:"Laboratory — tests & interpretation", tools:"Health tools — 10 practical calculators & trackers",brain:"Internal brain & learning",gpu:"Local AI (Ollama)",image:"Medical image + text",assess:"Disease likelihood assessment",risk:"Clinical risk scores (heart + diabetes)",renal:"Kidney function & drug dosing",sidefx:"Is it a side effect of my drug?",vaccine:"Child vaccination (Iran program)",ice:"Emergency card (ICE)",import:"Import smartwatch / app data",vault:"Health data vault (encryption)",charts:"Vitals trend charts",lmstudio:"LM Studio — local AI"},
+    referral:"Printable referral report", symptoms_browser:"Symptoms Browser", diseases_browser:"Diseases Database", drugs_browser:"Drugs Database", research:"Research & articles (PubMed + ClinicalTrials)", lab:"Laboratory — tests & interpretation", tools:"Health tools — 10 practical calculators & trackers",brain:"Internal brain & learning",gpu:"Local AI (Ollama)",image:"Medical image + text",assess:"Disease likelihood assessment",risk:"Clinical risk scores (heart + diabetes)",renal:"Kidney function & drug dosing",sidefx:"Is it a side effect of my drug?",vaccine:"Child vaccination (Iran program)",ice:"Emergency card (ICE)",import:"Import smartwatch / app data",vault:"Health data vault (encryption)",charts:"Vitals trend charts",lmstudio:"LM Studio — local AI",pregnancy:"Pregnancy & period tracker",family:"Family history & screening",correlate:"Pattern analysis of your data",second:"Second opinion — two AIs",passport:"Health passport"},
   keys:"API keys", keys_note:"Keys are stored only in a local .env file on your machine. They never enter the code, the ZIP or the installer.",
   getkey:"Get a free key", testconn:"Test connection", savekeys:"Save keys (no restart)", savemodel:"Save model",
   model:"OpenRouter model", model_list:"pick from the free/suggested list", model_manual:"or type a model id manually",
@@ -291,19 +305,28 @@ T.fa = {
        ["mental","سلامت روان"],["sleep","تحلیل خواب"],["checkup","تقویم چکاپ"],
        ["aid","کمک‌های اولیه / CPR"],["referral","گزارش ارجاع به پزشک"],["symptoms_browser","علائم"],["diseases_browser","بیماری‌ها"],["drugs_browser","داروها"],["research","پژوهش و مقالات"],["lab","آزمایشگاه"],["tools","ابزار سلامت"],["brain","مغز داخلی / یادگیری"],
        ["charts","نمودار روند"],["risk","ریسک قلب و دیابت"],["renal","دوز کلیوی"],["sidefx","عارضه دارویی"],["vaccine","واکسیناسیون"],["ice","کارت اضطراری"],["import","ورود داده"],["vault","قفل داده‌ها"],["lmstudio","LM Studio (هوش محلی)"],
+       ["pregnancy","بارداری / قاعدگی"],["family","ریسک خانوادگی"],["correlate","هم‌ربتگی"],["second","نظر دوم"],["passport","پاسپورت سلامت"],
        ["gpu","هوش محلی (Ollama)"],["settings","تنظیمات API"]],
   ph:"علائمت را بنویس... (Enter=ارسال، Shift+Enter=خط جدید)", send:"ارسال",
   attach:"ضمیمه عکس پزشکی", rmimg:"حذف",
   speakbtn:"قرائت صوتی", micbtn:"میکروفون", voice_na:"قرائت صوتی در این مرورگر در دسترس نیست.",
   mic_na:"ورودی صوتی نیاز به کروم/اج دارد. در نسخه‌ی دسکتاپ روی ویندوز کار می‌کند.",
   upd_btn:"بررسی به‌روزرسانی", upd_latest:"آخرین نسخه را داری: ", upd_new:"نسخه‌ی جدید موجود است: ", upd_dl:"دانلود و اجرای نصب", upd_offline:"اتصال به گیت‌هاب ممکن نشد (آفلاین؟).", upd_dl_started:"دانلود شروع شد؛ بعد از پایان، نصب روی سیستم سرور اجرا می‌شود.",
+  elder_btn:"حالت سالمند", elder_on:"فونت درشت + کنتراست بالا — برای خاموش کردن کلیک کن", elder_off:"برای درشت‌کردن فونت و بالا بردن کنتراست کلیک کن",
+  preg_log:"ثبت پریود", preg_stats:"تحلیل سیکل", preg_lmp:"فعال‌سازی حالت بارداری", preg_off:"خاموش کن", preg_wk:"هفته‌ی ", preg_due:"تاریخ زایمان: ", preg_size:"اندازه‌ی جنین: ", preg_fertile:"پنجره‌ی باروری: ", preg_next:"پریود بعدی: ", preg_avg:"میانگین سیکل: ", preg_logged:"پریودهای ثبت‌شده: ",
+  fam_add:"افزودن", fam_rel:"نسبت", fam_cond:"بیماری", fam_age:"سن تشخیص", fam_recs:"توصیه‌های غربالگری بر اساس سابقه‌ی خانوادگی تو",
+  corr_btn:"تحلیل داده‌های من", corr_empty:"هنوز داده‌ای نیست — علائم را در ابزار سلامت و فشار/قند را در علائم حیاتی ثبت کن.",
+  so_ask:"بپرس", so_ph:"سؤال پزشکی‌ات را بنویس...", so_a:"هوش اول", so_b:"هوش دوم", so_asking:"از هر دو می‌پرسم...",
+  pp_btn:"ساخت پاسپورت سلامت", pp_note:"یک فایل HTML قابل چاپ با پروفایل، داروها، علائم حیاتی و نمودار روند برای پزشکت.",
+  ocr_btn:"از عکس (OCR)", ocr_reading:"در حال خواندن عکس...",
+  bk_path:"مسیر فایل پشتیبان (مثلاً C:\backup.nmv)", bk_make:"ساخت پشتیبان رمزنگاری‌شده", bk_restore:"بازگردانی از پشتیبان",
   hello:"نکسوس آنلاین است.\nسلام! من نکسوس هستم — دستیار پزشکی فارسی/انگلیسی NexusMed 2077.\n\nبرای شروع:\n- علائمت را با جزئیات بنویس (شروع، شدت، مدت)\n- یا یکی از ابزارهای ستون کنار را باز کن\n- عکس پزشکی هم می‌توانی ضمیمه کنی\n\nدر علائم اورژانسی (درد سینه، تنگی نفس شدید، بیهوشی، تشنج، ضعف یک‌طرفه...) فوراً راهنمایی اورژانس می‌گیری.\nاین برنامه هرگز جایگزین پزشک نیست.",
   typing:"نکسوس در حال فکر کردن است...", imgtyping:"در حال تحلیل تصویر و متن...",
   src_emg:"پاسخ اورژانسی", src_int:"مغز داخلی آفلاین", learned:" - یادگیری ثبت شد",
   foot:"NexusMed 2077 یک دستیار اطلاعاتی است؛ جایگزین پزشک نیست و تشخیص قطعی نمی‌دهد — اورژانس: ایران ۱۱۵ | اروپا/فنلاند ۱۱۲",
   p_titles:{settings:"تنظیمات API",profile:"پروفایل بیمار",vitals:"علائم حیاتی",labs:"تحلیل آزمایش",rx:"اسکن نسخه و اصطلاحات",
     drugs:"دارو و تداخلات دارویی",mental:"سلامت روان",sleep:"تحلیل خواب",checkup:"تقویم چکاپ و واکسن",aid:"کمک‌های اولیه",
-    referral:"گزارش ارجاع قابل چاپ", symptoms_browser:"مرور علائم", diseases_browser:"بانک بیماری‌ها", drugs_browser:"بانک داروها", research:"پژوهش و مقالات (PubMed + کارآزمایی‌ها)", lab:"آزمایشگاه — آزمون‌ها و تفسیر نتایج", tools:"ابزار سلامت — ۱۰ ماشین‌حساب و ابزار کاربردی",brain:"مغز داخلی و یادگیری",gpu:"هوش مصنوعی محلی (Ollama)",image:"تحلیل تصویر پزشکی",assess:"ارزیابی احتمال بیماری‌ها",risk:"ریسک‌سنجی بالینی (قلب و دیابت)",renal:"عملکرد کلیه و تنظیم دوز دارو",sidefx:"عارضه داروی من هست؟",vaccine:"واکسیناسیون کودک (برنامه ایران)",ice:"کارت اضطراری (ICE)",import:"ورود داده ساعت هوشمند / اپ",vault:"قفل داده‌های سلامت (رمزنگاری)",charts:"نمودار روند علائم حیاتی",lmstudio:"LM Studio — هوش مصنوعی محلی"},
+    referral:"گزارش ارجاع قابل چاپ", symptoms_browser:"مرور علائم", diseases_browser:"بانک بیماری‌ها", drugs_browser:"بانک داروها", research:"پژوهش و مقالات (PubMed + کارآزمایی‌ها)", lab:"آزمایشگاه — آزمون‌ها و تفسیر نتایج", tools:"ابزار سلامت — ۱۰ ماشین‌حساب و ابزار کاربردی",brain:"مغز داخلی و یادگیری",gpu:"هوش مصنوعی محلی (Ollama)",image:"تحلیل تصویر پزشکی",assess:"ارزیابی احتمال بیماری‌ها",risk:"ریسک‌سنجی بالینی (قلب و دیابت)",renal:"عملکرد کلیه و تنظیم دوز دارو",sidefx:"عارضه داروی من هست؟",vaccine:"واکسیناسیون کودک (برنامه ایران)",ice:"کارت اضطراری (ICE)",import:"ورود داده ساعت هوشمند / اپ",vault:"قفل داده‌های سلامت (رمزنگاری)",charts:"نمودار روند علائم حیاتی",lmstudio:"LM Studio — هوش مصنوعی محلی",pregnancy:"بارداری و قاعدگی",family:"سابقه‌ی خانوادگی و غربالگری",correlate:"تحلیل الگوهای داده‌های تو",second:"نظر دوم — دو هوش مصنوعی",passport:"پاسپورت سلامت"},
   keys:"کلیدهای API", keys_note:"کلیدها فقط در فایل .env روی سیستم خودتان ذخیره می‌شوند و هرگز داخل کد، ZIP یا بسته‌ی نصبی قرار نمی‌گیرند.",
   getkey:"گرفتن کلید رایگان", testconn:"تست اتصال", savekeys:"ذخیره‌ی کلیدها (بدون ری‌استارت)", savemodel:"ذخیره‌ی مدل",
   model:"مدل OpenRouter", model_list:"انتخاب از لیست مدل‌های رایگان/پیشنهادی", model_manual:"یا نوشتن دستی model id",
@@ -374,9 +397,9 @@ function buildNav(){
   var addSep=function(k){var s=document.createElement("div");s.className="nsep";s.textContent=t(k);nav.appendChild(s)};
   addSep("nav_main");
   ["chat","image"].forEach(function(k,i){if(i===1)addSep("nav_clinical");nav.appendChild(mkNav(k))});
-  ["profile","vitals","charts","labs","rx","drugs","sidefx","renal","risk","mental","sleep","checkup","vaccine","ice","aid","import","vault"].forEach(function(k){nav.appendChild(mkNav(k))});
+  ["profile","vitals","charts","labs","rx","drugs","sidefx","renal","risk","pregnancy","family","correlate","mental","sleep","checkup","vaccine","ice","aid","import","vault"].forEach(function(k){nav.appendChild(mkNav(k))});
+  ["referral","second","passport","brain","lmstudio","gpu","settings"].forEach(function(k){nav.appendChild(mkNav(k))});
   addSep("nav_system");
-  ["referral","brain","lmstudio","gpu","settings"].forEach(function(k){nav.appendChild(mkNav(k))});
   document.querySelectorAll(".nbtn").forEach(function(b){b.addEventListener("click",function(){
     document.querySelectorAll(".nbtn").forEach(function(x){x.classList.remove("act")});b.classList.add("act");openPanel(b.dataset.p)})});
 }
@@ -423,14 +446,45 @@ async function sendMsg(){
   holder.innerHTML='<span class="spin"></span>'+(imgB64?t("imgtyping"):t("typing"));
   busy=true;$("send").disabled=true;
   var hint=imgB64?(window._imgHint||""):"";if(!imgB64)window._imgHint="";
-  var res=await api("/api/chat",{text:imgB64?"":txt,image_b64:imgB64,image_mime:imgMime,image_note:note,image_hint:hint});
+  if(imgB64){
+    var res=await api("/api/chat",{text:"",image_b64:imgB64,image_mime:imgMime,image_note:note,image_hint:hint});
+    busy=false;$("send").disabled=false;
+    holder.remove();clearImg();
+    var src=res.red_flag?t("src_emg"):(res.source==="internal"?t("src_int"):(res.source==="internal-image"?(LANG==="fa"?"مغز داخلی — تحلیل تصویر":"offline brain - image"):res.source||""));
+    if(res.image_type&&res.image_type.label)src+=" | "+res.image_type.label;
+    if(res.learned)src+=t("learned");
+    addMsg(res.red_flag?"bot emg":"bot",res.text||res.message_fa||"...",src);
+    lastBot=res.text||"";
+    refreshStatus();
+    return;
+  }
+  var acc="",src2="";
+  try{
+    var resp=await fetch("/api/chat/stream",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:txt})});
+    if(!resp.ok||!resp.body)throw new Error("http "+resp.status);
+    var rd=resp.body.getReader(),dec=new TextDecoder(),buf="";
+    while(true){
+      var chunk=await rd.read();
+      if(chunk.done)break;
+      buf+=dec.decode(chunk.value,{stream:true});
+      var lines=buf.split("\n");buf=lines.pop();
+      for(var i=0;i<lines.length;i++){
+        var ln=lines[i];if(!ln)continue;
+        var o;try{o=JSON.parse(ln)}catch(e){continue}
+        if(o.d){acc+=o.d;holder.innerHTML=fmt(acc);$("chat").scrollTop=1e9;lastBot=acc}
+        else if(o.done){if(o.red_flag)src2=t("src_emg");else src2=(o.source==="internal"?t("src_int"):(o.source==="internal-knowledge"?(LANG==="fa"?"دانش داخلی":"internal knowledge"):o.source||""))}
+      }
+    }
+    if(!acc)throw new Error("empty stream");
+  }catch(e){
+    var res2=await api("/api/chat",{text:txt});
+    acc=res2.text||res2.message_fa||"...";lastBot=acc;
+    src2=res2.red_flag?t("src_emg"):(res2.source==="internal"?t("src_int"):(res2.source==="internal-image"?(LANG==="fa"?"مغز داخلی — تحلیل تصویر":"offline brain - image"):res2.source||""));
+    holder.innerHTML=fmt(acc);
+  }
   busy=false;$("send").disabled=false;
-  holder.remove();clearImg();
-  var src=res.red_flag?t("src_emg"):(res.source==="internal"?t("src_int"):(res.source==="internal-image"?(LANG==="fa"?"مغز داخلی — تحلیل تصویر":"offline brain - image"):res.source||""));
-  if(res.image_type&&res.image_type.label)src+=" | "+res.image_type.label;
-  if(res.learned)src+=t("learned");
-  addMsg(res.red_flag?"bot emg":"bot",res.text||res.message_fa||"...",src);
-  lastBot=res.text||"";
+  if(src2)holder.innerHTML+='<span class="meta">'+esc(src2)+"</span>";
+  $("chat").scrollTop=1e9;
   refreshStatus();
 }
 var lastBot="";
@@ -489,7 +543,8 @@ function openPanel(k){
   $("panel").classList.add("open");$("ptitle").textContent=t("p_titles")[k]||k;
   var P={settings:uiSettings,profile:uiProfile,vitals:uiVitals,labs:uiLabs,rx:uiRx,drugs:uiDrugs,symptoms_browser:uiSymptomsBrowser,diseases_browser:uiDiseasesBrowser,drugs_browser:uiDrugsBrowser,research:uiResearch,lab:uiLab,tools:uiTools,
     mental:uiMental,sleep:uiSleep,checkup:uiCheckup,aid:uiAid,referral:uiReferral,brain:uiBrain,gpu:uiGpu,image:uiImage,assess:uiAssess,
-    risk:uiRisk,renal:uiRenal,sidefx:uiSidefx,vaccine:uiVaccine,ice:uiIce,import:uiImport,vault:uiVault,charts:uiCharts,lmstudio:uiLmstudio};
+    risk:uiRisk,renal:uiRenal,sidefx:uiSidefx,vaccine:uiVaccine,ice:uiIce,import:uiImport,vault:uiVault,charts:uiCharts,lmstudio:uiLmstudio,
+    pregnancy:uiPregnancy,family:uiFamily,correlate:uiCorrelate,second:uiSecond,passport:uiPassport};
   (P[k]||function(){})();
 }
 function closePanel(){$("panel").classList.remove("open")}
@@ -511,6 +566,10 @@ async function uiSettings(){
   }
   var h='<div class="card"><h3>'+(lang==="fa"?"به‌روزرسانی":"Updates")+'</h3>'+
   '<button class="btn pri" onclick="chkUpd()">'+t("upd_btn")+'</button><div id="updRes" style="margin-top:8px;font-size:12px"></div></div>';
+  var elder=!!(s.settings&&s.settings.elder_mode);
+  h+='<div class="card"><h3>'+t("elder_btn")+'</h3>'+
+  '<label style="font-size:12px"><input type="checkbox" '+(elder?"checked":"")+' onchange="toggleElder(this.checked)">'+
+  (elder?t("elder_on"):t("elder_off"))+'</label></div>';
   h+='<div class="card"><h3>'+(lang==="fa"?"API Keys":"API Keys")+'</h3>';
   h+='<p style="font-size:11.5px;color:var(--dim)">'+(lang==="fa"?"Keys stored only on your machine":"Keys stored only on your machine")+'</p>';
   var provs=[["openrouter","OpenRouter (free)"],["openai","OpenAI"],["deepseek","DeepSeek"]];
@@ -624,9 +683,26 @@ function uiLabs(){
   $("pbody").innerHTML='<div class="card"><h3>'+t("p_titles").labs+'</h3>'+
   '<p style="font-size:11.5px;color:var(--dim)">'+t("labs_hint")+' <kbd>FBS 132</kbd> <kbd>Hb 10.5</kbd> <kbd>TSH 6.2</kbd></p>'+
   '<textarea class="f" id="labtxt" placeholder="FBS 105&#10;Hb 13&#10;LDL 150"></textarea>'+
-  '<button class="btn pri" onclick="runLabs()">'+t("analyze")+'</button><div id="labres"></div>'+
+  '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
+  '<button class="btn pri" onclick="runLabs()">'+t("analyze")+'</button>'+
+  '<input type="file" id="ocrFile" accept="image/*" class="f" style="padding:6px;font-size:11px" onchange="ocrGo(this)">'+
+  '</div><div id="labres"></div>'+
   '<p style="font-size:11px;color:var(--dim);margin-top:8px">'+t("labs_note")+'</p></div>';
   return 0;
+}
+async function ocrGo(inp){
+  var f=inp.files[0];if(!f)return;
+  var rd=new FileReader();
+  rd.onload=async function(){
+    $("labres").innerHTML='<span class="spin"></span>'+t("ocr_reading");
+    var b64=String(rd.result||"").split(",")[1];
+    var r=await api("/api/ocr",{image_b64:b64});
+    if(r.ok&&r.ocr_text){$("labtxt").value=String(r.ocr_text).slice(0,5000)}
+    var txt=(r.text_report||"")+"\n"+(r.summary_fa||[]).join("\n");
+    $("labres").innerHTML=(r.ok?"":"<div>"+esc(r.message_fa||"")+"</div>")+
+    txt.split("\n").map(function(l){return "<div>"+fmt(l)+"</div>"}).join("");
+  };
+  rd.readAsDataURL(f);
 }
 async function runLabs(){
   var r=await api("/api/labs",{text:$("labtxt").value,save:true});
@@ -1862,7 +1938,14 @@ async function impCommit(){
 async function uiVault(){
   var L=LANG==="fa";
   var st=await api("/api/vault");
-  var h='<div class="card"><h3>'+(L?"قفل داده‌های سلامت":"Health data vault")+'</h3>';
+  var h='<div class="card"><h3>'+(L?"پشتیبان رمزنگاری‌شده":"Encrypted backup")+'</h3>';
+  h+='<p style="font-size:11.5px;color:var(--dim)">'+(L?"کل داده‌های شخصی در یک فایل .nmv رمزنگاری‌شده — برای انتقال بین کامپیوترها.":"All personal data in one encrypted .nmv file - for moving between computers.")+'</p>';
+  h+='<input class="f" id="bkP" placeholder="'+t("bk_path")+'" style="width:100%">';
+  h+='<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">';
+  h+='<button class="btn pri" onclick="bkMake()">'+t("bk_make")+'</button>';
+  h+='<button class="btn" onclick="bkRestore()">'+t("bk_restore")+'</button></div>';
+  h+='<div id="bkRes" style="margin-top:8px;font-size:12px"></div></div>';
+  h+='<div class="card"><h3>'+(L?"قفل داده‌های سلامت":"Health data vault")+'</h3>';
   h+='<div id="vtStat" class="b" style="color:'+(st.locked?"#ffd60a":"#3bff9e")+'">'+esc(st.message_fa||"")+'</div>';
   h+='<p style="font-size:11.5px;color:var(--dim);margin-top:6px">'+(L?"پروفایل، تاریخچه علائم حیاتی، یادآورها، دفترچه علائم و تاریخچه گفتگو با ChaCha20 رمزنگاری می‌شوند. رمز را گم کنی، هیچ راه بازیابی نیست.":"Profile, vitals history, reminders, diary and chat history get encrypted with ChaCha20. If you forget the password there is NO recovery.")+'</p>';
   h+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">';
@@ -1871,6 +1954,18 @@ async function uiVault(){
   h+='<button class="btn pri" onclick="vtUnlock()">'+(L?"باز کن":"Unlock")+'</button></div>';
   h+='<div id="vtRes" style="margin-top:8px;font-size:12px"></div></div>';
   $("pbody").innerHTML=h;
+}
+async function bkMake(){
+  var pw=$("vtPw")?$("vtPw").value:"";var path=$("bkP")?$("bkP").value.trim():"";
+  if(!pw||!path){$("bkRes").textContent=LANG==="fa"?"رمز و مسیر فایل را بده.":"Give the password and file path.";return}
+  var r=await api("/api/backup",{action:"backup",password:pw,path:path});
+  $("bkRes").textContent=r.message_fa||"";
+}
+async function bkRestore(){
+  var pw=$("vtPw")?$("vtPw").value:"";var path=$("bkP")?$("bkP").value.trim():"";
+  if(!pw||!path){$("bkRes").textContent=LANG==="fa"?"رمز و مسیر فایل را بده.":"Give the password and file path.";return}
+  var r=await api("/api/backup",{action:"restore",password:pw,path:path});
+  $("bkRes").textContent=r.message_fa||"";
 }
 async function vtLock(){
   var r=await api("/api/vault",{action:"lock",password:$("vtPw").value});
@@ -1912,6 +2007,11 @@ async function lmTest(){
   var t=await api("/api/lmstudio",{action:"test"});
   $("lmRes").textContent=t.message_fa||JSON.stringify(t);
 }
+async function toggleElder(on){
+  document.body.classList.toggle("elder",on);
+  await api("/api/settings",{elder_mode:on});
+}
+function applyElder(on){document.body.classList.toggle("elder",!!on)}
 async function chkUpd(){
   var el=$("updRes");if(el)el.textContent="...";
   var r=await api("/api/update/check");
@@ -1926,11 +2026,123 @@ async function updDl(url){
   if(el)el.textContent=r.message_fa||"";
 }
 
+async function uiPregnancy(){
+  var L=LANG==="fa";
+  var r=await api("/api/pregnancy");
+  var h='<div class="card"><h3>'+(L?"دنبال‌کننده‌ی قاعدگی":"Period tracker")+'</h3>';
+  h+='<div style="display:flex;gap:6px;flex-wrap:wrap">';
+  h+='<input class="f" id="pgD" placeholder="YYYY-MM-DD" style="width:120px">';
+  h+='<button class="btn pri" onclick="pgLog()">'+t("preg_log")+'</button>';
+  h+='<button class="btn" onclick="pgRefresh()">'+t("preg_stats")+'</button></div>';
+  h+='<div id="pgCycle" style="margin-top:8px;font-size:12.5px;white-space:pre-wrap"></div></div>';
+  h+='<div class="card"><h3>'+(L?"حالت بارداری":"Pregnancy mode")+'</h3>';
+  h+='<div style="display:flex;gap:6px;flex-wrap:wrap">';
+  h+='<input class="f" id="pgL" placeholder="YYYY-MM-DD" style="width:120px" title="'+(L?"اولین روز آخرین پریود":"first day of last period")+'">';
+  h+='<button class="btn pri" onclick="pgLmp()">'+t("preg_lmp")+'</button>';
+  h+='<button class="btn" onclick="pgClear()">'+t("preg_off")+'</button></div>';
+  h+='<div id="pgPreg" style="margin-top:8px;font-size:12.5px;white-space:pre-wrap"></div></div>';
+  $("pbody").innerHTML=h;
+  pgShow(r);
+}
+function pgShow(r){
+  var L=LANG==="fa";var el=$("pgPreg");if(!el)return;
+  if(r&&r.pregnant){
+    el.innerHTML='<div class="b">'+esc(t("preg_wk")+r.week+" / 40")+'</div>'
+    +esc(t("preg_size")+(r.size_fa||""))+'\n'+esc(r.note_fa||"")+'\n'+esc(t("preg_due")+(r.due_date||"")+" ("+fa(r.days_to_due||0)+(L?" روز مانده":" days left)"))
+    +'\n\n<div class="b" style="color:#ff8fab">'+esc(r.danger_head_fa||"")+'</div><span style="color:#ff8fab">'+esc(r.danger_fa||"")+'</span>';
+  } else {el.textContent=""}
+  var el2=$("pgCycle");if(!el2)return;
+  if(r&&r.cycle&&r.cycle.tracked){
+    var c=r.cycle;
+    el2.textContent=t("preg_logged")+" "+fa(c.tracked)+"\n"+t("preg_avg")+" "+fa(c.avg_cycle)+(L?" روز":" days")
+    +"\n"+t("preg_next")+" "+c.next_expected+"\n"+t("preg_fertile")+" "+c.fertile_from+" — "+c.fertile_to
+    +(c.late_note_fa?"\n"+c.late_note_fa:"");
+  } else if(r&&r.cycle){el2.textContent=r.cycle.message_fa||""}
+}
+async function pgRefresh(){pgShow(await api("/api/pregnancy"))}
+async function pgLog(){if(!$("pgD").value.trim())return;await api("/api/pregnancy",{action:"period",date:$("pgD").value.trim()});pgRefresh()}
+async function pgLmp(){if(!$("pgL").value.trim())return;pgShow(await api("/api/pregnancy",{action:"lmp",date:$("pgL").value.trim()}))}
+async function pgClear(){await api("/api/pregnancy",{action:"clear"});pgRefresh()}
+async function uiFamily(){
+  var L=LANG==="fa";
+  var r=await api("/api/family");
+  var rels=[["mother",L?"مادر":"mother"],["father",L?"پدر":"father"],["sister",L?"خواهر":"sister"],["brother",L?"برادر":"brother"],["grandmother",L?"مادربزرگ":"grandmother"],["grandfather",L?"پدربزرگ":"grandfather"],["aunt",L?"عمه/خاله":"aunt"],["uncle",L?"عمو/دایی":"uncle"]];
+  var h='<div class="card"><h3>'+t("fam_recs")+'</h3>';
+  h+='<div style="display:flex;gap:6px;flex-wrap:wrap">';
+  h+='<select class="f" id="fmR" style="width:110px">'+rels.map(function(x){return '<option value="'+x[0]+'">'+esc(x[1])+'</option>'}).join("")+'</select>';
+  h+='<input class="f" id="fmC" placeholder="'+t("fam_cond")+'" style="flex:1;min-width:100px">';
+  h+='<input class="f" id="fmA" placeholder="'+t("fam_age")+'" style="width:70px">';
+  h+='<button class="btn pri" onclick="fmAdd()">'+t("fam_add")+'</button></div>';
+  h+='<div id="fmRes" style="margin-top:10px"></div></div>';
+  $("pbody").innerHTML=h;
+  fmShow(r);
+}
+function fmShow(r){
+  var el=$("fmRes");if(!el)return;
+  if(!r||!(r.members||[]).length){el.textContent=(r&&r.message_fa)||"";return}
+  var h="";
+  (r.recommendations||[]).forEach(function(x){
+    h+='<div style="margin-top:8px;padding:8px 10px;border:1px solid var(--bd);border-radius:8px;font-size:12.5px'
+    +(x.first_degree?';border-color:#7a1836':'')+'">'
+    +'<div class="b">'+esc(x.relation)+" — "+esc(x.condition)+(x.test?' <span style="color:var(--cy)">['+esc(x.test)+']</span>':"")+'</div>'
+    +'<div style="margin-top:4px">'+esc(x.text||"")+'</div></div>';
+  });
+  if(r.note_fa)h+='<div style="font-size:11px;color:var(--dim);margin-top:8px">'+esc(r.note_fa)+'</div>';
+  el.innerHTML=h;
+}
+async function fmAdd(){
+  if(!$("fmC").value.trim())return;
+  var r=await api("/api/family",{action:"add",relation:$("fmR").value,condition:$("fmC").value,age:$("fmA").value});
+  if(r.ok){$("fmC").value="";$("fmA").value="";fmShow(r)}
+}
+async function uiCorrelate(){
+  var L=LANG==="fa";
+  $("pbody").innerHTML='<div class="card"><h3>'+t("p_titles").correlate+'</h3>'
+  +'<button class="btn pri" onclick="corrGo()">'+t("corr_btn")+'</button>'
+  +'<div id="corrRes" style="margin-top:10px;font-size:12.5px"></div></div>';
+}
+async function corrGo(){
+  var el=$("corrRes");el.textContent="...";
+  var r=await api("/api/correlator");
+  if(!(r.findings||[]).length){el.textContent=r.message_fa||t("corr_empty");return}
+  el.innerHTML=r.findings.map(function(x){return '<div style="margin-top:6px">• '+esc(x.text||"")+'</div>'}).join("")
+  +(r.note_fa?'<div style="font-size:11px;color:var(--dim);margin-top:10px">'+esc(r.note_fa)+'</div>':"");
+}
+async function uiSecond(){
+  var L=LANG==="fa";
+  var h='<div class="card"><h3>'+t("p_titles").second+'</h3>';
+  h+='<input class="f" id="soQ" placeholder="'+t("so_ph")+'" style="width:100%">';
+  h+='<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">';
+  h+='<select class="f" id="soA" style="width:130px"><option>openrouter</option><option>openai</option><option>deepseek</option><option>lmstudio</option></select>';
+  h+='<select class="f" id="soB" style="width:130px"><option>lmstudio</option><option>openrouter</option><option>openai</option><option>deepseek</option></select>';
+  h+='<button class="btn pri" onclick="soGo()">'+t("so_ask")+'</button></div>';
+  h+='<div id="soRes" style="margin-top:10px"></div></div>';
+  $("pbody").innerHTML=h;
+}
+async function soGo(){
+  var q=$("soQ").value.trim();if(!q)return;
+  var el=$("soRes");el.innerHTML='<span class="spin"></span>'+t("so_asking");
+  var r=await api("/api/second",{q:q,a:$("soA").value,b:$("soB").value});
+  if(!r.ok){el.textContent=r.message_fa||"";return}
+  el.innerHTML=["a","b"].map(function(k){
+    var d=r[k];
+    return '<div class="card" style="margin-top:8px"><h3>'+esc(d.provider)+'</h3>'
+    +'<div style="white-space:pre-wrap;font-size:12.5px">'+(d.ok?fmt(d.text||""):esc(d.message_fa||""))+'</div></div>';
+  }).join("");
+}
+async function uiPassport(){
+  var L=LANG==="fa";
+  $("pbody").innerHTML='<div class="card"><h3>'+t("p_titles").passport+'</h3>'
+  +'<p style="font-size:11.5px;color:var(--dim)">'+t("pp_note")+'</p>'
+  +'<button class="btn pri" onclick="window.open(\'/api/passport\')">'+t("pp_btn")+'</button></div>';
+}
+
 (function boot(){
   applyLang();
   api("/api/sleep/questions").then(function(r){window._QS={phq9:r.phq9||[],gad7:r.gad7||[]}});
   api("/api/status").then(function(s){
     if(s.settings&&s.settings.language){LANG=s.settings.language==="fa"?"fa":"en";applyLang()}
+    applyElder(s.settings&&s.settings.elder_mode);
   });
   setInterval(refreshStatus,15000);
 })();

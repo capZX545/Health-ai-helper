@@ -29,7 +29,8 @@ _EMOJI = re.compile("[\u2600-\u27BF\U0001F000-\U0001FAFF\uFE0F]")
 PERSONAL_FILES = ["learned_knowledge.json", "ai_behavior_profile.json", "patient_profile.json",
                   "vitals_history.json", "app_settings.json", ".reasoning_state.json",
                   "referral_report.html", "lab_report.html", "reminders.json",
-                  "ice_card.json", "health_vault.nmv", "med_reminders.json", "symptom_diary.json"]
+                  "ice_card.json", "health_vault.nmv", "med_reminders.json", "symptom_diary.json",
+                  "cycle_log.json", "family_history.json"]
 
 
 def clean():
@@ -968,6 +969,222 @@ def t_voice_io():
     return "tts/stt platform probes"
 
 
+
+def t_hybrid_stream():
+    from i18n import set_override
+    set_override("fa")
+    from hybrid_engine import HybridEngine
+    e = HybridEngine()
+    info = {}
+    chunks = list(e.chat_stream("من متفورمین مصرف می‌کنم و اسهال دارم", info))
+    expect(chunks and "متفورمین" in "".join(chunks), chunks[:2])
+    expect(info["source"] == "internal-knowledge", info)
+    info = {}
+    list(e.chat_stream("درد قفسه سینه شدید و تنگی نفس", info))
+    expect(info.get("red_flag") is True, info)
+    info = {}
+    chunks = list(e.chat_stream("zqxjw unknown obscure query vvv", info))
+    expect(chunks and info.get("source") in ("internal", "internal-knowledge"), info)
+    from ai_client import chat_stream as ext_stream
+    import inspect
+    expect(inspect.isgeneratorfunction(ext_stream))
+    from local_lm_connector import chat_stream as lm_stream
+    expect(inspect.isgeneratorfunction(lm_stream))
+    set_override(None)
+    return "qa/emergency/fallback paths + generators"
+
+
+def t_ocr_reader():
+    from i18n import set_override
+    set_override("fa")
+    import ocr_reader as ocr
+    r = ocr.ocr_image(b"notanimage")
+    expect(not r["ok"] and ("ویندوز" in r["message_fa"] or "عکس" in r["message_fa"] or len(r["message_fa"]) > 5), r)
+    import sys as _s
+    if not _s.platform.startswith("win"):
+        expect(not ocr.ocr_available())
+    expect("Windows.Media.Ocr" in ocr._PS_SCRIPT)
+    set_override(None)
+    return "graceful fallback + ps1 payload"
+
+
+def t_health_correlator():
+    import json as _json
+    from i18n import set_override
+    set_override("fa")
+    import health_correlator as hc
+    diary = [{"date": "2026-09-01", "symptom": "سردرد", "severity": 7},
+             {"date": "2026-09-05", "symptom": "سردرد", "severity": 8},
+             {"date": "2026-09-09", "symptom": "سردرد", "severity": 6},
+             {"date": "2026-09-02", "symptom": "خستگی", "severity": 5}]
+    vitals = [{"ts": "2026-09-01T10:00", "systolic_bp": 145, "glucose": 100},
+              {"ts": "2026-09-05T10:00", "systolic_bp": 150},
+              {"ts": "2026-09-09T10:00", "systolic_bp": 148, "glucose": 99},
+              {"ts": "2026-09-02T10:00", "systolic_bp": 118},
+              {"ts": "2026-09-03T10:00", "systolic_bp": 120, "glucose": 95},
+              {"ts": "2026-09-04T10:00", "systolic_bp": 121}]
+    with open("symptom_diary.json", "w", encoding="utf-8") as f:
+        _json.dump(diary, f, ensure_ascii=False)
+    with open("vitals_history.json", "w", encoding="utf-8") as f:
+        _json.dump(vitals, f, ensure_ascii=False)
+    r = hc.analyze()
+    expect(r["ok"], r)
+    corr = [x for x in r["findings"] if x["type"] == "correlation"]
+    expect(corr and any("سردرد" in x["text"] for x in corr), r["findings"])
+    expect(any("142" in x["text"] or "فشار" in x["text"] for x in corr), corr)
+    empty = hc.analyze.__doc__ is not None
+    with open("symptom_diary.json", "w", encoding="utf-8") as f:
+        _json.dump([], f)
+    r2 = hc.analyze()
+    expect(r2["ok"] and r2["findings"] == [], r2)
+    set_override(None)
+    return "bp-on-headache-days detected + empty case"
+
+
+def t_pregnancy_tracker():
+    import os as _os
+    from i18n import set_override
+    set_override("fa")
+    import pregnancy_tracker as pt
+    r = pt.set_pregnancy("2026-07-01")
+    from datetime import date
+    expect(r["ok"] and r["pregnant"], r)
+    r2 = pt.pregnancy_status(today=date(2026, 9, 20))
+    expect(r2["ok"] and r2["week"] == 12 and r2["trimester"] == 1, r2)
+    expect(r2["due_date"] == "2027-04-07", r2)
+    expect(r2["size_fa"] and r2["danger_fa"], r2)
+    r3 = pt.pregnancy_status(today=date(2026, 7, 8))
+    expect(r3["week"] == 2 and r3["trimester"] == 1, r3)
+    expect(not pt.set_pregnancy("bad")["ok"])
+    lp = pt.log_period("2026-08-01")
+    expect(lp["ok"] and "2026-08-01" in lp["periods"], lp)
+    pt.log_period("2026-08-29")
+    pt.log_period("2026-09-26")
+    c = pt.cycle_stats()
+    expect(c["ok"] and c["tracked"] == 3 and c["avg_cycle"] == 28, c)
+    expect(c["next_expected"] == "2026-10-24", c)
+    expect(c["ovulation"] == "2026-10-10", c)
+    expect(not pt.log_period("xx")["ok"])
+    pt.clear_pregnancy()
+    s = pt.pregnancy_status()
+    expect(s["ok"] and not s["pregnant"], s)
+    if _os.path.exists("cycle_log.json"):
+        _os.remove("cycle_log.json")
+    set_override(None)
+    return "weeks/due/cycle vectors (40-week guide)"
+
+
+def t_family_risk():
+    import os as _os
+    from i18n import set_override
+    set_override("fa")
+    import family_risk as fr
+    r = fr.add_member("father", "سرطان کولون", "52")
+    expect(r["ok"] and len(r["members"]) == 1, r)
+    fr.add_member("mother", "دیابت نوع ۲")
+    fr.add_member("grandmother", "سرطان سینه", "61")
+    rr = fr.recommendations()
+    expect(rr["ok"] and len(rr["recommendations"]) == 3, rr)
+    colon = [x for x in rr["recommendations"] if x["test"] == "کولونوسکوپی"]
+    expect(colon and colon[0]["first_degree"] is True, rr)
+    breast = [x for x in rr["recommendations"] if "ماموگرافی" in str(x.get("test"))]
+    expect(breast and breast[0]["first_degree"] is False, rr)
+    expect(not fr.add_member("cousin", "x")["ok"])
+    expect(not fr.add_member("mother", "")["ok"])
+    fr.remove_member(0)
+    expect(len(fr.list_members()) == 2)
+    for i in range(2):
+        fr.remove_member(0)
+    expect(fr.recommendations()["recommendations"] == [])
+    if _os.path.exists("family_history.json"):
+        _os.remove("family_history.json")
+    set_override(None)
+    return "colon/breast/diabetes rules + degrees"
+
+
+def t_second_opinion():
+    from i18n import set_override
+    set_override("fa")
+    import second_opinion as so
+    r = so.ask("", "openrouter", "lmstudio")
+    expect(not r["ok"], r)
+    r2 = so.ask("test question", "openrouter", "no_such_provider")
+    expect(r2["ok"] and r2["a"]["ok"] is False and r2["b"]["ok"] is False, r2)
+    expect(not r2["a"]["provider"] == "", r2)
+    set_override(None)
+    return "parallel ask + graceful failures"
+
+
+def t_health_passport():
+    import os as _os
+    from i18n import set_override
+    set_override("fa")
+    import health_passport as hp
+    import json as _json
+    with open("patient_profile.json", "w", encoding="utf-8") as f:
+        _json.dump({"name": "تست", "age": 40, "gender": "مرد", "weight_kg": 80, "height_cm": 175,
+                    "conditions": "فشار خون", "allergies": "پنی‌سیلین", "medications": "متفورمین"}, f, ensure_ascii=False)
+    with open("vitals_history.json", "w", encoding="utf-8") as f:
+        _json.dump([{"ts": "2026-09-01T10:00", "systolic_bp": 125, "diastolic_bp": 82, "glucose": 98}], f)
+    html = hp.build_html("fa")
+    expect("پاسپورت سلامت" in html and "تست" in html and "فشار خون" in html, html[:200])
+    expect("متفورمین" in html and "125/82" in html, html[:200])
+    html_en = hp.build_html("en")
+    expect("Health Passport" in html_en and "پاسپورت سلامت" not in html_en)
+    r = hp.save()
+    expect(r["ok"] and _os.path.exists(r["path"]), r)
+    _os.remove(r["path"])
+    for f_ in ("patient_profile.json", "vitals_history.json"):
+        if _os.path.exists(f_):
+            _os.remove(f_)
+    set_override(None)
+    return "passport html fa/en + charts"
+
+
+def t_backup_restore():
+    import json as _json
+    import os as _os
+    import tempfile
+    import secure_store as ss
+    tmp = tempfile.mkdtemp()
+    with open("patient_profile.json", "w", encoding="utf-8") as f:
+        _json.dump({"name": "کاربر تست"}, f, ensure_ascii=False)
+    dest = _os.path.join(tmp, "backup.nmv")
+    r = ss.backup_to("pw9999", dest)
+    expect(r["ok"] and r["files"] >= 1 and _os.path.exists(dest), r)
+    _os.remove("patient_profile.json")
+    bad = ss.restore_from("WRONG", dest)
+    expect(not bad["ok"], bad)
+    r2 = ss.restore_from("pw9999", dest)
+    expect(r2["ok"] and r2["restored"] >= 1, r2)
+    data = _json.load(open("patient_profile.json", encoding="utf-8"))
+    expect(data["name"] == "کاربر تست", data)
+    expect(not ss.backup_to("12", dest)["ok"])
+    expect(not ss.backup_to("pw9999", "")["ok"])
+    if _os.path.exists("patient_profile.json"):
+        _os.remove("patient_profile.json")
+    return "encrypted single-file backup roundtrip"
+
+
+def t_elder_mode():
+    from ai_api_manager import save_settings, get_settings
+    save_settings({"elder_mode": True})
+    expect(get_settings().get("elder_mode") is True)
+    save_settings({"elder_mode": False})
+    expect(get_settings().get("elder_mode") is False)
+    save_settings({"streaming_enabled": False})
+    expect(get_settings().get("streaming_enabled") is False)
+    save_settings({"streaming_enabled": True})
+    expect(get_settings().get("streaming_enabled") is True)
+    html = open("clinic_2077.html", encoding="utf-8").read()
+    expect("body.elder" in html and "toggleElder" in html and "elder_mode" in html)
+    import ui_2077
+    expect(abs(ui_2077._font_scale() - 1.0) < 0.01)
+    src = open("ui_2077.py", encoding="utf-8").read()
+    expect("_toggle_elder" in src and "elder_mode" in src)
+    return "settings roundtrip + web class + desktop scale"
+
+
 def main():
     clean()
     t0 = time.time()
@@ -1012,6 +1229,15 @@ def main():
     run_module("secure_store (ChaCha20 vault)", t_secure_store)
     run_module("updater (github)", t_updater)
     run_module("voice_io (tts/stt)", t_voice_io)
+    run_module("hybrid_engine streaming", t_hybrid_stream)
+    run_module("ocr_reader", t_ocr_reader)
+    run_module("health_correlator", t_health_correlator)
+    run_module("pregnancy_tracker", t_pregnancy_tracker)
+    run_module("family_risk", t_family_risk)
+    run_module("second_opinion", t_second_opinion)
+    run_module("health_passport", t_health_passport)
+    run_module("secure_store backup", t_backup_restore)
+    run_module("elder mode + streaming settings", t_elder_mode)
     run_module("infrastructure (ports/builders)", t_misc_infra)
     clean()
     total = len(RESULTS)

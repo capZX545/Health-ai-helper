@@ -78,6 +78,18 @@ Things got added over time as I needed them:
   an encrypted health-data vault (pure-python ChaCha20, no new dependencies) and
   auto-update from GitHub releases. The web version got full parity: charts,
   profiles, LM Studio and all new tools are in `http://localhost:2077` too.
+- **v9 adds:** GPT-style streaming answers (word by word, desktop + web, with
+  graceful fallback), photo OCR for lab reports using the OCR engine built into
+  Windows (photo -> text -> lab analysis, no new dependencies), a pattern
+  analyzer that cross-checks the symptom diary against the vitals history
+  ("on headache days your average systolic BP was 142 vs 127"), a bilingual
+  period tracker with cycle/fertile predictions plus a 40-week offline
+  pregnancy guide with trimester danger signs, a family-history module that
+  turns relatives' conditions into a personal screening plan, a second-opinion
+  mode that asks two AI providers in parallel, a one-file printable health
+  passport (profile + meds + vitals + charts), encrypted single-file backup /
+  restore for moving between computers, and an elder mode (large fonts, high
+  contrast) on both desktop and web.
 
 ## Where the data comes from
 

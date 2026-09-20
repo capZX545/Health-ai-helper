@@ -70,6 +70,12 @@ import voice_io
 import health_import
 import secure_store
 import updater
+import ocr_reader
+import health_correlator
+import pregnancy_tracker
+import family_risk
+import second_opinion
+import health_passport
 
 
 def main() -> int:

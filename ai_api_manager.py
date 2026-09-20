@@ -27,6 +27,8 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     "brain_enabled": True,
     "language": "en",
     "local_first": False,
+    "elder_mode": False,
+    "streaming_enabled": True,
 }
 
 

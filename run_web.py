@@ -160,6 +160,21 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/update/check":
                 from updater import check_latest
                 return self._json(check_latest())
+            if path == "/api/correlator":
+                import health_correlator as hc
+                return self._json(hc.analyze())
+            if path == "/api/family":
+                import family_risk as fr
+                return self._json(fr.recommendations())
+            if path == "/api/pregnancy":
+                import pregnancy_tracker as pt
+                r = pt.pregnancy_status()
+                if not r.get("pregnant"):
+                    r["cycle"] = pt.cycle_stats()
+                return self._json(r)
+            if path == "/api/passport":
+                import health_passport as hp
+                return self._html(hp.build_html())
             if path == "/api/charts":
                 from i18n import is_fa
                 from vitals_chart import all_charts
@@ -509,6 +524,31 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         data = self._body()
         try:
+            if path == "/api/chat/stream":
+                import json as _json
+                text = str(data.get("text") or "").strip()
+                if not text:
+                    return self._json({"ok": False, "message_fa": tt("The message is empty.", "پیام خالی است.")}, 400)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/x-ndjson; charset=utf-8")
+                self.send_header("Cache-Control", "no-cache")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
+                info = {}
+                try:
+                    for d in get_engine().chat_stream(text, info):
+                        self.wfile.write((_json.dumps({"d": d}, ensure_ascii=False) + "\n").encode("utf-8"))
+                        self.wfile.flush()
+                    self.wfile.write((_json.dumps({"done": 1, "source": info.get("source", "internal"),
+                                                   "red_flag": bool(info.get("red_flag"))},
+                                                  ensure_ascii=False) + "\n").encode("utf-8"))
+                except Exception as e:
+                    try:
+                        self.wfile.write((_json.dumps({"done": 1, "error": str(e)[:150]},
+                                                      ensure_ascii=False) + "\n").encode("utf-8"))
+                    except Exception:
+                        pass
+                return
             if path == "/api/chat":
                 text = str(data.get("text") or "").strip()
                 from i18n import tt
@@ -1082,6 +1122,51 @@ Answer in Farsi. Be specific about medications (name them) but always note presc
             if path == "/api/ice":
                 import emergency_card as ec
                 return self._json(ec.save_ice(data))
+            if path == "/api/family":
+                import family_risk as fr
+                action = str(data.get("action") or "list")
+                if action == "add":
+                    return self._json(fr.add_member(str(data.get("relation") or ""),
+                                                    str(data.get("condition") or ""),
+                                                    str(data.get("age") or "")))
+                if action == "remove":
+                    return self._json(fr.remove_member(int(data.get("idx") or 0)))
+                return self._json(fr.recommendations())
+            if path == "/api/pregnancy":
+                import pregnancy_tracker as pt
+                action = str(data.get("action") or "")
+                if action == "period":
+                    return self._json(pt.log_period(str(data.get("date") or "")))
+                if action == "lmp":
+                    return self._json(pt.set_pregnancy(str(data.get("date") or "")))
+                if action == "clear":
+                    return self._json(pt.clear_pregnancy())
+                r = pt.pregnancy_status()
+                if not r.get("pregnant"):
+                    r["cycle"] = pt.cycle_stats()
+                return self._json(r)
+            if path == "/api/second":
+                from second_opinion import ask
+                return self._json(ask(str(data.get("q") or ""),
+                                      str(data.get("a") or "openrouter"),
+                                      str(data.get("b") or "lmstudio")))
+            if path == "/api/ocr":
+                import base64 as _b64
+                from ocr_reader import ocr_and_lab
+                raw = str(data.get("image_b64") or "").split(",")[-1]
+                try:
+                    img = _b64.b64decode(raw)
+                except Exception:
+                    return self._json({"ok": False, "message_fa": "تصویر قابل رمزگشایی نبود."}, 400)
+                return self._json(ocr_and_lab(img))
+            if path == "/api/backup":
+                import secure_store as ss
+                action = str(data.get("action") or "")
+                if action == "restore":
+                    return self._json(ss.restore_from(str(data.get("password") or ""),
+                                                      str(data.get("path") or "")))
+                return self._json(ss.backup_to(str(data.get("password") or ""),
+                                               str(data.get("path") or "")))
             if path == "/api/lmstudio":
                 import local_lm_connector as lmc
                 action = str(data.get("action") or "status")

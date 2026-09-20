@@ -176,6 +176,67 @@ def chat(provider: str, messages: list[dict], model: str | None = None,
         return {"ok": False, "error": f"parse:{e}", "error_fa": tt("Could not read the service response.", "پاسخ سرویس قابل خواندن نبود.")}
 
 
+
+def chat_stream(provider: str, messages: list[dict], model: str | None = None,
+                temperature: float = 0.4, max_tokens: int = 1200,
+                timeout: int = 120):
+    """
+    Streaming variant of chat(): yields text deltas from the SSE stream.
+    Raises RuntimeError before the first delta if the provider fails,
+    so the caller can fall back to the next provider.
+    """
+    if requests is None:
+        raise RuntimeError("no requests library")
+    from ai_api_manager import get_api_key
+    key = get_api_key(provider)
+    if not key:
+        raise RuntimeError(f"missing key: {provider}")
+    url = _endpoints().get(provider)
+    if not url:
+        raise RuntimeError("unknown provider")
+    mdl = _model_for(provider, model)
+    payload = {
+        "model": mdl,
+        "messages": [dict(m) for m in messages],
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "stream": True,
+    }
+    try:
+        resp = requests.post(url, headers=_headers(provider, key), json=payload,
+                             stream=True, timeout=timeout)
+    except Exception as e:
+        raise RuntimeError(f"connection: {str(e)[:120]}")
+    if resp.status_code != 200:
+        try:
+            body = resp.text[:160]
+        except Exception:
+            body = ""
+        resp.close()
+        raise RuntimeError(f"http {resp.status_code} {body}")
+    try:
+        for raw in resp.iter_lines():
+            if not raw:
+                continue
+            line = raw.decode("utf-8", "ignore").strip()
+            if not line.startswith("data:"):
+                continue
+            data_str = line[5:].strip()
+            if data_str == "[DONE]":
+                break
+            try:
+                obj = json.loads(data_str)
+            except Exception:
+                continue
+            try:
+                delta = obj["choices"][0].get("delta", {}).get("content")
+            except Exception:
+                delta = None
+            if delta:
+                yield delta
+    finally:
+        resp.close()
+
 def chat_with_fallbacks(messages: list[dict], models: list[dict[str, str]] | None = None,
                         **kw) -> dict[str, Any]:
     """

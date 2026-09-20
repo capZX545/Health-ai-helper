@@ -99,41 +99,12 @@ class HybridEngine:
                     "red_flag": True, "reasons": analysis["red_flag_reasons"], "learned": False}
 
         if not image_b64 and not analysis.get("red_flag"):
-            try:
-                from intent_router import classify
-                from knowledge_answer import (answer_greeting, answer_drug_question,
-                                              answer_disease_question, answer_advice_question)
-                _ans = None
-                from medical_qa import answer_from_qa
-                from lab_answer import answer_lab_question, answer_lifestyle_question
-                _ans = answer_from_qa(user_text)
-                if not _ans:
-                    _ans = answer_lab_question(user_text)
-                if not _ans:
-                    _ans = answer_lifestyle_question(user_text)
-                if not _ans:
-                    try:
-                        from side_effect_checker import check_message
-                        _ans = check_message(user_text)
-                    except Exception:
-                        _ans = None
-                if not _ans:
-                    intent = classify(user_text)
-                    if intent == "greeting":
-                        _ans = answer_greeting(user_text)
-                    elif intent == "advice_question":
-                        _ans = answer_advice_question(user_text)
-                    elif intent == "drug_question":
-                        _ans = answer_drug_question(user_text)
-                    elif intent == "disease_question":
-                        _ans = answer_disease_question(user_text)
-                if _ans:
-                    self._remember("user", user_text)
-                    self._remember("assistant", _ans)
-                    return {"ok": True, "text": _ans, "source": "internal-knowledge",
-                            "red_flag": False, "learned": False}
-            except Exception:
-                pass
+            _ans = self._instant_answer(user_text)
+            if _ans:
+                self._remember("user", user_text)
+                self._remember("assistant", _ans)
+                return {"ok": True, "text": _ans, "source": "internal-knowledge",
+                        "red_flag": False, "learned": False}
 
         s = get_settings()
         external = None
@@ -190,6 +161,127 @@ class HybridEngine:
         return {"ok": True, "text": text, "source": "internal", "red_flag": False,
                 "learned": False, "image_type": (external or {}).get("image_type"),
                 "external_error": external.get("error_fa") if external else None, "info": info}
+
+    def _instant_answer(self, user_text: str) -> str | None:
+        try:
+            from intent_router import classify
+            from knowledge_answer import (answer_greeting, answer_drug_question,
+                                          answer_disease_question, answer_advice_question)
+            from medical_qa import answer_from_qa
+            from lab_answer import answer_lab_question, answer_lifestyle_question
+            _ans = answer_from_qa(user_text)
+            if not _ans:
+                _ans = answer_lab_question(user_text)
+            if not _ans:
+                _ans = answer_lifestyle_question(user_text)
+            if not _ans:
+                try:
+                    from side_effect_checker import check_message
+                    _ans = check_message(user_text)
+                except Exception:
+                    _ans = None
+            if not _ans:
+                intent = classify(user_text)
+                if intent == "greeting":
+                    _ans = answer_greeting(user_text)
+                elif intent == "advice_question":
+                    _ans = answer_advice_question(user_text)
+                elif intent == "drug_question":
+                    _ans = answer_drug_question(user_text)
+                elif intent == "disease_question":
+                    _ans = answer_disease_question(user_text)
+            return _ans or None
+        except Exception:
+            return None
+
+    def chat_stream(self, user_text: str, info: dict | None = None):
+        """
+        Generator that yields answer text deltas (GPT-style live typing).
+        Fills info with {source, red_flag} when done. Falls back to the
+        offline brain when no external provider streams.
+        """
+        from patient_profile import load_profile
+        info = info if info is not None else {}
+        analysis = analyze(user_text, load_profile())
+        if analysis["red_flag"]:
+            reply = emergency_response(analysis["red_flag_reasons"])
+            self._remember("user", user_text)
+            self._remember("assistant", reply)
+            info.update({"source": "internal-emergency", "red_flag": True})
+            yield reply
+            return
+        _ans = self._instant_answer(user_text)
+        if _ans:
+            self._remember("user", user_text)
+            self._remember("assistant", _ans)
+            info.update({"source": "internal-knowledge", "red_flag": False})
+            yield _ans
+            return
+        s = get_settings()
+        if s.get("streaming_enabled") is False:
+            ext = self._try_external(user_text, s)
+            if ext and ext.get("ok"):
+                text = ext["text"]
+                self._remember("user", user_text)
+                self._remember("assistant", text)
+                info.update({"source": ext.get("source") or f"external:{ext.get('provider', '?')}",
+                             "red_flag": False})
+                yield text
+                return
+            text, _i = self.internal_answer(user_text, analysis)
+            self._remember("user", user_text)
+            self._remember("assistant", text)
+            info.update({"source": "internal", "red_flag": False})
+            yield text
+            return
+        msgs = [{"role": "system", "content": self._system_prompt({}, self._rag(user_text))}]
+        msgs.extend(self.memory[-8:])
+        msgs.append({"role": "user", "content": user_text})
+        order = [p for p in s["provider_order"] if p != "local" and (get_api_key(p) or p == "lmstudio")]
+        if s.get("local_first"):
+            from local_llm import chat as local_chat, get_config
+            if get_config().get("enabled"):
+                r = local_chat(msgs)
+                if r.get("ok"):
+                    self._remember("user", user_text)
+                    self._remember("assistant", r["text"])
+                    info.update({"source": "local", "red_flag": False})
+                    yield r["text"]
+                    return
+        for p in order:
+            try:
+                if p == "lmstudio":
+                    from local_lm_connector import chat_stream as lm_stream, is_enabled
+                    if not is_enabled():
+                        continue
+                    gen = lm_stream(msgs)
+                else:
+                    from ai_client import chat_stream as ext_stream
+                    gen = ext_stream(p, msgs,
+                                     model=(s.get("openrouter_model") if p == "openrouter" else None))
+                chunks: list[str] = []
+                for d in gen:
+                    chunks.append(d)
+                    yield d
+                if chunks:
+                    full = "".join(chunks)
+                    self._remember("user", user_text)
+                    self._remember("assistant", full)
+                    info.update({"source": f"external:{p}", "red_flag": False})
+                    try:
+                        from auto_learning import learn_from_exchange
+                        learn_from_exchange(user_text, full, provider=p, model="", red_flag=False)
+                    except Exception:
+                        pass
+                    return
+            except Exception:
+                continue
+        text, _i = self.internal_answer(user_text, analysis)
+        self._remember("user", user_text)
+        self._remember("assistant", text)
+        info.update({"source": "internal", "red_flag": False})
+        yield text
+        return
 
     def _try_external(self, user_text: str, s: dict) -> dict[str, Any] | None:
         msgs = [{"role": "system", "content": self._system_prompt({}, self._rag(user_text))}]

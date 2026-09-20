@@ -32,6 +32,11 @@ PROTECTED_FILES = [
     "symptom_diary.json",
     "ice_card.json",
     "conversation_history.json",
+    "cycle_log.json",
+    "family_history.json",
+    "learned_knowledge.json",
+    "ai_behavior_profile.json",
+    "app_settings.json",
 ]
 
 
@@ -195,3 +200,58 @@ def unlock(password: str, vault_path: str | None = None, out_dir: str | None = N
     return {"ok": True, "restored": restored,
             "message_fa": (f"{restored} فایل بازگردانی شد و رمزنگاری برداشته شد."
                            if fa else f"{restored} files restored and encryption removed.")}
+
+
+def backup_to(password: str, dest_path: str) -> dict[str, Any]:
+    fa = is_fa()
+    if not password or len(password) < 4:
+        return {"ok": False, "message_fa": "رمز حداقل ۴ نویسه باشد." if fa else "Password must be at least 4 characters."}
+    if not dest_path:
+        return {"ok": False, "message_fa": "مسیر فایل پشتیبان را بده." if fa else "Give the backup file path."}
+    files: dict[str, str] = {}
+    for name in [os.path.join(DATA_DIR, f) for f in PROTECTED_FILES]:
+        if os.path.exists(name) and os.path.getsize(name) > 0:
+            with open(name, "rb") as f:
+                raw = f.read()
+            if raw.strip():
+                files[os.path.basename(name)] = base64.b64encode(raw).decode("ascii")
+    if not files:
+        return {"ok": False, "message_fa": "فایل شخصی‌ای برای پشتیبان پیدا نشد." if fa else "No personal files found to back up."}
+    blob = encrypt_bytes(password, json.dumps({"files": files}, ensure_ascii=False).encode("utf-8"))
+    try:
+        os.makedirs(os.path.dirname(os.path.abspath(dest_path)) or ".", exist_ok=True)
+        with open(dest_path, "wb") as f:
+            f.write(blob)
+    except Exception as e:
+        return {"ok": False, "message_fa": str(e)}
+    return {"ok": True, "files": len(files), "path": dest_path,
+            "message_fa": (f"پشتیبان رمزنگاری‌شده‌ی {len(files)} فایل ساخته شد: {dest_path}"
+                           if fa else f"Encrypted backup of {len(files)} files created: {dest_path}")}
+
+
+def restore_from(password: str, src_path: str, out_dir: str | None = None) -> dict[str, Any]:
+    fa = is_fa()
+    if not os.path.exists(src_path):
+        return {"ok": False, "message_fa": "فایل پشتیبان پیدا نشد." if fa else "Backup file not found."}
+    try:
+        with open(src_path, "rb") as f:
+            blob = f.read()
+        data = json.loads(decrypt_bytes(password, blob).decode("utf-8"))
+    except ValueError as e:
+        return {"ok": False, "message_fa": ("رمز اشتباه است." if "wrong password" in str(e) else str(e))
+                if fa and "wrong password" in str(e) else ("Wrong password." if "wrong password" in str(e) else str(e))}
+    except Exception as e:
+        return {"ok": False, "message_fa": str(e)}
+    files = data.get("files") or {}
+    base = out_dir or DATA_DIR
+    restored = 0
+    try:
+        for name, b64 in files.items():
+            name = os.path.basename(str(name))
+            with open(os.path.join(base, name), "wb") as f:
+                f.write(base64.b64decode(b64))
+            restored += 1
+    except Exception as e:
+        return {"ok": False, "message_fa": str(e)}
+    return {"ok": True, "restored": restored,
+            "message_fa": (f"{restored} فایل بازگردانی شد." if fa else f"{restored} files restored.")}

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import json, os, urllib.request
 
 DATA_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -91,3 +90,37 @@ def chat(messages: list[dict], temperature: float = 0.4, max_tokens: int = 800) 
     except Exception as e:
         return {"ok": False, "error": str(e)[:120],
                 "error_fa": "خطا در اتصال به LM Studio: " + str(e)[:80]}
+
+
+def chat_stream(messages: list, temperature: float = 0.4, max_tokens: int = 800,
+                timeout: int = 120):
+    cfg = _cfg()
+    base = cfg.get("base_url", "http://localhost:1234")
+    model = cfg.get("model", "")
+    if not model:
+        models = list_models()
+        model = models[0] if models else "local-model"
+    payload = json.dumps({
+        "model": model, "messages": messages,
+        "temperature": temperature, "max_tokens": max_tokens, "stream": True,
+    }).encode()
+    req = urllib.request.Request(base + "/v1/chat/completions", data=payload, method="POST",
+                                 headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        for raw in r:
+            line = raw.decode("utf-8", "ignore").strip()
+            if not line.startswith("data:"):
+                continue
+            data_str = line[5:].strip()
+            if data_str == "[DONE]":
+                break
+            try:
+                obj = json.loads(data_str)
+            except Exception:
+                continue
+            try:
+                delta = obj["choices"][0].get("delta", {}).get("content")
+            except Exception:
+                delta = None
+            if delta:
+                yield delta

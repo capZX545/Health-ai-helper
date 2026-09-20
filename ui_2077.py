@@ -53,7 +53,16 @@ def _load_bundled_fonts() -> None:
         pass
 
 
+def _font_scale() -> float:
+    try:
+        from ai_api_manager import get_settings
+        return 1.35 if get_settings().get("elder_mode") else 1.0
+    except Exception:
+        return 1.0
+
+
 def pick_font(size: int, bold: bool = False):
+    size = max(9, int(round(size * _font_scale())))
     _load_bundled_fonts()
     fams = set(tkfont.families())
     try:
@@ -118,6 +127,12 @@ class App:
         from i18n import tt
         return tt(en, fa)
 
+    def _toggle_elder(self):
+        from ai_api_manager import get_settings, save_settings
+        save_settings({"elder_mode": not bool(get_settings().get("elder_mode"))})
+        from i18n import get_lang
+        self.set_lang(get_lang())
+
     def set_lang(self, lang: str):
         from i18n import set_lang as _sl
         _sl(lang)
@@ -143,6 +158,11 @@ class App:
         tk.Button(top, text=("Farsi" if get_lang() == "en" else "English"),
                   command=lambda: self.set_lang("fa" if get_lang() == "en" else "en"),
                   bg="#0d1930", fg=C["cy"], relief="flat", font=F).pack(side="left", padx=4, pady=12)
+        from ai_api_manager import get_settings, save_settings
+        _elder = bool(get_settings().get("elder_mode"))
+        tk.Button(top, text=self.L("Elder mode", "حالت سالمند") + (" *" if _elder else ""),
+                  command=lambda: self._toggle_elder(),
+                  bg="#0d1930", fg=C["yl"], relief="flat", font=F).pack(side="left", padx=4, pady=12)
 
 
         tk.Button(top, text=self.L("Emergency 115/112", "اورژانس ۱۱۵/۱۱۲"), command=lambda: self._panel_emergency(),
@@ -209,6 +229,11 @@ class App:
             (("Research & articles", "پژوهش و مقالات"), self._panel_research),
             (("Laboratory", "آزمایشگاه"), self._panel_lab),
             (("Health tools", "ابزار سلامت"), self._panel_tools),
+            (("Pregnancy / period", "بارداری / قاعدگی"), self._panel_pregnancy),
+            (("Family risk", "ریسک خانوادگی"), self._panel_family),
+            (("Correlations", "تحلیل هم‌ربتگی"), self._panel_correlate),
+            (("Second opinion", "نظر دوم AI"), self._panel_second),
+            (("Health passport", "پاسپورت سلامت"), self._panel_passport),
             (("Risk scores", "ریسک قلب و دیابت"), self._panel_risk),
             (("Renal dosing", "دوز کلیوی"), self._panel_renal),
             (("Drug side effects", "عارضه دارویی"), self._panel_sidefx),
@@ -479,7 +504,46 @@ class App:
                     from image_caption import analyze_image_file
                     res = analyze_image_file(img_path, note, self._engine())
                 else:
-                    res = self._engine().chat(text)
+                    info = {}
+                    acc = []
+
+                    def feed(d):
+                        self.chat.config(state="normal")
+                        self.chat.insert("end", d, "bot")
+                        self.chat.see("end")
+                        self.chat.config(state="disabled")
+
+                    for d in self._engine().chat_stream(text, info):
+                        acc.append(d)
+                        self._ui(lambda dd=d: feed(dd))
+                    if not acc:
+                        res = self._engine().chat(text)
+                        info = {"source": res.get("source", "internal"), "red_flag": res.get("red_flag")}
+                        acc = [res.get("text", "")]
+                        self._ui(lambda: feed("".join(acc)))
+                    full_text = "".join(acc)
+                    self.last_answer = full_text
+                    source = str(info.get("source", "internal"))
+
+                    def finish():
+                        tag = "emg" if info.get("red_flag") else "bot"
+                        self.chat.config(state="normal")
+                        self.chat.insert("end", "\n", tag)
+                        meta = {"internal": self.L("offline brain", "مغز داخلی آفلاین"),
+                                "internal-knowledge": self.L("internal knowledge", "دانش داخلی"),
+                                "internal-emergency": self.L("emergency", "اورژانسی"),
+                                "internal-image": self.L("offline brain - image", "مغز داخلی — تحلیل تصویر")}.get(source, source)
+                        if meta:
+                            self.chat.insert("end", meta + "\n\n", "meta")
+                        else:
+                            self.chat.insert("end", "\n")
+                        self.chat.see("end")
+                        self.chat.config(state="disabled")
+                        self.send_btn.config(state="normal", text=self.L("Send", "ارسال"))
+                        self._refresh_status()
+                    self._ui(finish)
+                    return
+                res = res
                 tag = "emg" if res.get("red_flag") else "bot"
                 meta = {"internal": self.L("offline brain", "مغز داخلی آفلاین"),
                         "internal-image": self.L("offline brain - image", "مغز داخلی — تحلیل تصویر"),
@@ -714,8 +778,34 @@ class App:
             box.insert("1.0", r.get("text_report", "") + "\n\n"+ "\n".join(r.get("summary_fa", [])))
             if r.get("html_path"):
                 box.insert("end", self.L("\n\n visual report: ", "\n\n گزارش تصویری: ") + r["html_path"])
-        tk.Button(w, text=self.L("Analyze", "تحلیل"), command=go, bg="#0077b6", fg="#021018",
-                  font=pick_font(11, True), relief="flat").pack(pady=8, ipadx=24, ipady=4)
+        def ocr_go():
+            pth = filedialog.askopenfilename(title=self.L("Photo of the lab report", "عکس جواب آزمایش"),
+                                             filetypes=[(self.L("Images", "تصاویر"), "*.jpg *.jpeg *.png *.bmp *.webp"), (self.L("All", "همه"), "*.*")])
+            if not pth:
+                return
+            box.delete("1.0", "end")
+            box.insert("1.0", self.L("Reading the photo...", "در حال خواندن عکس..."))
+
+            def work():
+                from ocr_reader import ocr_image
+                r = ocr_image(pth)
+                def apply():
+                    box.delete("1.0", "end")
+                    if not r.get("ok"):
+                        box.insert("1.0", r.get("message_fa", ""))
+                        return
+                    txt.delete("1.0", "end")
+                    txt.insert("1.0", r.get("text", ""))
+                    go()
+                self._ui(apply)
+            threading.Thread(target=work, daemon=True).start()
+
+        bf = tk.Frame(w, bg=C["panel2"])
+        bf.pack(pady=6)
+        tk.Button(bf, text=self.L("Analyze", "تحلیل"), command=go, bg="#0077b6", fg="#021018",
+                  font=pick_font(11, True), relief="flat").pack(side="right", padx=6, ipadx=24, ipady=4)
+        tk.Button(bf, text=self.L("From photo (OCR)", "از عکس (OCR)"), command=ocr_go, bg="#0d5a4a", fg="#c8ffe9",
+                  font=pick_font(10, True), relief="flat").pack(side="right", padx=6, ipadx=10, ipady=4)
 
     def _panel_rx(self):
         from prescription_scanner import scan
@@ -2367,6 +2457,221 @@ class App:
         tk.Button(inner, text=self.L("Test connection", "تست اتصال"), command=test,
                   bg="#0077b6", fg="#021018", font=pick_font(10, True), relief="flat").pack(pady=6, ipadx=12)
 
+    def _panel_pregnancy(self):
+        import pregnancy_tracker as pt
+        w, top, inner, bottom = self._win_list(self.L("Pregnancy & period tracker", "بارداری و قاعدگی"))
+        box = scrolledtext.ScrolledText(bottom, bg="#070d18", fg=C["tx"], font=pick_font(10),
+                                        height=9, relief="flat", wrap="word")
+        box.pack(fill="both", expand=True, padx=16, pady=(4, 8))
+        f1 = tk.Frame(inner, bg=C["panel2"])
+        f1.pack(fill="x", padx=10, pady=6)
+        tk.Label(f1, text=self.L("Log period start (YYYY-MM-DD)", "ثبت شروع پریود (YYYY-MM-DD)"),
+                 bg=C["panel2"], fg=C["tx"], font=pick_font(10), anchor="e").pack(fill="x", padx=8)
+        rowp = tk.Frame(f1, bg=C["panel2"])
+        rowp.pack(fill="x", padx=8, pady=2)
+        e_pd = tk.Entry(rowp, bg="#0a1424", fg=C["tx"], relief="flat", width=13, justify="right", insertbackground=C["cy"])
+        e_pd.pack(side="right", padx=4, ipady=2)
+        tk.Button(rowp, text=self.L("Log", "ثبت"), command=lambda: self._pt_do(box, lambda: pt.log_period(e_pd.get()), box),
+                  bg="#0077b6", fg="#021018", font=pick_font(9, True), relief="flat").pack(side="right", padx=2, ipadx=8)
+        tk.Button(rowp, text=self.L("Cycle stats", "تحلیل سیکل"), command=lambda: self._pt_show(box, pt.cycle_stats()),
+                  bg="#0d1930", fg=C["cy"], font=pick_font(9), relief="flat").pack(side="right", padx=2, ipadx=6)
+        f2 = tk.Frame(inner, bg=C["panel2"])
+        f2.pack(fill="x", padx=10, pady=6)
+        tk.Label(f2, text=self.L("Pregnancy mode — first day of last period", "حالت بارداری — اولین روز آخرین پریود"),
+                 bg=C["panel2"], fg=C["yl"], font=pick_font(10), anchor="e").pack(fill="x", padx=8)
+        rowl = tk.Frame(f2, bg=C["panel2"])
+        rowl.pack(fill="x", padx=8, pady=2)
+        e_lmp = tk.Entry(rowl, bg="#0a1424", fg=C["tx"], relief="flat", width=13, justify="right", insertbackground=C["cy"])
+        e_lmp.pack(side="right", padx=4, ipady=2)
+        tk.Button(rowl, text=self.L("Set", "فعال کن"),
+                  command=lambda: self._pt_show(box, pt.set_pregnancy(e_lmp.get())),
+                  bg="#0077b6", fg="#021018", font=pick_font(9, True), relief="flat").pack(side="right", padx=2, ipadx=8)
+        tk.Button(rowl, text=self.L("Turn off", "خاموش کن"),
+                  command=lambda: self._pt_show(box, pt.clear_pregnancy()),
+                  bg="#0d1930", fg=C["dim"], font=pick_font(9), relief="flat").pack(side="right", padx=2, ipadx=6)
+        st = pt.pregnancy_status()
+        if st.get("pregnant"):
+            self._pt_show(box, st)
+        else:
+            c = pt.cycle_stats()
+            if c.get("tracked"):
+                self._pt_show(box, c)
+            else:
+                box.insert("1.0", self.L("Log a few period start dates to get cycle length, next period and fertile window predictions.",
+                                         "چند تاریخ شروع پریود را ثبت کن تا طول سیکل، پریود بعدی و پنجره‌ی باروری حساب شود."))
+
+    def _pt_show(self, box, r):
+        box.delete("1.0", "end")
+        if not r.get("ok"):
+            box.insert("1.0", r.get("message_fa", ""))
+            return
+        if r.get("pregnant"):
+            lines = [self.L("Week ", "هفته‌ی ") + str(r["week"]) + " / 40 — " + self.L("trimester ", "سه‌ماهه‌ی ") + str(r["trimester"]),
+                     self.L("Baby size: ", "اندازه‌ی جنین: ") + str(r.get("size_fa", "")),
+                     str(r.get("note_fa", "")),
+                     self.L("Due date: ", "تاریخ زایمان: ") + str(r.get("due_date", "")) + self.L(f" ({r.get('days_to_due')} days left)", f" ({r.get('days_to_due')} روز مانده)"),
+                     "",
+                     str(r.get("danger_head_fa", "")),
+                     str(r.get("danger_fa", ""))]
+        elif r.get("tracked"):
+            lines = [self.L("Logged periods: ", "پریودهای ثبت‌شده: ") + str(r["tracked"]),
+                     self.L("Average cycle: ", "میانگین سیکل: ") + str(r.get("avg_cycle")) + self.L(" days", " روز"),
+                     self.L("Last period: ", "آخرین پریود: ") + str(r.get("last", "")),
+                     self.L("Next expected: ", "پریود بعدی: ") + str(r.get("next_expected", "")),
+                     self.L("Fertile window: ", "پنجره‌ی باروری: ") + str(r.get("fertile_from", "")) + " — " + str(r.get("fertile_to", ""))]
+            if r.get("late_note_fa"):
+                lines.append(str(r["late_note_fa"]))
+        else:
+            lines = [r.get("message_fa", "")]
+        box.insert("1.0", "\n".join(str(x) for x in lines if x is not None))
+
+    def _pt_do(self, box, fn, _box2):
+        r = fn()
+        self._pt_show(box, r if r.get("ok") and (r.get("pregnant") or r.get("tracked")) else r)
+        if r.get("ok") and not (r.get("pregnant") or r.get("tracked")):
+            c = __import__("pregnancy_tracker").cycle_stats()
+            self._pt_show(box, c)
+
+    def _panel_family(self):
+        import family_risk as fr
+        w, top, inner, bottom = self._win_list(self.L("Family history & screening", "سابقه‌ی خانوادگی و غربالگری"))
+        box = scrolledtext.ScrolledText(bottom, bg="#070d18", fg=C["tx"], font=pick_font(10),
+                                        height=9, relief="flat", wrap="word")
+        box.pack(fill="both", expand=True, padx=16, pady=(4, 8))
+        f = tk.Frame(inner, bg=C["panel2"])
+        f.pack(fill="x", padx=10, pady=6)
+        c_rel = ttk.Combobox(f, values=[self.L("mother", "مادر"), self.L("father", "پدر"),
+                                        self.L("sister", "خواهر"), self.L("brother", "برادر"),
+                                        self.L("grandmother", "مادربزرگ"), self.L("grandfather", "پدربزرگ"),
+                                        self.L("aunt", "عمه/خاله"), self.L("uncle", "عمو/دایی")],
+                             width=11, font=pick_font(9), state="readonly")
+        c_rel.current(0)
+        c_rel.grid(row=0, column=0, padx=4)
+        e_cond = tk.Entry(f, bg="#0a1424", fg=C["tx"], relief="flat", width=24, justify="right", insertbackground=C["cy"])
+        e_cond.grid(row=0, column=1, padx=4, ipady=2)
+        e_age = tk.Entry(f, bg="#0a1424", fg=C["tx"], relief="flat", width=5, justify="right", insertbackground=C["cy"])
+        e_age.grid(row=0, column=2, padx=4, ipady=2)
+        rel_map = [self.L("mother", "مادر"), self.L("father", "پدر"), self.L("sister", "خواهر"), self.L("brother", "برادر"),
+                   self.L("grandmother", "مادربزرگ"), self.L("grandfather", "پدربزرگ"), self.L("aunt", "عمه/خاله"), self.L("uncle", "عمو/دایی")]
+        rel_keys = ["mother", "father", "sister", "brother", "grandmother", "grandfather", "aunt", "uncle"]
+
+        def refresh():
+            r = fr.recommendations()
+            box.delete("1.0", "end")
+            if not r.get("members"):
+                box.insert("1.0", r.get("message_fa", ""))
+                return
+            for rec in r.get("recommendations", []):
+                box.insert("end", "• " + rec["line"] + "\n\n")
+            box.insert("end", r.get("note_fa", ""))
+
+        def do_add():
+            key = rel_keys[rel_map.index(c_rel.get())] if c_rel.get() in rel_map else "mother"
+            fr.add_member(key, e_cond.get(), e_age.get())
+            e_cond.delete(0, "end")
+            e_age.delete(0, "end")
+            refresh()
+
+        tk.Button(f, text=self.L("Add", "افزودن"), command=do_add,
+                  bg="#0077b6", fg="#021018", font=pick_font(9, True), relief="flat").grid(row=0, column=3, padx=4, ipadx=8)
+
+        def do_remove():
+            members = fr.list_members()
+            if members:
+                fr.remove_member(len(members) - 1)
+                refresh()
+
+        tk.Button(f, text=self.L("Remove last", "حذف آخری"), command=do_remove,
+                  bg="#0d1930", fg="#ff8fab", font=pick_font(9), relief="flat").grid(row=1, column=3, padx=4, pady=4, ipadx=4)
+        tk.Label(f, text=self.L("relation / condition / their age at diagnosis", "نسبت / بیماری / سن تشخیص آن‌ها"),
+                 bg=C["panel2"], fg=C["dim"], font=pick_font(8)).grid(row=1, column=0, columnspan=3)
+        refresh()
+
+    def _panel_correlate(self):
+        import health_correlator as hc
+        w = self._win(self.L("Pattern analysis of your data", "تحلیل الگوهای داده‌های تو"))
+        box = self._result_box(w)
+
+        def run():
+            r = hc.analyze()
+            box.delete("1.0", "end")
+            if not r.get("findings"):
+                box.insert("1.0", r.get("message_fa", ""))
+                return
+            for f_ in r["findings"]:
+                box.insert("end", "• " + f_.get("text", "") + "\n\n")
+            box.insert("end", "\n" + r.get("note_fa", ""))
+
+        tk.Button(w, text=self.L("Analyze my data", "تحلیل داده‌های من"), command=run,
+                  bg="#0077b6", fg="#021018", font=pick_font(11, True), relief="flat").pack(pady=6, ipadx=12)
+        box.insert("1.0", self.L("Symptom diary + vitals history are cross-analyzed for patterns.",
+                                 "دفترچه‌ی علائم و تاریخچه‌ی علائم حیاتی برای پیدا کردن الگو کنار هم تحلیل می‌شوند."))
+
+    def _panel_second(self):
+        import second_opinion as so
+        w = self._win(self.L("Second opinion — two AIs", "نظر دوم — دو هوش مصنوعی"))
+        f = tk.Frame(w, bg=C["panel2"])
+        f.pack(fill="x", padx=16, pady=8)
+        tk.Label(f, text=self.L("Your question", "سؤالت"), bg=C["panel2"], fg=C["tx"], font=pick_font(10), anchor="e").pack(fill="x")
+        e_q = tk.Entry(f, bg="#0a1424", fg=C["tx"], relief="flat", font=pick_font(11), justify="right", insertbackground=C["cy"])
+        e_q.pack(fill="x", ipady=4, pady=4)
+        row = tk.Frame(w, bg=C["panel2"])
+        row.pack(fill="x", padx=16)
+        c_a = ttk.Combobox(row, values=["openrouter", "openai", "deepseek", "lmstudio"], width=11, font=pick_font(9), state="readonly")
+        c_a.set("openrouter")
+        c_a.pack(side="right", padx=4)
+        c_b = ttk.Combobox(row, values=["lmstudio", "openrouter", "openai", "deepseek"], width=11, font=pick_font(9), state="readonly")
+        c_b.set("lmstudio")
+        c_b.pack(side="left", padx=4)
+        box = self._result_box(w)
+        box.configure(height=13)
+
+        def run():
+            box.delete("1.0", "end")
+            box.insert("1.0", self.L("Asking both...", "از هر دو می‌پرسم..."))
+
+            def work():
+                r = so.ask(e_q.get(), c_a.get(), c_b.get())
+                def apply():
+                    box.delete("1.0", "end")
+                    if not r.get("ok"):
+                        box.insert("1.0", r.get("message_fa", ""))
+                        return
+                    for side in ("a", "b"):
+                        d = r[side]
+                        head = "=== " + str(d["provider"]) + " ==="
+                        box.insert("end", head + "\n" + "-" * 34 + "\n")
+                        if d.get("ok"):
+                            box.insert("end", str(d.get("text", "")) + "\n\n")
+                        else:
+                            box.insert("end", str(d.get("message_fa", "")) + "\n\n")
+                self._ui(apply)
+            threading.Thread(target=work, daemon=True).start()
+
+        tk.Button(w, text=self.L("Ask both", "بپرس"), command=run,
+                  bg="#0077b6", fg="#021018", font=pick_font(11, True), relief="flat").pack(pady=6, ipadx=16)
+        box.insert("1.0", self.L("The same question goes to two providers at once; answers appear side by side.",
+                                 "یک سؤال همزمان از دو سرویس پرسیده می‌شود؛ جواب‌ها کنار هم می‌آیند."))
+
+    def _panel_passport(self):
+        import health_passport as hp
+        import webbrowser
+        w = self._win(self.L("Health passport", "پاسپورت سلامت"))
+        box = self._result_box(w)
+        box.configure(height=7)
+
+        def make():
+            r = hp.save()
+            box.delete("1.0", "end")
+            box.insert("1.0", r.get("message_fa", ""))
+            if r.get("ok"):
+                webbrowser.open("file://" + r["path"])
+
+        tk.Button(w, text=self.L("Build passport (profile + meds + vitals + charts)", "ساخت پاسپورت (پروفایل + داروها + علائم حیاتی + نمودارها)"),
+                  command=make, bg="#0077b6", fg="#021018", font=pick_font(11, True), relief="flat").pack(pady=10, ipadx=10)
+        box.insert("1.0", self.L("One printable HTML file with everything a doctor needs, including your trend charts.",
+                                 "یک فایل HTML قابل چاپ با همه‌چیزی که پزشک لازم دارد، از جمله نمودارهای روند تو."))
+
     def _panel_risk(self):
         import risk_scores as rsk
         w, top, inner, bottom = self._win_list(self.L("Clinical risk scores", "ریسک‌سنجی بالینی"))
@@ -2710,6 +3015,33 @@ class App:
                   bg="#7a1836", fg="#ffd6e2", font=pick_font(10, True), relief="flat").grid(row=1, column=0, pady=8, ipadx=14)
         tk.Button(f, text=self.L("Unlock", "باز کن"), command=do_unlock,
                   bg="#0d5a4a", fg="#c8ffe9", font=pick_font(10, True), relief="flat").grid(row=1, column=1, pady=8, ipadx=14)
+
+        def do_backup():
+            pth = filedialog.asksaveasfilename(title=self.L("Encrypted backup", "پشتیبان رمزنگاری‌شده"),
+                                               defaultextension=".nmv",
+                                               filetypes=[("NexusMed vault", "*.nmv")])
+            if not pth:
+                return
+            r = ss.backup_to(e_pw.get(), pth)
+            box.delete("1.0", "end")
+            box.insert("1.0", r.get("message_fa", ""))
+
+        def do_restore():
+            pth = filedialog.askopenfilename(title=self.L("Restore from backup", "بازگردانی از پشتیبان"),
+                                             filetypes=[("NexusMed vault", "*.nmv"), (self.L("All", "همه"), "*.*")])
+            if not pth:
+                return
+            r = ss.restore_from(e_pw.get(), pth)
+            box.delete("1.0", "end")
+            box.insert("1.0", r.get("message_fa", ""))
+            refresh()
+
+        bf2 = tk.Frame(w, bg=C["panel2"])
+        bf2.pack(fill="x", padx=16, pady=4)
+        tk.Button(bf2, text=self.L("Encrypted backup file", "فایل پشتیبان رمزنگاری‌شده"), command=do_backup,
+                  bg="#0d1930", fg=C["cy"], font=pick_font(10), relief="flat").pack(side="right", padx=6, ipadx=8)
+        tk.Button(bf2, text=self.L("Restore from backup", "بازگردانی از پشتیبان"), command=do_restore,
+                  bg="#0d1930", fg=C["yl"], font=pick_font(10), relief="flat").pack(side="left", padx=6, ipadx=8)
         box.insert("1.0", self.L("Locking encrypts profile, vitals history, reminders, diary and chat history with ChaCha20. "
                                  "If you forget the password there is NO recovery.",
                                  "قفل کردن، پروفایل، تاریخچه علائم حیاتی، یادآورها، دفترچه علائم و تاریخچه گفتگو را با ChaCha20 رمزنگاری می‌کند. "
