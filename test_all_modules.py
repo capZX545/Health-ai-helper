@@ -27,6 +27,7 @@ RESULTS: list[tuple[str, bool, str]] = []
 _EMOJI = re.compile("[\u2600-\u27BF\U0001F000-\U0001FAFF\uFE0F]")
 
 PERSONAL_FILES = ["learned_knowledge.json", "ai_behavior_profile.json", "patient_profile.json",
+                  "lm_studio_config.json",
                   "vitals_history.json", "app_settings.json", ".reasoning_state.json",
                   "referral_report.html", "lab_report.html", "reminders.json",
                   "ice_card.json", "health_vault.nmv", "med_reminders.json", "symptom_diary.json",
@@ -1250,6 +1251,92 @@ def t_onboarding_wiring():
     return "desktop panel + web overlay + auto-open"
 
 
+
+def t_lmstudio_auto():
+    import json as _json
+    import threading as _th
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+    import local_lm_connector as lmc
+
+    class _H(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def do_GET(self):
+            if self.path.startswith("/v1/models"):
+                body = _json.dumps({"data": [{"id": "test-model"}]}).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
+            self.send_response(404)
+            self.end_headers()
+
+        def do_POST(self):
+            n = int(self.headers.get("Content-Length") or 0)
+            raw = self.rfile.read(n)
+            try:
+                req = _json.loads(raw.decode("utf-8"))
+            except Exception:
+                req = {}
+            if req.get("stream"):
+                parts = ["پاسخ ", "تست ", "LM"]
+                events = [_json.dumps({"choices": [{"delta": {"content": x}}]}, ensure_ascii=False) for x in parts]
+                body = ("\n\n".join("data: " + e for e in events) + "\n\ndata: [DONE]\n\n").encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type", "text/event-stream")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
+            body = _json.dumps({"choices": [{"message": {"content": "پاسخ تست LM Studio"}}]}, ensure_ascii=False).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+    srv = ThreadingHTTPServer(("127.0.0.1", 0), _H)
+    port = srv.server_address[1]
+    _th.Thread(target=srv.serve_forever, daemon=True).start()
+    lmc._save({"enabled": False, "auto": True, "base_url": "", "model": ""})
+    try:
+        lmc.set_config(f"http://127.0.0.1:{port}", "")
+        d = lmc.autodiscover(force=True)
+        expect(d["found"] and d["base_url"] == f"http://127.0.0.1:{port}", d)
+        expect(d["models"] == ["test-model"], d)
+        expect(lmc.is_active(), "auto mode should make connector active")
+        r = lmc.chat([{"role": "user", "content": "hi"}])
+        expect(r["ok"] and r["text"] == "پاسخ تست LM Studio" and r["model"] == "test-model", r)
+        chunks = list(lmc.chat_stream([{"role": "user", "content": "hi"}]))
+        expect("".join(chunks) == "پاسخ تست LM", chunks)
+        lmc.set_enabled(False)
+        expect(not lmc.is_active(), "manual off must disable even when detected")
+        lmc.set_enabled(True)
+        expect(lmc.is_active())
+        from hybrid_engine import HybridEngine
+        e = HybridEngine()
+        info = {}
+        out = list(e.chat_stream("zqxjw obscure question vvv", info))
+        expect(info.get("source") == "external:lmstudio", info)
+        expect("پاسخ تست" in "".join(out), out)
+        from ai_api_manager import get_settings
+        ext = e._try_external("zqxjw obscure question vvv", get_settings())
+        expect(ext and ext.get("ok") and ext.get("provider") == "lmstudio", ext)
+        srv.shutdown()
+        d2 = lmc.autodiscover(force=True)
+        expect(not d2["found"], d2)
+    finally:
+        srv.shutdown()
+        srv.server_close()
+        lmc._save({"enabled": False, "auto": True, "base_url": "http://localhost:1234", "model": ""})
+        if os.path.exists("lm_studio_config.json"):
+            os.remove("lm_studio_config.json")
+    return "autodiscover + auto-priority + stream/non-stream e2e"
+
+
 def main():
     clean()
     t0 = time.time()
@@ -1303,6 +1390,7 @@ def main():
     run_module("health_passport", t_health_passport)
     run_module("secure_store backup", t_backup_restore)
     run_module("elder mode + streaming settings", t_elder_mode)
+    run_module("local_lm_connector auto-detect", t_lmstudio_auto)
     run_module("medical_qa curated bank", t_medical_qa_bank)
     run_module("calendar_export (ics)", t_calendar_export)
     run_module("onboarding wiring", t_onboarding_wiring)

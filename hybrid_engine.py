@@ -52,6 +52,11 @@ class HybridEngine:
         self.dialogue = ClinicalDialogue()
         self.memory: list[dict[str, str]] = []
         self.last_source = "internal"
+        try:
+            from local_lm_connector import start_watch
+            start_watch()
+        except Exception:
+            pass
 
     def _system_prompt(self, profile: dict, rag_hits: list[dict]) -> str:
         from patient_profile import load_profile
@@ -238,6 +243,12 @@ class HybridEngine:
         msgs.extend(self.memory[-8:])
         msgs.append({"role": "user", "content": user_text})
         order = [p for p in s["provider_order"] if p != "local" and (get_api_key(p) or p == "lmstudio")]
+        try:
+            from local_lm_connector import is_active as _lm_active
+            if "lmstudio" in order and _lm_active():
+                order = ["lmstudio"] + [p for p in order if p != "lmstudio"]
+        except Exception:
+            pass
         if s.get("local_first"):
             from local_llm import chat as local_chat, get_config
             if get_config().get("enabled"):
@@ -251,8 +262,8 @@ class HybridEngine:
         for p in order:
             try:
                 if p == "lmstudio":
-                    from local_lm_connector import chat_stream as lm_stream, is_enabled
-                    if not is_enabled():
+                    from local_lm_connector import chat_stream as lm_stream, is_active
+                    if not is_active():
                         continue
                     gen = lm_stream(msgs)
                 else:
@@ -294,12 +305,18 @@ class HybridEngine:
                 if r.get("ok"):
                     return r
         order = [p for p in s["provider_order"] if p != "local" and (get_api_key(p) or p == "lmstudio")]
+        try:
+            from local_lm_connector import is_active as _lm_active
+            if "lmstudio" in order and _lm_active():
+                order = ["lmstudio"] + [p for p in order if p != "lmstudio"]
+        except Exception:
+            pass
         last_err = None
         for p in order:
             if p == "lmstudio":
                 try:
-                    from local_lm_connector import chat as lm_chat, is_enabled
-                    if is_enabled():
+                    from local_lm_connector import chat as lm_chat, is_active
+                    if is_active():
                         r = lm_chat(msgs)
                         if r.get("ok"):
                             r["provider"] = "lmstudio"
@@ -393,11 +410,18 @@ class HybridEngine:
             ls = learn_stats()
         except Exception:
             ls = {"entries": 0}
+        try:
+            from local_lm_connector import detect_status as _lm_stat, is_active as _lm_act
+            lm = _lm_stat()
+            lm["active"] = _lm_act()
+        except Exception:
+            lm = {}
         return {
             "time": now_iso(),
             "external_available": has_any_external(),
             "masked_keys": masked_keys(),
             "local": get_config(),
+            "lmstudio": lm,
             "learning": ls,
             "last_source": self.last_source,
             "settings": get_settings(),

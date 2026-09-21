@@ -65,3 +65,4 @@ conversation_history.json
 VERSION_STAMP.txt
 cycle_log.json
 family_history.json
+lm_studio_config.json

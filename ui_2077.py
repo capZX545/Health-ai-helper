@@ -581,6 +581,9 @@ class App:
                 brain = self.L("offline brain on", "مغز داخلی روشن") if s.get("settings", {}).get("brain_enabled") else self.L("brain off (background learning on)", "مغز خاموش (یادگیری پس‌زمینه فعال)")
                 learned = s.get("learning", {}).get("entries", 0)
                 msg = f"{ext} | {brain} | " + self.L(f"memory: {learned}", f"حافظه: {learned} مورد")
+                lm = s.get("lmstudio") or {}
+                if lm.get("found"):
+                    msg += " | LM Studio: " + str((lm.get("models") or ["?"])[0])
             except Exception as e:
                 msg = self.L("status: error — ", "وضعیت: خطا — ")+ str(e)[:80]
 
@@ -2453,18 +2456,41 @@ class App:
         tk.Label(inner, text=self.L("Connect to LM Studio for free, offline, unlimited AI.",
                                     "LM Studio را وصل کن — هوش مصنوعی رایگان، آفلاین و نامحدود."),
                  bg=C["panel2"], fg=C["dim"], font=pick_font(9), anchor="e", wraplength=600, justify="right").pack(fill="x", padx=10, pady=6)
-        for step in ("1. Download LM Studio from lmstudio.ai",
+        stat = tk.Label(inner, text=self.L("Auto-detect: searching...", "تشخیص خودکار: در حال جستجو..."),
+                        bg=C["panel2"], fg=C["gr"], font=pick_font(10, True), anchor="e")
+        stat.pack(fill="x", padx=10, pady=(6, 0))
+
+        def refresh_stat():
+            d = lmc.detect_status(force=True)
+
+            def apply():
+                try:
+                    if not stat.winfo_exists():
+                        return
+                    if d.get("found"):
+                        stat.config(fg=C["gr"], text=self.L("Auto-connected: ", "خودکار وصل شد: ")
+                                    + str((d.get("models") or ["?"])[0]))
+                    else:
+                        stat.config(fg=C["dim"], text=self.L("Not detected yet — turns on by itself when LM Studio starts.",
+                                                             "هنوز پیدا نشده — به‌محض روشن‌شدن LM Studio خودش وصل می‌شود."))
+                except tk.TclError:
+                    pass
+            self._ui(apply)
+
+        import threading as _th
+        _th.Thread(target=refresh_stat, daemon=True).start()
+        for step in ("1. Install LM Studio from lmstudio.ai",
                      "2. Load any model (Qwen 2.5 7B, Llama 3.2 8B, Phi-4)",
                      "3. Developer tab → Start Server (port 1234)",
-                     "4. Toggle the switch below and Test"):
+                     "4. Nothing else — the app connects by itself"):
             tk.Label(inner, text=step, bg=C["panel2"], fg=C["tx"], font=pick_font(9), anchor="w").pack(fill="x", padx=14)
-        var_on = tk.BooleanVar(value=lmc.is_enabled())
+        var_on = tk.BooleanVar(value=lmc.is_active())
         def toggle():
             lmc.set_enabled(var_on.get())
             box.delete("1.0", "end")
             box.insert("1.0", self.L("Enabled" if var_on.get() else "Disabled",
                                      "فعال شد" if var_on.get() else "غیرفعال شد"))
-        tk.Checkbutton(inner, text=self.L("Use LM Studio for AI responses", "استفاده از LM Studio برای پاسخ‌ها"),
+        tk.Checkbutton(inner, text=self.L("Use LM Studio (automatic when running)", "استفاده از LM Studio (خودکار وقتی روشن است)"),
                        variable=var_on, command=toggle, bg=C["panel2"], fg=C["tx"],
                        selectcolor="#0a1424", activebackground=C["panel2"],
                        activeforeground=C["cy"], font=pick_font(10), anchor="e").pack(fill="x", padx=10, pady=6)

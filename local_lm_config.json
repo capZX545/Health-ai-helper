@@ -1,0 +1,6 @@
+{
+ "enabled": false,
+ "auto": true,
+ "base_url": "http://localhost:1234",
+ "model": ""
+}

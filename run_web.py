@@ -156,7 +156,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"ok": True, "config": get_config()})
             if path == "/api/lmstudio":
                 import local_lm_connector as lmc
-                return self._json({"ok": True, "enabled": lmc.is_enabled(), "config": lmc.get_config()})
+                d = lmc.detect_status()
+                return self._json({"ok": True, "enabled": lmc.is_active(), "auto": lmc.get_config().get("auto", True),
+                                   "detected": bool(d.get("found")), "models": d.get("models") or [],
+                                   "config": lmc.get_config()})
             if path == "/api/update/check":
                 from updater import check_latest
                 return self._json(check_latest())
@@ -1193,7 +1196,13 @@ Answer in Farsi. Be specific about medications (name them) but always note presc
                     return self._json({"ok": True, "config": lmc.get_config()})
                 if action == "test":
                     return self._json(lmc.test_connection())
-                return self._json({"ok": True, "enabled": lmc.is_enabled(), "config": lmc.get_config()})
+                if action == "detect":
+                    d = lmc.detect_status(force=True)
+                    return self._json({"ok": True, "detected": bool(d.get("found")),
+                                       "models": d.get("models") or [],
+                                       "message_fa": ("خودکار وصل شد — مدل: " + str((d.get("models") or ["?"])[0]))
+                                       if d.get("found") else "الان پیدا نشد؛ LM Studio را با Local Server روشن کن."})
+                return self._json({"ok": True, "enabled": lmc.is_active(), "config": lmc.get_config()})
             if path == "/api/update/download":
                 from updater import download_and_run
                 return self._json(download_and_run(str(data.get("url") or "")))
