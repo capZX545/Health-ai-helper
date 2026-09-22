@@ -2256,8 +2256,15 @@ function homeOpen(k){
   });
   api("/api/profile").then(function(r){
     var p=(r&&r.profile)||{};
-    if(!String(p.name||"").trim())openPanel("onboarding");
+    if(!String(p.name||"").trim()&&!location.hash)openPanel("onboarding");
   });
+  if(location.hash==="#home"||location.hash.indexOf("#home=")===0){
+    openPanel("home");
+    if(location.hash.indexOf("#home=")===0){
+      var hk=location.hash.slice(6);
+      setTimeout(function(){if(typeof homeDetail==="function")homeDetail(hk)},400);
+    }
+  }
   setInterval(refreshStatus,15000);
 })();
 </script>
