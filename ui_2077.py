@@ -106,6 +106,15 @@ class App:
         self._hello()
         self.root.after(6000, self._startup_update_check)
         self.root.after(1600, self._maybe_onboard)
+        self.root.after(500, self._open_home_at_boot)
+
+    def _open_home_at_boot(self):
+        try:
+            if not (self.root.winfo_exists()):
+                return
+            self._panel_home()
+        except Exception:
+            pass
 
     def _startup_update_check(self):
         def work():
@@ -2514,6 +2523,7 @@ class App:
         w, top, inner, bottom = self._win_list(self.L("Home — module dashboard", "خانه — داشبورد ماژول‌ها"))
         try:
             w.geometry("980x740")
+            w.lift()
         except Exception:
             pass
         canvas = tk.Canvas(top, bg="#020403", height=310, highlightthickness=0)
