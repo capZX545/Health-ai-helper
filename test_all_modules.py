@@ -1337,6 +1337,29 @@ def t_lmstudio_auto():
     return "autodiscover + auto-priority + stream/non-stream e2e"
 
 
+
+def t_module_info():
+    import re
+    import module_info as mi
+    src = open("ui_2077.py", encoding="utf-8").read()
+    block = src[src.find("def _nav_items"):src.find("def _build", src.find("def _nav_items"))]
+    nav_keys = re.findall(r'\("([a-z0-9_]+)", \(', block)
+    expect(len(nav_keys) >= 35, len(nav_keys))
+    for k in nav_keys:
+        m = mi.get(k)
+        expect(m.get("en") and m.get("fa") and m.get("d_en") and m.get("d_fa"), k)
+    for k in mi.ORBIT_KEYS:
+        expect(k in nav_keys, k)
+    plan = mi.orbit_plan()
+    expect(len(plan[0]["keys"]) == 8 and len(plan[1]["keys"]) == 5)
+    html = open("clinic_2077.html", encoding="utf-8").read()
+    expect("HOME_MODULES" in html and "uiHome" in html and "homespin" in html)
+    import json as _json
+    m = mi.get("sidefx")
+    expect(m["fa"] == "عارضه دارویی" and "14,259" in m["d_en"])
+    return f"{len(nav_keys)} nav keys fully described, orbit 8+5, web dashboard wired"
+
+
 def main():
     clean()
     t0 = time.time()
@@ -1391,6 +1414,7 @@ def main():
     run_module("secure_store backup", t_backup_restore)
     run_module("elder mode + streaming settings", t_elder_mode)
     run_module("local_lm_connector auto-detect", t_lmstudio_auto)
+    run_module("module_info + home dashboard", t_module_info)
     run_module("medical_qa curated bank", t_medical_qa_bank)
     run_module("calendar_export (ics)", t_calendar_export)
     run_module("onboarding wiring", t_onboarding_wiring)

@@ -144,6 +144,48 @@ class App:
         self._refresh_status()
         self._hello()
 
+    def _nav_items(self):
+        return [
+            ("home", ("Home", "خانه"), self._panel_home),
+            ("chat", ("Chat (return)", "گفتگو (بازگشت)"), lambda: None),
+            ("profile", ("Patient profile", self.L("Patient profile", "پروفایل بیمار")), self._panel_profile),
+            ("vitals", ("Vitals", self.L("Vitals", "علائم حیاتی")), self._panel_vitals),
+            ("labs", ("Lab analysis", self.L("Lab analysis", "تحلیل آزمایش")), self._panel_labs),
+            ("rx", ("Prescription scan", self.L("Prescription scan", "اسکن نسخه")), self._panel_rx),
+            ("drugs", ("Drugs & interactions", self.L("Drugs & interactions", "دارو و تداخلات")), self._panel_drugs),
+            ("image", ("Medical image", self.L("Medical image analysis", "تحلیل تصویر پزشکی")), self._panel_image),
+            ("assess", ("Disease likelihood", "ارزیابی احتمال بیماری"), self._panel_assess),
+            ("symptoms", ("Symptoms (check & analyze)", "علائم (تیک و تحلیل)"), self._panel_symptoms),
+            ("diseases", ("Diseases database", "بانک بیماری‌ها"), self._panel_diseases),
+            ("drugsdb", ("Drugs database", "بانک داروها"), self._panel_drugs),
+            ("research", ("Research & articles", "پژوهش و مقالات"), self._panel_research),
+            ("lab", ("Laboratory", "آزمایشگاه"), self._panel_lab),
+            ("tools", ("Health tools", "ابزار سلامت"), self._panel_tools),
+            ("pregnancy", ("Pregnancy / period", "بارداری / قاعدگی"), self._panel_pregnancy),
+            ("family", ("Family risk", "ریسک خانوادگی"), self._panel_family),
+            ("correlate", ("Correlations", "تحلیل هم‌ربتگی"), self._panel_correlate),
+            ("second", ("Second opinion", "نظر دوم AI"), self._panel_second),
+            ("passport", ("Health passport", "پاسپورت سلامت"), self._panel_passport),
+            ("risk", ("Risk scores", "ریسک قلب و دیابت"), self._panel_risk),
+            ("renal", ("Renal dosing", "دوز کلیوی"), self._panel_renal),
+            ("sidefx", ("Drug side effects", "عارضه دارویی"), self._panel_sidefx),
+            ("vaccine", ("Child vaccination", "واکسیناسیون کودک"), self._panel_vaccine),
+            ("ice", ("Emergency card", "کارت اضطراری"), self._panel_ice),
+            ("import", ("Import health data", "ورود داده سلامت"), self._panel_import),
+            ("vault", ("Data vault", "قفل داده‌ها"), self._panel_vault),
+            ("charts", ("Vitals charts", "نمودار روند"), self._panel_charts),
+            ("profiles", ("Profiles", "پروفایل‌ها"), self._panel_profiles),
+            ("lmstudio", ("LM Studio", "LM Studio"), self._panel_lmstudio),
+            ("mental", ("Mental health", "سلامت روان"), self._panel_mental),
+            ("sleep", ("Sleep analysis", "تحلیل خواب"), self._panel_sleep),
+            ("checkup", ("Checkup calendar", "تقویم چکاپ"), self._panel_checkup),
+            ("aid", ("First aid / CPR", self.L("First aid / CPR", "کمک‌های اولیه / CPR")), self._panel_emergency),
+            ("referral", ("Referral report", "گزارش ارجاع"), self._panel_referral),
+            ("brain", ("Brain & learning", self.L("Internal brain & learning", "مغز داخلی / یادگیری")), self._panel_brain),
+            ("doctor", ("Doctor Mode", "حالت دکتر"), self._panel_doctor),
+            ("gpu", ("Local AI (GPU/Ollama)", "هوش محلی (GPU/Ollama)"), self._panel_gpu),
+        ]
+
     def _build(self):
         F, FB = pick_font(11), pick_font(11, True)
         F_SMALL, F_TITLE = pick_font(9), pick_font(15, True)
@@ -215,47 +257,9 @@ class App:
         nav.bind_all("<Button-4>", lambda e: _nav_wheel_linux(e, -1), add="+")
         nav.bind_all("<Button-5>", lambda e: _nav_wheel_linux(e, 1), add="+")
         self._nav_canvas = nav_canvas
-        items = [
-            (("Chat (return)", "گفتگو (بازگشت)"), lambda: None),
-            (("Patient profile", self.L("Patient profile", "پروفایل بیمار")), self._panel_profile),
-            (("Vitals", self.L("Vitals", "علائم حیاتی")), self._panel_vitals),
-            (("Lab analysis", self.L("Lab analysis", "تحلیل آزمایش")), self._panel_labs),
-            (("Prescription scan", self.L("Prescription scan", "اسکن نسخه")), self._panel_rx),
-            (("Drugs & interactions", self.L("Drugs & interactions", "دارو و تداخلات")), self._panel_drugs),
-            (("Medical image", self.L("Medical image analysis", "تحلیل تصویر پزشکی")), self._panel_image),
-            (("Disease likelihood", "ارزیابی احتمال بیماری"), self._panel_assess),
-            (("Symptoms (check & analyze)", "علائم (تیک و تحلیل)"), self._panel_symptoms),
-            (("Diseases database", "بانک بیماری‌ها"), self._panel_diseases),
-            (("Drugs database", "بانک داروها"), self._panel_drugs),
-            (("Research & articles", "پژوهش و مقالات"), self._panel_research),
-            (("Laboratory", "آزمایشگاه"), self._panel_lab),
-            (("Health tools", "ابزار سلامت"), self._panel_tools),
-            (("Pregnancy / period", "بارداری / قاعدگی"), self._panel_pregnancy),
-            (("Family risk", "ریسک خانوادگی"), self._panel_family),
-            (("Correlations", "تحلیل هم‌ربتگی"), self._panel_correlate),
-            (("Second opinion", "نظر دوم AI"), self._panel_second),
-            (("Health passport", "پاسپورت سلامت"), self._panel_passport),
-            (("Risk scores", "ریسک قلب و دیابت"), self._panel_risk),
-            (("Renal dosing", "دوز کلیوی"), self._panel_renal),
-            (("Drug side effects", "عارضه دارویی"), self._panel_sidefx),
-            (("Child vaccination", "واکسیناسیون کودک"), self._panel_vaccine),
-            (("Emergency card", "کارت اضطراری"), self._panel_ice),
-            (("Import health data", "ورود داده سلامت"), self._panel_import),
-            (("Data vault", "قفل داده‌ها"), self._panel_vault),
-            (("Vitals charts", "نمودار روند"), self._panel_charts),
-            (("Profiles", "پروفایل‌ها"), self._panel_profiles),
-            (("LM Studio", "LM Studio"), self._panel_lmstudio),
-            (("Mental health", "سلامت روان"), self._panel_mental),
-            (("Sleep analysis", "تحلیل خواب"), self._panel_sleep),
-            (("Checkup calendar", "تقویم چکاپ"), self._panel_checkup),
-            (("First aid / CPR", self.L("First aid / CPR", "کمک‌های اولیه / CPR")), self._panel_emergency),
-            (("Referral report", "گزارش ارجاع"), self._panel_referral),
-            (("Brain & learning", self.L("Internal brain & learning", "مغز داخلی / یادگیری")), self._panel_brain),
-            (("Doctor Mode", "حالت دکتر"), self._panel_doctor),
-            (("Local AI (GPU/Ollama)", "هوش محلی (GPU/Ollama)"), self._panel_gpu),
-        ]
+        items = self._nav_items()
         tk.Label(navf, text=self.L("- modules -", "ـ ماژول‌ها ـ"), bg=C["panel"], fg=C["dim"], font=F_SMALL).pack(pady=8)
-        for pair, cmd in items:
+        for _key, pair, cmd in items:
             txt = self.L(pair[0], pair[1])
             b = tk.Button(navf, text=txt, anchor="e", bg=C["panel"], fg=C["tx"], relief="flat",
                           font=F, activebackground="#101c36", activeforeground=C["cy"],
@@ -2502,6 +2506,109 @@ class App:
                 box.insert("end", "\n" + self.L("Models: ", "مدل‌ها: ") + ", ".join(r["models"]))
         tk.Button(inner, text=self.L("Test connection", "تست اتصال"), command=test,
                   bg="#0077b6", fg="#021018", font=pick_font(10, True), relief="flat").pack(pady=6, ipadx=12)
+
+    def _panel_home(self):
+        import math
+        from module_info import MODULE_INFO, orbit_plan
+        cmds = {k: c for k, _p, c in self._nav_items()}
+        w, top, inner, bottom = self._win_list(self.L("Home — module dashboard", "خانه — داشبورد ماژول‌ها"))
+        try:
+            w.geometry("980x740")
+        except Exception:
+            pass
+        canvas = tk.Canvas(top, bg="#020403", height=310, highlightthickness=0)
+        canvas.pack(fill="x")
+        cx, cy = 470, 155
+        canvas.create_oval(cx - 36, cy - 36, cx + 36, cy + 36, fill="#0d5a5a", outline="#3bd8d8", width=2)
+        canvas.create_text(cx, cy, text="NEXUS\n2077", fill="#021018", font=pick_font(10, True), justify="center")
+        box = scrolledtext.ScrolledText(bottom, bg="#070d18", fg=C["tx"], font=pick_font(10),
+                                        height=7, relief="flat", wrap="word")
+        box.pack(fill="both", expand=True, padx=16, pady=(4, 8))
+
+        def show(key):
+            m = MODULE_INFO.get(key) or {}
+            box.delete("1.0", "end")
+            box.insert("1.0", self.L(str(m.get("en", "")), str(m.get("fa", ""))) + "\n" + "=" * 40 + "\n")
+            box.insert("end", self.L(str(m.get("d_en", "")), str(m.get("d_fa", ""))))
+
+        def _short(txt):
+            for sep in (" ", "(", "/", "—"):
+                txt = txt.split(sep)[0]
+            return txt.strip()
+
+        planets = []
+        for ring in orbit_plan():
+            r = ring["radius"]
+            canvas.create_oval(cx - r, cy - r, cx + r, cy + r, outline="#13494a", width=1, dash=(3, 5))
+            n = len(ring["keys"])
+            for i, k in enumerate(ring["keys"]):
+                m = MODULE_INFO.get(k) or {}
+                lbl = _short(self.L(str(m.get("en", k)), str(m.get("fa", k))))
+                size = 27 if r > 100 else 24
+                oval = canvas.create_oval(0, 0, 1, 1, fill="#062b2c", outline="#1e7d7d", width=1)
+                txt = canvas.create_text(0, 0, text=lbl, fill="#c8f5f2", font=pick_font(8))
+                planets.append({"oval": oval, "txt": txt, "a0": 2 * math.pi * i / n,
+                                "r": r, "size": size, "spd": ring["speed"] * ring["direction"]})
+                canvas.tag_bind(oval, "<Enter>", lambda e, kk=k: show(kk))
+                canvas.tag_bind(txt, "<Enter>", lambda e, kk=k: show(kk))
+                canvas.tag_bind(oval, "<Button-1>", lambda e, kk=k: cmds.get(kk, lambda: None)())
+                canvas.tag_bind(txt, "<Button-1>", lambda e, kk=k: cmds.get(kk, lambda: None)())
+
+        state = {"a": 0.0}
+
+        def tick():
+            try:
+                if not w.winfo_exists():
+                    return
+                state["a"] += 0.011
+                for it in planets:
+                    a = it["a0"] + state["a"] * it["spd"]
+                    x = cx + it["r"] * math.cos(a)
+                    y = cy + it["r"] * math.sin(a)
+                    rr = it["size"]
+                    canvas.coords(it["oval"], x - rr, y - rr, x + rr, y + rr)
+                    canvas.coords(it["txt"], x, y)
+            except tk.TclError:
+                return
+            w.after(40, tick)
+
+        w.after(40, tick)
+        tiles_frame = tk.Frame(inner, bg=C["panel2"])
+        tiles_frame.pack(fill="both", expand=True, padx=10, pady=8)
+        keys = [k for k, _p, _c in self._nav_items() if k not in ("home",)]
+        per_row = 3
+        for idx2, key in enumerate(keys):
+            m = MODULE_INFO.get(key) or {}
+            name = self.L(str(m.get("en", key)), str(m.get("fa", key)))
+            tile = tk.Frame(tiles_frame, bg="#062b2c", highlightthickness=1,
+                            highlightbackground="#13494a", cursor="hand2")
+            tile.grid(row=idx2 // per_row, column=idx2 % per_row, padx=5, pady=5,
+                      sticky="nsew")
+            lbl = tk.Label(tile, text=name, bg="#062b2c", fg="#c8f5f2",
+                           font=pick_font(9, True), wraplength=140, justify="center",
+                           pady=8, padx=6, cursor="hand2")
+            lbl.pack(fill="both", expand=True)
+            for col in range(per_row):
+                tiles_frame.grid_columnconfigure(col, weight=1)
+
+            def bind_events(widget):
+                widget.bind("<Enter>", lambda e, kk=key, ww=widget: [show(kk), _hover(ww, True)])
+                widget.bind("<Leave>", lambda e, ww=widget: _hover(ww, False))
+                widget.bind("<Button-1>", lambda e, kk=key: cmds.get(kk, lambda: None)())
+
+            def _hover(widget, on):
+                try:
+                    bg = "#0d5a5a" if on else "#062b2c"
+                    widget.config(bg=bg)
+                    for ch in widget.winfo_children():
+                        ch.config(bg=bg)
+                except tk.TclError:
+                    pass
+
+            bind_events(tile)
+            bind_events(lbl)
+        box.insert("1.0", self.L("Hover any circle or tile to see its full description; click to open.",
+                                 "ماوس را روی هر دایره یا خانه ببر تا توضیح کاملش را ببینی؛ کلیک کن تا باز شود."))
 
     def _panel_pregnancy(self):
         import pregnancy_tracker as pt

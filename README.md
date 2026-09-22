@@ -80,6 +80,10 @@ Things got added over time as I needed them:
   profiles, LM Studio and all new tools are in `http://localhost:2077` too.
 [![Deploy to Render](https://img.shields.io/badge/Deploy_to-Render-46a2f7.svg)](https://render.com/deploy?repo=https://github.com/capZX545/Health-ai-helper)
 
+- **v9.3 adds:** an animated Home dashboard (desktop + web): rotating orbital
+  rings of modules around the NEXUS core (hover pauses the orbit), a grid of
+  module tiles, and full bilingual descriptions on hover for every module —
+  themed on the uploaded UI (dark + teal).
 - **v9.2 adds:** zero-configuration LM Studio auto-connect. The app silently
   probes localhost (1234/1235 and the configured URL) in the background; the
   moment LM Studio's local server is running it is detected, the first loaded
