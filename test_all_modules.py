@@ -1246,9 +1246,10 @@ def t_onboarding_wiring():
     src = open("ui_2077.py", encoding="utf-8").read()
     expect("after(1600, self._maybe_onboard)" in src)
     html = open("clinic_2077.html", encoding="utf-8").read()
-    expect("uiOnboarding" in html and 'openPanel("onboarding")' in html)
+    expect("uiOnboarding" in html and (chr(92) + "'onboarding") in html)
     expect("ob_title" in html)
-    return "desktop panel + web overlay + auto-open"
+    expect('openPanel("home")' in html and "window._needsSetup" in html)
+    return "desktop panel + web home-first boot + setup card"
 
 
 

@@ -2902,8 +2902,9 @@ class App:
                     if data:
                         save_profile(data)
                     w.destroy()
-                    self._bot(self.L("Profile saved. Now describe your symptoms in the chat, or explore the tools in the side panel.",
-                                     "پروفایل ذخیره شد. حالا علائمت را در چت بنویس، یا ابزارهای ستون کنار را ببین."), "meta")
+                    self._panel_home()
+                    self._bot(self.L("Profile saved. Explore the modules on the home dashboard, or describe your symptoms in the chat.",
+                                     "پروفایل ذخیره شد. ماژول‌ها را در داشبورد خانه ببین، یا علائمت را در چت بنویس."), "meta")
 
                 tk.Button(body, text=self.L("Finish", "تمام"), command=finish,
                           bg="#0d5a4a", fg="#c8ffe9", font=pick_font(11, True), relief="flat").pack(pady=10, ipadx=18)
