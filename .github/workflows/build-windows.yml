@@ -44,7 +44,7 @@ jobs:
             Write-Host "✅ NexusMed2077.exe exists"
           } else { Write-Host "❌ exe missing!"; exit 1 }
           # چک کن فایل‌های داده
-          $dataFiles = @("clinic_2077.html","diseases_doid.json","drugs_fda.json","symptoms_hpo.json","drug_labels.json.gz","fa_names.json","disease_symptoms_hpo.json.gz","vision_model.json.gz")
+          $dataFiles = @("clinic_2077.html","diseases_doid.json","drugs_fda.json","symptoms_hpo.json","drug_labels.json.gz","fa_names.json","disease_symptoms_hpo.json.gz","vision_model.json.gz","vision_cnn.json.gz")
           foreach ($f in $dataFiles) {
             if ((Test-Path "$distDir\$f") -or (Test-Path "$distDir\_internal\$f")) {
               Write-Host "✅ $f"
@@ -66,7 +66,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: Output/NexusMed_Setup_v10.0.0.exe
+          files: Output/NexusMed_Setup_v10.1.0.exe
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -76,4 +76,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: NexusMed-Setup
-          path: Output/NexusMed_Setup_v10.0.0.exe
+          path: Output/NexusMed_Setup_v10.1.0.exe

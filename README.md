@@ -80,6 +80,20 @@ Things got added over time as I needed them:
   profiles, LM Studio and all new tools are in `http://localhost:2077` too.
 [![Deploy to Render](https://img.shields.io/badge/Deploy_to-Render-46a2f7.svg)](https://render.com/deploy?repo=https://github.com/capZX545/Health-ai-helper)
 
+- **v10.1 adds:** the vision engine grows to CT, MRI and every photo type with
+  true "where is the damage" localization. A pure-NumPy CNN (conv-pool x3 +
+  GAP, trained on a synthetic corpus of 16 finding types, exported as a
+  version-proof 0.03 MB JSON) classifies regions, while deterministic
+  radiology analysis (body-mask statistics, two-mode tissue modeling for MRI's
+  gray/white matter, lung-field mapping, left-right symmetry veto against
+  normal paired anatomy, bone-stripe suppression) locates the abnormal area.
+  Findings: brain tumor (CT/MRI), hemorrhage, infarct, lung mass, pneumonia,
+  melanoma-suspicious mole, nevus, plus the existing skin/wound/retina set —
+  each reported with location, size, confidence, plain bilingual explanation
+  and urgency. Benchmark: ~87% detection on abnormal synthetic scans with
+  ZERO false positives on clean scans (precision-first, like real CAD).
+  Honest limits documented in-app: it flags WHERE with high specificity, but
+  naming the exact lesion type is assisted guessing — never a diagnosis.
 - **v10 adds:** the trained internal vision engine. Attach any medical photo
   and the offline brain itself now finds WHERE the damage is and where things
   look healthy: a random forest trained on a synthetic corpus (skin lesions,

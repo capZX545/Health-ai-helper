@@ -79,6 +79,7 @@ import health_passport
 import calendar_export
 import disease_lookup
 import vision_core
+import vision_net
 import vision_report
 
 

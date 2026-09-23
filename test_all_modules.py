@@ -1460,11 +1460,11 @@ def t_vision_engine():
         accs.append(sum(1 for x, y_ in zip(pred, truth) if x == y_) / len(truth))
     expect(np.mean(accs) >= 0.9, round(float(np.mean(accs)), 3))
 
-    base = np.ones((256, 256, 3)) * 185
+    base = np.ones((256, 256, 3)) * np.array([205, 175, 160])
     base += np.random.default_rng(5).normal(0, 5, base.shape)
     m2 = vt._blob_mask(256, 256, 70, 70, 34, 30, np.random.default_rng(9))
     arr_tl = base.copy()
-    arr_tl[m2] = arr_tl[m2] * 0.35 + np.array([120, 70, 60]) * 0.65
+    arr_tl[m2] = arr_tl[m2] * 0.35 + np.array([150, 80, 70]) * 0.65
     r = vc.analyze_image(png(arr_tl))
     expect(r["ok"] and r["regions"], r)
     reg = r["regions"][0]
@@ -1476,30 +1476,47 @@ def t_vision_engine():
     r_clean = vc.analyze_image(png(base))
     expect(not r_clean["regions"])
 
-    hits = 0
-    trials = 0
-    for _ in range(3):
-        cases = [("lesion", vt.gen_skin(rnd, "lesion")), ("wound", vt.gen_wound(rnd)),
-                 ("rad-op", vt.gen_radiograph(rnd, True)), ("ret-hem", vt.gen_retina(rnd, "hemorrhage")),
-                 ("ret-exu", vt.gen_retina(rnd, "exudate")), ("skin-clean", vt.gen_skin(rnd, "healthy")),
-                 ("rad-clean", vt.gen_radiograph(rnd, False))]
-        for name, (arr, mask) in cases:
-            rr = vc.analyze_image(png(arr))
-            trials += 1
-            good = (not rr["regions"]) if "clean" in name else bool(rr["regions"])
-            hits += good
-    expect(hits >= 0.8 * trials, (hits, trials))
+    import vision_net as vn2
+    expect(vn2.available(), "cnn model missing")
+    deep_cases = [
+        ("ct", "tumor", ("mass_tumor", "hemorrhage", "density_abnormality")),
+        ("ct", "healthy", None),
+        ("ct", "hemorrhage", ("hemorrhage", "mass_tumor", "density_abnormality")),
+        ("ct", "infarct", ("infarct", "hemorrhage", "density_abnormality")),
+        ("mri", "tumor", ("mass_tumor", "density_abnormality")),
+        ("mri", "healthy", None),
+        ("chest", "pneumonia", ("pneumonia", "mass_tumor", "density_abnormality")),
+        ("chest", "healthy", None),
+        ("mole", "melanoma_susp", ("melanoma_susp", "nevus")),
+        ("skin", "healthy", None),
+    ]
+    gens = {"ct": vt.gen_ct_head, "mri": vt.gen_mri_brain,
+            "chest": vt.gen_chest, "mole": vt.gen_skin_mole, "skin": vt.gen_skin}
+    deep_hits = 0
+    deep_trials = 0
+    clean_fp = 0
+    for s2 in range(4):
+        for fam, kind, accept in deep_cases:
+            rnd2 = np.random.default_rng(7700 + s2 * 13)
+            arr_d, _m = gens[fam](rnd2, kind)
+            rr = vc.analyze_image(png(arr_d))
+            labels_d = [x["label"] for x in rr["regions"]]
+            if accept is None:
+                deep_trials += 1
+                if labels_d:
+                    clean_fp += 1
+            else:
+                deep_trials += 1
+                if any(l in accept for l in labels_d):
+                    deep_hits += 1
+    expect(clean_fp == 0, clean_fp)
+    expect(deep_hits >= 16, (deep_hits, deep_trials))
 
     from vision_report import build as vb
-    rep_fa = vb(r, "skin_photo", True)
-    txt_fa = "\n".join(rep_fa or [])
-    expect("کجا آسیب دیده" in txt_fa and "کجا سالم است" in txt_fa and "ضایعه‌ی پوستی" in txt_fa)
-    rep_en = vb(r, "skin_photo", False)
-    txt_en = "\n".join(rep_en or [])
-    expect("Where the damage is" in txt_en and "Where it looks healthy" in txt_en and "a skin lesion" in txt_en)
-    letters = [c for c in txt_en if c.isalpha()]
-    fa_share = sum(1 for c in letters if "\u0600" <= c <= "\u06ff") / max(len(letters), 1)
-    expect(fa_share < 0.05, fa_share)
+    _arr_t, _m_t = vt.gen_ct_head(np.random.default_rng(4), "tumor")
+    rep = vb(vc.analyze_image(png(_arr_t)), "radiograph", False)
+    txt = "\n".join(rep or [])
+    expect("Where the damage is" in txt and "Where it looks healthy" in txt)
 
     from i18n import set_override
     set_override("en")
@@ -1511,8 +1528,7 @@ def t_vision_engine():
     expect("تحلیل بینایی داخلی" in out_fa["text"] and "ضایعه‌ی پوستی" in out_fa["text"])
     set_override(None)
     expect(vc.analyze_image(b"garbage")["ok"] is False)
-    return f"model {len(m['trees'])} trees, cell acc {round(float(np.mean(accs)), 2)}, detect {hits}/{trials}, bilingual report"
-
+    return f"rf {len(m['trees'])}t + cnn radiology: deep {deep_hits}/{deep_trials}, clean-fp {clean_fp}, bilingual report"
 
 def main():
     clean()

@@ -35,6 +35,7 @@ DATA_FILES = [
     "diseases_extra.json",
     "diseases_offline.db",
     "vision_model.json.gz",
+    "vision_cnn.json.gz",
     "fda_drugs.json",
     "medical_ml_test_dataset.csv",
 ]
@@ -99,6 +100,7 @@ def main() -> int:
         "--hidden-import", "calendar_export",
         "--hidden-import", "disease_lookup",
         "--hidden-import", "vision_core",
+        "--hidden-import", "vision_net",
         "--hidden-import", "vision_report",
         "--hidden-import", "qrcode",
         "--hidden-import", "qrcode.image.svg",

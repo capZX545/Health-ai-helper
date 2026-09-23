@@ -154,7 +154,7 @@ def cell_labels(mask: np.ndarray, grid: int) -> list[int]:
             if block.size == 0:
                 out.append(LAB["healthy"])
                 continue
-            counts = np.bincount(block, minlength=len(vc.LABELS))
+            counts = np.bincount(block, minlength=16)
             share = counts / counts.sum()
             abnormal_share = sum(share[k] for k in abn if k < len(share))
             if abnormal_share >= 0.25:
@@ -203,6 +203,311 @@ def export_json(model, path):
         json.dump(data, f, separators=(",", ":"))
 
 
+import vision_net as _vn_mod
+DLAB = {n: i for i, n in enumerate(_vn_mod.LABELS_DEEP)}
+_OLD2DEEP = None
+
+
+def _to_deep(mask, fam):
+    global _OLD2DEEP
+    if fam in ("skin", "wound", "retina"):
+        if _OLD2DEEP is None:
+            _OLD2DEEP = {LAB[x]: DLAB[x] for x in vc.LABELS if x in DLAB}
+        out = np.zeros_like(mask)
+        for old_id, deep_id in _OLD2DEEP.items():
+            out[mask == old_id] = deep_id
+        return out
+    return mask
+
+
+def _ellipse(h, w, cy, cx, ry, rx):
+    yy, xx = np.mgrid[0:h, 0:w]
+    return (((yy - cy) / ry) ** 2 + ((xx - cx) / rx) ** 2) < 1.0
+
+
+def gen_ct_head(rnd, kind="healthy"):
+    h = w = IMG
+    img = np.ones((h, w, 3)) * 8.0
+    yy, xx = np.mgrid[0:h, 0:w]
+    head = _ellipse(h, w, 128, 128, 96, 108)
+    skull = _ellipse(h, w, 128, 128, 96, 108) & (~_ellipse(h, w, 128, 128, 89, 101))
+    scalp = _ellipse(h, w, 128, 128, 103, 115) & (~_ellipse(h, w, 128, 128, 96, 108))
+    brain = _ellipse(h, w, 128, 128, 89, 101)
+    img[head] = 30.0
+    img[brain] = rnd.uniform(96, 110)
+    img[skull] = rnd.uniform(190, 225)
+    img[scalp] = rnd.uniform(50, 70)
+    gyri = (np.sin(xx / 7.0 + rnd.uniform(0, 6)) * np.cos(yy / 6.0 + rnd.uniform(0, 6)) * 4.0)
+    img[brain] += gyri[brain][:, None]
+    vl = _ellipse(h, w, 124, 112, 16, 10)
+    vr = _ellipse(h, w, 124, 144, 16, 10)
+    img[vl | vr] = rnd.uniform(35, 55)
+    img += _noise(rnd, h, w, 3.5)
+    mask = np.zeros((h, w), dtype=int)
+    mask[~head] = DLAB["dark_bg"]
+    if kind == "tumor":
+        cy = rnd.uniform(95, 165)
+        cx = rnd.uniform(75, 180)
+        m = _blob_mask(h, w, cy, cx, rnd.uniform(17, 33), rnd.uniform(17, 33), rnd) & brain
+        m &= ~((yy > cy + 60) | (yy < cy - 60))
+        img[m] = img[m] * 0.35 + rnd.uniform(135, 160) * 0.65
+        mask[m] = DLAB["mass_tumor"]
+    elif kind == "hemorrhage":
+        cy = rnd.uniform(100, 160)
+        cx = rnd.uniform(90, 170)
+        m = _blob_mask(h, w, cy, cx, rnd.uniform(10, 20), rnd.uniform(10, 20), rnd) & brain
+        img[m] = img[m] * 0.25 + rnd.uniform(175, 205) * 0.75
+        mask[m] = DLAB["hemorrhage"]
+    elif kind == "infarct":
+        side = 0 if rnd.random() < 0.5 else 1
+        ang = rnd.uniform(-0.7, 0.7) + (0 if side else np.pi)
+        cy = 128 + 62 * np.sin(ang)
+        cx = 128 + 66 * np.cos(ang)
+        yy2, xx2 = np.mgrid[0:h, 0:w]
+        vec_a = np.arctan2(yy2 - cy, xx2 - cx)
+        dist = np.sqrt((yy2 - cy) ** 2 + (xx2 - cx) ** 2)
+        wedge = (np.abs(((vec_a - ang + np.pi) % (2 * np.pi)) - np.pi) < 0.5) & (dist < 58) & brain
+        img[wedge] = img[wedge] * 0.3 + rnd.uniform(60, 78) * 0.7
+        mask[wedge] = DLAB["infarct"]
+    return img, mask
+
+
+def gen_mri_brain(rnd, kind="healthy"):
+    h = w = IMG
+    img = np.ones((h, w, 3)) * 6.0
+    head = _ellipse(h, w, 128, 128, 98, 108)
+    skull = _ellipse(h, w, 128, 128, 98, 108) & (~_ellipse(h, w, 128, 128, 90, 100))
+    scalp = _ellipse(h, w, 128, 128, 105, 115) & (~_ellipse(h, w, 128, 128, 98, 108))
+    brain = _ellipse(h, w, 128, 128, 90, 100)
+    wm = _ellipse(h, w, 128, 128, 62, 72)
+    img[head] = 20.0
+    img[brain] = rnd.uniform(98, 108)
+    img[wm] = rnd.uniform(125, 140)
+    img[skull] = rnd.uniform(10, 22)
+    img[scalp] = rnd.uniform(140, 165)
+    vl = _ellipse(h, w, 124, 112, 17, 10)
+    vr = _ellipse(h, w, 124, 144, 17, 10)
+    img[vl | vr] = rnd.uniform(165, 185)
+    img += _noise(rnd, h, w, 3.0)
+    mask = np.zeros((h, w), dtype=int)
+    mask[~head] = DLAB["dark_bg"]
+    if kind == "tumor":
+        cy = rnd.uniform(95, 165)
+        cx = rnd.uniform(80, 175)
+        core = _blob_mask(h, w, cy, cx, rnd.uniform(13, 24), rnd.uniform(13, 24), rnd) & brain
+        halo = _blob_mask(h, w, cy, cx, rnd.uniform(26, 40), rnd.uniform(26, 40), rnd) & brain & (~core)
+        img[core] = img[core] * 0.2 + rnd.uniform(195, 225) * 0.8
+        img[halo] = img[halo] * 0.45 + rnd.uniform(150, 170) * 0.55
+        mask[core] = DLAB["mass_tumor"]
+        mask[halo] = DLAB["mass_tumor"]
+    elif kind == "infarct":
+        ang = rnd.uniform(-0.7, 0.7) + (0 if rnd.random() < 0.5 else np.pi)
+        cy = 128 + 60 * np.sin(ang)
+        cx = 128 + 64 * np.cos(ang)
+        yy2, xx2 = np.mgrid[0:h, 0:w]
+        vec_a = np.arctan2(yy2 - cy, xx2 - cx)
+        dist = np.sqrt((yy2 - cy) ** 2 + (xx2 - cx) ** 2)
+        wedge = (np.abs(((vec_a - ang + np.pi) % (2 * np.pi)) - np.pi) < 0.55) & (dist < 55) & brain
+        img[wedge] = img[wedge] * 0.35 + rnd.uniform(160, 180) * 0.65
+        mask[wedge] = DLAB["infarct"]
+    elif kind == "hemorrhage":
+        cy = rnd.uniform(100, 160)
+        cx = rnd.uniform(90, 170)
+        m = _blob_mask(h, w, cy, cx, rnd.uniform(9, 18), rnd.uniform(9, 18), rnd) & brain
+        img[m] = img[m] * 0.3 + rnd.uniform(60, 80) * 0.7
+        mask[m] = DLAB["hemorrhage"]
+    return img, mask
+
+
+def gen_chest(rnd, kind="healthy"):
+    h = w = IMG
+    img = np.full((h, w, 3), rnd.uniform(60, 75))
+    yy, xx = np.mgrid[0:h, 0:w]
+    rib = (np.sin(xx / 13.0 + rnd.uniform(0, 1)) > 0.78).astype(float)
+    img += rib[..., None] * rnd.uniform(45, 65)
+    spine = (np.abs(xx - 128) < 14) & (yy > 40)
+    img[spine] += rnd.uniform(50, 70)
+    lung = (((xx > 30) & (xx < 115)) | ((xx > 141) & (xx < 226))) & (yy > 50) & (yy < 205)
+    img[lung] -= rnd.uniform(25, 35)
+    img += _noise(rnd, h, w, 4.0)
+    mask = np.zeros((h, w), dtype=int)
+    border = (xx < 14) | (xx > w - 14) | (yy < 12) | (yy > h - 12)
+    mask[border] = DLAB["dark_bg"]
+    img[border] *= 0.3
+    if kind == "pneumonia":
+        cx = rnd.uniform(50, 110) if rnd.random() < 0.5 else rnd.uniform(146, 206)
+        cy = rnd.uniform(90, 175)
+        m = _blob_mask(h, w, cy, cx, rnd.uniform(28, 48), rnd.uniform(28, 48), rnd) & lung
+        img[m] += rnd.uniform(34, 50)
+        mask[m] = DLAB["pneumonia"]
+    elif kind == "mass":
+        cx = rnd.uniform(55, 105) if rnd.random() < 0.5 else rnd.uniform(150, 200)
+        cy = rnd.uniform(95, 165)
+        m = _blob_mask(h, w, cy, cx, rnd.uniform(18, 32), rnd.uniform(18, 32), rnd, harmonics=6) & lung
+        img[m] += rnd.uniform(48, 66)
+        mask[m] = DLAB["mass_tumor"]
+    elif kind == "fracture":
+        rib_y = int(rnd.choice([70, 105, 140, 175]))
+        seg = (np.abs(yy - rib_y) < 5) & (xx > 150) & (xx < 230)
+        img[seg] += rnd.uniform(45, 60)
+        gap_x = int(rnd.uniform(165, 215))
+        gap = (np.abs(yy - rib_y) < 5) & (np.abs(xx - gap_x) < rnd.uniform(2, 3.5))
+        img[gap] *= 0.35
+        mask[(np.abs(yy - rib_y) < 8) & (np.abs(xx - gap_x) < 12)] = DLAB["fracture"]
+    return img, mask
+
+
+def gen_skin_mole(rnd, kind):
+    h = w = IMG
+    yy, xx = np.mgrid[0:h, 0:w]
+    base = rnd.uniform(150, 205, 3)
+    arr = np.ones((h, w, 3)) * base + np.linspace(-12, 12, w)[None, :, None]
+    arr += _noise(rnd, h, w)
+    mask = np.zeros((h, w), dtype=int)
+    cy = rnd.uniform(75, 180)
+    cx = rnd.uniform(75, 180)
+    if kind == "nevus":
+        m = _ellipse(h, w, cy, cx, rnd.uniform(9, 17), rnd.uniform(9, 17))
+        tone = np.array([rnd.uniform(120, 150), rnd.uniform(85, 110), rnd.uniform(65, 90)])
+        arr[m] = arr[m] * 0.3 + tone * 0.7
+        mask[m] = DLAB["nevus"]
+    else:
+        m = _blob_mask(h, w, cy, cx, rnd.uniform(17, 30), rnd.uniform(15, 28), rnd, harmonics=6)
+        tone = np.array([rnd.uniform(55, 90), rnd.uniform(35, 60), rnd.uniform(28, 50)])
+        arr[m] = arr[m] * 0.25 + tone * 0.75
+        speck = m & (np.sin(xx * 0.9 + yy * 0.7) > 0.55)
+        arr[speck] *= 0.55
+        rim = m & (~_blob_mask(h, w, cy, cx, 10, 10, rnd))
+        arr[rim & (np.sin(xx * 0.4) > 0.7)] = arr[rim & (np.sin(xx * 0.4) > 0.7)] * 0.5 + np.array([150, 60, 55]) * 0.5
+        mask[m] = DLAB["melanoma_susp"]
+    return arr, mask
+
+
+DEEP_FAMILIES = [
+    ("skin", "healthy"), ("skin", "lesion"), ("skin", "bruise"), ("skin", "burn"),
+    ("mole", "nevus"), ("mole", "melanoma_susp"),
+    ("wound", None), ("chest", "healthy"), ("chest", "pneumonia"), ("chest", "mass"),
+    ("chest", "fracture"), ("ct", "healthy"), ("ct", "tumor"), ("ct", "hemorrhage"),
+    ("ct", "infarct"), ("mri", "healthy"), ("mri", "tumor"), ("mri", "hemorrhage"),
+    ("mri", "infarct"), ("retina", "healthy"), ("retina", "exudate"), ("retina", "hemorrhage"),
+]
+
+
+def gen_deep(rnd, fam, kind):
+    if fam == "skin":
+        return gen_skin(rnd, kind)
+    if fam == "mole":
+        return gen_skin_mole(rnd, kind)
+    if fam == "wound":
+        return gen_wound(rnd)
+    if fam == "chest":
+        return gen_chest(rnd, kind)
+    if fam == "ct":
+        return gen_ct_head(rnd, kind)
+    if fam == "mri":
+        return gen_mri_brain(rnd, kind)
+    return gen_retina(rnd, kind)
+
+
+def patch_label(mask: np.ndarray, abn_ids) -> int:
+    block = mask.ravel()
+    counts = np.bincount(block, minlength=16)
+    share = counts / counts.sum()
+    abnormal_share = sum(share[k] for k in abn_ids)
+    if abnormal_share >= 0.25:
+        return int(max((k for k in abn_ids), key=lambda k: counts[k]))
+    return int(counts.argmax())
+
+
+def build_patch_dataset(n_per=24, patch=48, seed=SEED, n_patches=10):
+    import vision_net as vn
+    rnd = np.random.default_rng(seed)
+    abn_ids = [vn.LABELS_DEEP.index(x) for x in vn.ABNORMAL_DEEP]
+    lab16 = {n: i for i, n in enumerate(vn.LABELS_DEEP)}
+    X, y = [], []
+    for fam, kind in DEEP_FAMILIES:
+        for _ in range(n_per):
+            arr, mask = gen_deep(rnd, fam, kind)
+            mask = _to_deep(mask, fam)
+            h, w = mask.shape
+            ys, xs = np.nonzero(mask >= 0)
+            abn_ys, abn_xs = np.nonzero(np.isin(mask, abn_ids))
+            picks = []
+            if len(abn_ys):
+                for _ in range(n_patches * 3 // 4):
+                    i = int(rnd.integers(0, len(abn_ys)))
+                    picks.append((int(abn_ys[i]), int(abn_xs[i])))
+            while len(picks) < n_patches:
+                i = int(rnd.integers(0, len(ys)))
+                picks.append((int(ys[i]), int(xs[i])))
+            for cy, cx in picks:
+                y0 = int(np.clip(cy - patch // 2, 0, h - patch))
+                x0 = int(np.clip(cx - patch // 2, 0, w - patch))
+                win = np.clip(arr[y0:y0 + patch, x0:x0 + patch], 0, 255) / 255.0
+                X.append(win.transpose(2, 0, 1))
+                y.append(patch_label(mask[y0:y0 + patch, x0:x0 + patch], abn_ids))
+    X = np.asarray(X, dtype=np.float32)
+    y = np.asarray(y)
+    return X, y
+
+
+def train_cnn(epochs=45, batch=64, lr=0.007, seed=SEED):
+    import vision_net as vn
+    X, y = build_patch_dataset(seed=seed)
+    print("patches:", X.shape, "classes used:", len(np.unique(y)), flush=True)
+    net = vn.Net(len(vn.LABELS_DEEP), seed=seed)
+    rnd = np.random.default_rng(seed + 1)
+    n = len(y)
+    counts = np.bincount(y, minlength=len(vn.LABELS_DEEP)).astype(float)
+    inv = 1.0 / np.maximum(counts, 1.0)
+    w_cls = (inv / inv.sum()) * len(vn.LABELS_DEEP)
+    w_cls = w_cls ** 0.6
+    for ep in range(epochs):
+        order = rnd.permutation(n)
+        for i0 in range(0, n, batch):
+            idx = order[i0:i0 + batch]
+            xb = np.array(X[idx], dtype=np.float64)
+            flip = rnd.random(len(idx)) < 0.5
+            xb = np.where(flip[:, None, None, None], xb[:, :, :, ::-1], xb)
+            gain = rnd.uniform(0.85, 1.15, (len(idx), 1, 1, 1))
+            bias = rnd.uniform(-0.08, 0.08, (len(idx), 1, 1, 1))
+            xb = np.clip(xb * gain + bias, 0, 1)
+            probs, cache = net.forward(xb)
+            g = net.backward(probs, y[idx], cache, sample_w=w_cls[y[idx]])
+            net.adam(g, lr=lr * (0.95 ** ep))
+        acc, lss = chunk_eval(net, X, y)
+        print(f"epoch {ep + 1}/{epochs} loss {lss:.4f} train-acc {acc:.4f}", flush=True)
+    return net, X, y
+
+
+def chunk_eval(net, X, y, chunk=384):
+    acc_sum = 0.0
+    loss_sum = 0.0
+    n = len(y)
+    for i0 in range(0, n, chunk):
+        pr, _ = net.forward(X[i0:i0 + chunk])
+        acc_sum += float((pr.argmax(1) == y[i0:i0 + chunk]).sum())
+        loss_sum += float(-np.log(np.clip(pr[np.arange(len(y[i0:i0 + chunk])), y[i0:i0 + chunk]], 1e-9, 1)).sum())
+    return acc_sum / n, loss_sum / n
+
+
+def eval_cnn(net, seed=SEED + 4242):
+    Xv, yv = build_patch_dataset(n_per=10, seed=seed, n_patches=10)
+    acc, _ = chunk_eval(net, Xv, yv)
+    return acc, Xv, yv
+
+
+def main_cnn():
+    import vision_net as vn
+    net, X, y = train_cnn()
+    acc, _, _ = eval_cnn(net)
+    print("held-out patch acc:", round(float(acc), 4))
+    vn.save(net)
+    size = os.path.getsize(vn.CNN_PATH)
+    print("cnn exported:", round(size / 1e6, 2), "MB")
+    return 0
+
+
 def main():
     from sklearn.ensemble import RandomForestClassifier
     from sklearn.metrics import accuracy_score, f1_score
@@ -225,4 +530,7 @@ def main():
 
 
 if __name__ == "__main__":
+    import sys as _sys
+    if "--cnn" in _sys.argv:
+        raise SystemExit(main_cnn())
     raise SystemExit(main())
