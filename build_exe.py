@@ -101,6 +101,7 @@ def main() -> int:
         "--hidden-import", "disease_lookup",
         "--hidden-import", "vision_core",
         "--hidden-import", "vision_net",
+        "--hidden-import", "vision_overlay",
         "--hidden-import", "vision_report",
         "--hidden-import", "qrcode",
         "--hidden-import", "qrcode.image.svg",

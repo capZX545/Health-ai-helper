@@ -80,6 +80,7 @@ import calendar_export
 import disease_lookup
 import vision_core
 import vision_net
+import vision_overlay
 import vision_report
 
 

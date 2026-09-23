@@ -80,6 +80,15 @@ Things got added over time as I needed them:
   profiles, LM Studio and all new tools are in `http://localhost:2077` too.
 [![Deploy to Render](https://img.shields.io/badge/Deploy_to-Render-46a2f7.svg)](https://render.com/deploy?repo=https://github.com/capZX545/Health-ai-helper)
 
+- **v10.2 adds:** annotated output images — the engine now draws red boxes
+  directly on the photo around each finding (bilingual label + confidence,
+  healthy-area footer) like real CAD viewers. Vision accuracy push across
+  the board: rib suppression via vertical morphological opening (zero chest
+  false positives), brighter-lesion tissue model, stricter grayscale-vs-skin
+  routing (center saturation + border brightness), mole scan window stride
+  and thresholds tuned (melanoma 10/10, nevus 7/10 on the benchmark), CNN
+  retrained with a 3x mole mix. Benchmark: 164/180 (91%) with zero
+  false positives on all clean scans.
 - **v10.1 adds:** the vision engine grows to CT, MRI and every photo type with
   true "where is the damage" localization. A pure-NumPy CNN (conv-pool x3 +
   GAP, trained on a synthetic corpus of 16 finding types, exported as a

@@ -386,6 +386,7 @@ def gen_skin_mole(rnd, kind):
 DEEP_FAMILIES = [
     ("skin", "healthy"), ("skin", "lesion"), ("skin", "bruise"), ("skin", "burn"),
     ("mole", "nevus"), ("mole", "melanoma_susp"),
+    ("mole", "nevus"), ("mole", "melanoma_susp"), ("mole", "nevus"),
     ("wound", None), ("chest", "healthy"), ("chest", "pneumonia"), ("chest", "mass"),
     ("chest", "fracture"), ("ct", "healthy"), ("ct", "tumor"), ("ct", "hemorrhage"),
     ("ct", "infarct"), ("mri", "healthy"), ("mri", "tumor"), ("mri", "hemorrhage"),

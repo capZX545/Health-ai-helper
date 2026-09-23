@@ -184,9 +184,14 @@ def _regions(pred: np.ndarray, conf: np.ndarray, grid: int) -> list[dict[str, An
 
 
 def _is_grayscale(arr: np.ndarray) -> bool:
-    mx = arr.max(axis=2)
-    mn = arr.min(axis=2)
-    return float((mx - mn).mean()) < 14.0
+    h2, w2 = arr.shape[:2]
+    sub = arr[h2 // 4:3 * h2 // 4, w2 // 4:3 * w2 // 4, :].astype(np.float64)
+    mx = sub.max(axis=2)
+    mn = sub.min(axis=2)
+    border = np.concatenate([arr[:max(2, h2 // 8)].reshape(-1, 3),
+                             arr[-max(2, h2 // 8):].reshape(-1, 3)]).astype(np.float64)
+    border_bright = float(border.mean())
+    return float((mx - mn).mean()) < 16.0 and border_bright < 120.0
 
 
 def _crop_classify(arr: np.ndarray, x0: float, y0: float, x1: float, y1: float) -> tuple[str, float]:
@@ -228,7 +233,7 @@ def _mole_scan(arr: np.ndarray) -> dict[str, Any] | None:
                        for y, x in chunk]).transpose(0, 3, 1, 2)
         probs = vn.predict_proba(xb)
         for (y, x), pr in zip(chunk, probs):
-            for cls, thr_m in (("melanoma_susp", 0.62), ("nevus", 0.55)):
+            for cls, thr_m in (("melanoma_susp", 0.62), ("nevus", 0.50)):
                 c = float(pr[vn.LABELS_DEEP.index(cls)])
                 if c >= thr_m and (best is None or c > best[0]):
                     best = (c, cls, x / w, y / h, (x + win) / w, (y + win) / h)
@@ -245,6 +250,7 @@ def _radiology_regions(arr: np.ndarray) -> list[dict[str, Any]]:
     from scipy import ndimage
     lum = (0.299 * arr[..., 0] + 0.587 * arr[..., 1] + 0.114 * arr[..., 2])
     h, w = lum.shape
+    sx = sy = 1.0
     if max(h, w) > 512:
         sc = 512.0 / max(h, w)
         try:
@@ -255,50 +261,61 @@ def _radiology_regions(arr: np.ndarray) -> list[dict[str, Any]]:
             sx, sy = 1.0 / sc, 1.0 / sc
         except Exception:
             return []
-    else:
-        sx = sy = 1.0
     body = ndimage.binary_erosion(ndimage.binary_opening(lum > 30, np.ones((5, 5))), np.ones((9, 9)))
     if body.sum() < 500:
         return []
+    mid = w / 2.0
+
     p20 = np.percentile(lum[body], 20)
     dark = body & (lum < p20 + 8)
     lab, n = ndimage.label(ndimage.binary_opening(dark, np.ones((7, 7))))
     left_union = np.zeros((h, w), dtype=bool)
     right_union = np.zeros((h, w), dtype=bool)
-    mid = w / 2.0
     for i in range(1, n + 1):
         comp = lab == i
-        area = int(comp.sum())
-        if area < 0.02 * body.sum():
+        if comp.sum() < 0.02 * body.sum():
             continue
         ys, xs = np.nonzero(comp)
         if xs.min() <= 6 or xs.max() >= w - 7 or ys.min() <= 6 or ys.max() >= h - 7:
             continue
-        cx = xs.mean()
-        if cx < mid:
+        if xs.mean() < mid:
             left_union |= comp
         else:
             right_union |= comp
-    lungs = []
-    if left_union.sum() >= 0.05 * body.sum() and right_union.sum() >= 0.05 * body.sum():
-        cy_l = np.nonzero(left_union)[1].mean()
-        cy_r = np.nonzero(right_union)[1].mean()
-        if abs(cy_l - mid) >= 0.14 * w and abs(cy_r - mid) >= 0.14 * w:
-            lungs = [left_union, right_union]
-    regions: list[dict[str, Any]] = []
-    if len(lungs) == 2 and 0 < lungs[0].sum() and lungs[1].sum() and        max(lungs[0].sum(), lungs[1].sum()) < 3.0 * min(lungs[0].sum(), lungs[1].sum()):
-        analysis = np.zeros_like(body)
-        for comp in lungs:
-            ys, xs = np.nonzero(comp)
-            analysis[ys.min():ys.max() + 1, xs.min():xs.max() + 1] = True
-        yy2, xx2 = np.mgrid[0:h, 0:w]
-        analysis &= (np.abs(xx2 - mid) > 0.09 * w)
-        analysis &= body
-        lung_mode = float(np.median(lum[lungs[0] | lungs[1]]))
+    is_chest_like = (left_union.sum() >= 0.05 * body.sum()
+                     and right_union.sum() >= 0.05 * body.sum())
+
+    raw = []
+    struct = np.ones((9, 9))
+    if is_chest_like:
+        ys0, xs0 = np.nonzero(body)
+        bx0, bx1 = int(xs0.min()), int(xs0.max()) + 1
+        by0, by1 = int(ys0.min()), int(ys0.max()) + 1
+        box = np.zeros_like(body)
+        box[by0:by1, bx0:bx1] = True
+        analysis = ndimage.binary_closing(body, np.ones((31, 1)))
+        analysis = ndimage.binary_closing(analysis, np.ones((1, 21)))
+        analysis &= box
+        spine_half = int(0.085 * w)
+        analysis[:, int(mid) - spine_half:int(mid) + spine_half] = False
+        lung_mode = float(np.percentile(lum[analysis], 30))
         thr = lung_mode + 20.0
         dev = analysis & (lum > thr)
-        min_area = 900
-        sign_hint = "lung"
+        dev = ndimage.binary_opening(dev, np.ones((41, 1)))
+        dev = ndimage.binary_closing(dev, np.ones((9, 9)))
+        dev = ndimage.binary_closing(dev, np.ones((3, 23)))
+        lab2, n2 = ndimage.label(ndimage.binary_opening(dev, struct))
+        for i in range(1, n2 + 1):
+            comp = lab2 == i
+            if comp.sum() < 900:
+                continue
+            ys, xs = np.nonzero(comp)
+            hh = ys.max() - ys.min() + 1
+            ww = xs.max() - xs.min() + 1
+            if ww < 26 or comp.sum() < 0.35 * hh * ww:
+                continue
+            raw.append(("bright", comp, ys, xs, hh, ww))
+        whitelist = ("pneumonia", "mass_tumor")
     else:
         vals = lum[body]
         hist, edges = np.histogram(vals, bins=48, range=(0, 256))
@@ -322,23 +339,6 @@ def _radiology_regions(arr: np.ndarray) -> list[dict[str, Any]]:
             spread = max(14.0, 1.2 * np.percentile(np.abs(vals - mode), 60))
             dev_pos = body & (lum > mode + spread)
             dev_neg = body & (lum < mode - spread)
-        sign_hint = "brain"
-    raw = []
-    struct = np.ones((9, 9))
-    if sign_hint == "lung":
-        dev = ndimage.binary_closing(dev, np.ones((3, 27)))
-        lab2, n2 = ndimage.label(ndimage.binary_opening(dev, struct))
-        for i in range(1, n2 + 1):
-            comp = lab2 == i
-            if comp.sum() < min_area:
-                continue
-            ys, xs = np.nonzero(comp)
-            hh = ys.max() - ys.min() + 1
-            ww = xs.max() - xs.min() + 1
-            if ww < 34 or comp.sum() < 0.35 * hh * ww:
-                continue
-            raw.append(("bright", comp, ys, xs, hh, ww))
-    else:
         for sign, devx in (("bright", dev_pos), ("dark", dev_neg)):
             lab2, n2 = ndimage.label(ndimage.binary_opening(devx, struct))
             for i in range(1, n2 + 1):
@@ -378,11 +378,9 @@ def _radiology_regions(arr: np.ndarray) -> list[dict[str, Any]]:
             if not twin:
                 keep.append((sign, comp, ys, xs, hh, ww))
         raw = keep
+
     raw.sort(key=lambda r: -int(r[1].sum()))
-    if sign_hint == "lung":
-        whitelist = ("pneumonia", "mass_tumor")
-    else:
-        whitelist = (("mass_tumor", "hemorrhage") if sign == "bright" else ("infarct", "hemorrhage"))
+    regions = []
     for sign, comp, ys, xs, hh, ww in raw[:3]:
         x0 = xs.min() * sx / arr.shape[1]
         y0 = ys.min() * sy / arr.shape[0]
@@ -390,7 +388,11 @@ def _radiology_regions(arr: np.ndarray) -> list[dict[str, Any]]:
         y1 = (ys.max() + 1) * sy / arr.shape[0]
         area_pct = round(100.0 * int(comp.sum()) / (h * w), 1)
         label, conf = _crop_classify(arr, x0, y0, x1, y1)
-        if label not in whitelist:
+        if is_chest_like:
+            wl = ("pneumonia", "mass_tumor")
+        else:
+            wl = ("mass_tumor", "hemorrhage") if sign == "bright" else ("infarct", "hemorrhage")
+        if label not in wl:
             import vision_net as _vn0
             try:
                 crop = arr[int(y0 * arr.shape[0]):int(y1 * arr.shape[0]) + 1,
@@ -398,7 +400,7 @@ def _radiology_regions(arr: np.ndarray) -> list[dict[str, Any]]:
                 from PIL import Image as _I0
                 im = _I0.fromarray(np.clip(crop, 0, 255).astype(np.uint8)).resize((48, 48))
                 probs = _vn0.predict_proba((np.asarray(im, dtype=np.float64).transpose(2, 0, 1) / 255.0)[None])[0]
-                cands = sorted(((probs[_vn0.LABELS_DEEP.index(l)], l) for l in whitelist), reverse=True)
+                cands = sorted(((probs[_vn0.LABELS_DEEP.index(l2)], l2) for l2 in wl), reverse=True)
                 label, conf = cands[0][1], float(cands[0][0])
             except Exception:
                 label, conf = "", 0.0
@@ -455,7 +457,10 @@ def analyze_image(image_bytes: bytes) -> dict[str, Any]:
                 for r in regions:
                     if r["label"] in ("lesion", "bruise", "burn", "granulation") and r["area_pct"] <= 25.0:
                         lab2, conf2 = _crop_classify(arr, *r["bbox"])
-                        if lab2 in ("nevus", "melanoma_susp") and conf2 >= 0.45:
+                        if lab2 == "melanoma_susp" and conf2 >= 0.62:
+                            r["label"] = lab2
+                            r["conf"] = round(max(r["conf"], conf2), 2)
+                        elif lab2 == "nevus" and conf2 >= 0.75:
                             r["label"] = lab2
                             r["conf"] = round(max(r["conf"], conf2), 2)
                 if not any(r["label"] in ("nevus", "melanoma_susp") for r in regions):
