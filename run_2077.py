@@ -78,6 +78,8 @@ import second_opinion
 import health_passport
 import calendar_export
 import disease_lookup
+import vision_core
+import vision_report
 
 
 def main() -> int:

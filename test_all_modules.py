@@ -1433,6 +1433,87 @@ def t_bilingual_chat():
     return "16 chat cases x fa/en language purity + answers"
 
 
+
+def t_vision_engine():
+    import io as _io
+    import numpy as np
+    import vision_core as vc
+    import vision_train as vt
+    from PIL import Image
+
+    def png(arr):
+        buf = _io.BytesIO()
+        Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8)).save(buf, format="PNG")
+        return buf.getvalue()
+
+    expect(os.path.exists("vision_model.json.gz"))
+    m = vc._load_model()
+    expect(len(m.get("classes", [])) == len(vc.LABELS) and len(m.get("trees", [])) >= 50)
+    rnd = np.random.default_rng(31337)
+    accs = []
+    for _ in range(6):
+        arr, mask = vt.gen_skin(rnd, rnd.choice(["healthy", "lesion", "bruise", "burn"]))
+        a = vc.load_image(png(arr))
+        feats, _, _ = vc.cell_features(a)
+        pred, conf = vc.predict_cells(feats)
+        truth = vt.cell_labels(mask, vc.GRID)
+        accs.append(sum(1 for x, y_ in zip(pred, truth) if x == y_) / len(truth))
+    expect(np.mean(accs) >= 0.9, round(float(np.mean(accs)), 3))
+
+    base = np.ones((256, 256, 3)) * 185
+    base += np.random.default_rng(5).normal(0, 5, base.shape)
+    m2 = vt._blob_mask(256, 256, 70, 70, 34, 30, np.random.default_rng(9))
+    arr_tl = base.copy()
+    arr_tl[m2] = arr_tl[m2] * 0.35 + np.array([120, 70, 60]) * 0.65
+    r = vc.analyze_image(png(arr_tl))
+    expect(r["ok"] and r["regions"], r)
+    reg = r["regions"][0]
+    expect(reg["label"] == "lesion", reg)
+    expect(reg["bbox"][0] < 0.45 and reg["bbox"][1] < 0.45, reg["bbox"])
+    expect("بالا" in reg["where_fa"] and "left" in reg["where_en"], reg)
+    expect(r["healthy_pct"] > 60, r["healthy_pct"])
+
+    r_clean = vc.analyze_image(png(base))
+    expect(not r_clean["regions"])
+
+    hits = 0
+    trials = 0
+    for _ in range(3):
+        cases = [("lesion", vt.gen_skin(rnd, "lesion")), ("wound", vt.gen_wound(rnd)),
+                 ("rad-op", vt.gen_radiograph(rnd, True)), ("ret-hem", vt.gen_retina(rnd, "hemorrhage")),
+                 ("ret-exu", vt.gen_retina(rnd, "exudate")), ("skin-clean", vt.gen_skin(rnd, "healthy")),
+                 ("rad-clean", vt.gen_radiograph(rnd, False))]
+        for name, (arr, mask) in cases:
+            rr = vc.analyze_image(png(arr))
+            trials += 1
+            good = (not rr["regions"]) if "clean" in name else bool(rr["regions"])
+            hits += good
+    expect(hits >= 0.8 * trials, (hits, trials))
+
+    from vision_report import build as vb
+    rep_fa = vb(r, "skin_photo", True)
+    txt_fa = "\n".join(rep_fa or [])
+    expect("کجا آسیب دیده" in txt_fa and "کجا سالم است" in txt_fa and "ضایعه‌ی پوستی" in txt_fa)
+    rep_en = vb(r, "skin_photo", False)
+    txt_en = "\n".join(rep_en or [])
+    expect("Where the damage is" in txt_en and "Where it looks healthy" in txt_en and "a skin lesion" in txt_en)
+    letters = [c for c in txt_en if c.isalpha()]
+    fa_share = sum(1 for c in letters if "\u0600" <= c <= "\u06ff") / max(len(letters), 1)
+    expect(fa_share < 0.05, fa_share)
+
+    from i18n import set_override
+    set_override("en")
+    from image_caption import analyze_image_bytes
+    out = analyze_image_bytes(png(arr_tl), "what is this")
+    expect("Internal vision analysis" in out["text"] and "a skin lesion" in out["text"])
+    set_override("fa")
+    out_fa = analyze_image_bytes(png(arr_tl), "این چیه")
+    expect("تحلیل بینایی داخلی" in out_fa["text"] and "ضایعه‌ی پوستی" in out_fa["text"])
+    set_override(None)
+    expect(vc.analyze_image(b"garbage")["ok"] is False)
+    return f"model {len(m['trees'])} trees, cell acc {round(float(np.mean(accs)), 2)}, detect {hits}/{trials}, bilingual report"
+
+
 def main():
     clean()
     t0 = time.time()
@@ -1489,6 +1570,7 @@ def main():
     run_module("local_lm_connector auto-detect", t_lmstudio_auto)
     run_module("module_info + home dashboard", t_module_info)
     run_module("disease_lookup (name->analysis+meds)", t_disease_lookup)
+    run_module("vision engine (ML localization)", t_vision_engine)
     run_module("bilingual chat audit", t_bilingual_chat)
     run_module("medical_qa curated bank", t_medical_qa_bank)
     run_module("calendar_export (ics)", t_calendar_export)

@@ -403,6 +403,16 @@ def offline_analysis(type_info: dict, note: str, image_bytes: bytes | None = Non
                 q.append(head2 + "\n" + "\n".join(lines))
         except Exception:
             pass
+    if image_bytes and tkey in ("skin_photo", "wound_photo", "eye_photo", "radiograph", "other_photo", "dental_photo"):
+        try:
+            from vision_core import analyze_image as vision_analyze
+            from vision_report import build as vision_build
+            v = vision_analyze(image_bytes)
+            vlines = vision_build(v, tkey, fa)
+            if vlines:
+                q.append("\n" + "\n".join(vlines))
+        except Exception:
+            pass
     if note:
         q.append(("یادداشت تو: " if fa else "Your note: ") + note)
     q.append(MEDICAL_DISCLAIMER())
