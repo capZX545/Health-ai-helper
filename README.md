@@ -80,6 +80,16 @@ Things got added over time as I needed them:
   profiles, LM Studio and all new tools are in `http://localhost:2077` too.
 [![Deploy to Render](https://img.shields.io/badge/Deploy_to-Render-46a2f7.svg)](https://render.com/deploy?repo=https://github.com/capZX545/Health-ai-helper)
 
+- **v9.4 adds:** type any disease name in Farsi or English in the chat —
+  common or rare — and get the full analysis: what it is, common signs,
+  **the related medications** (specific drugs for the top 60 diseases,
+  chapter-level drug families for everything else), treatment and self-care.
+  Exact-match resolver over a curated table, the 104-condition engine bank,
+  the 27k ICD-10 catalog, the 15k Persian name bank and Wikidata — no more
+  fuzzy mismatches ("diabetes" now correctly means type 2 diabetes, "آسم"
+  means asthma). Symptom words are never hijacked away from symptom analysis.
+  Plus a permanent bilingual chat audit (16 cases x both languages) and
+  Persian-dominant drug answers.
 - **v9.3 adds:** an animated Home dashboard (desktop + web): rotating orbital
   rings of modules around the NEXUS core (hover pauses the orbit), a grid of
   module tiles, and full bilingual descriptions on hover for every module —

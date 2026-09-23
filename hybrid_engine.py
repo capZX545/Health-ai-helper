@@ -186,6 +186,12 @@ class HybridEngine:
                 except Exception:
                     _ans = None
             if not _ans:
+                try:
+                    from disease_lookup import answer_if_disease
+                    _ans = answer_if_disease(user_text)
+                except Exception:
+                    _ans = None
+            if not _ans:
                 intent = classify(user_text)
                 if intent == "greeting":
                     _ans = answer_greeting(user_text)

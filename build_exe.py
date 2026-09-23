@@ -96,6 +96,7 @@ def main() -> int:
         "--hidden-import", "second_opinion",
         "--hidden-import", "health_passport",
         "--hidden-import", "calendar_export",
+        "--hidden-import", "disease_lookup",
         "--hidden-import", "qrcode",
         "--hidden-import", "qrcode.image.svg",
         *add_data,

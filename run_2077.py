@@ -77,6 +77,7 @@ import family_risk
 import second_opinion
 import health_passport
 import calendar_export
+import disease_lookup
 
 
 def main() -> int:

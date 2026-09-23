@@ -1361,6 +1361,78 @@ def t_module_info():
     return f"{len(nav_keys)} nav keys fully described, orbit 8+5, web dashboard wired"
 
 
+
+def t_disease_lookup():
+    from i18n import set_override
+    import disease_lookup as dl
+    fa_hit = [("دیابت", "type 2 diabetes"), ("قند خون", "type 2 diabetes"),
+              ("آسم", "asthma"), ("سرطان خون", "leukemia"), ("پسوریازیس", "psoriasis"),
+              ("فشار خون", "hypertension"), ("بواسیر", "hemorrhoids"), ("کم کاری تیروئید", "hypothyroidism"),
+              ("کرونا", "COVID"), ("سرماخوردگی", "cold")]
+    en_hit = [("diabetes", "type 2 diabetes"), ("psoriasis", "psoriasis"), ("leukemia", "leukemia"),
+              ("asthma", "asthma"), ("gout", "gout"), ("hypertension", "hypertension"),
+              ("hypothyroidism", "hypothyroidism"), ("hemorrhoids", "hemorrhoids")]
+    for q, want in fa_hit + en_hit:
+        r = dl.resolve(dl._core_of(q))
+        expect(r is not None and want.lower() in r["en"].lower(), (q, r))
+    for q in ["سردرد", "استفراغ", "cough", "headache", "تب", "diarrhea"]:
+        expect(dl.answer_if_disease(q) is None, q)
+    set_override("fa")
+    a = dl.answer_if_disease("دیابت")
+    expect(a and "متفورمین" in a and "دیابت نوع ۲" in a and "insipidus" not in a, a[:80])
+    expect("ICD-10: E11" in a, a[:60])
+    b = dl.answer_if_disease("آسم")
+    expect(b and "آسم" in b and "melasma" not in b.lower(), b[:60])
+    set_override("en")
+    c = dl.answer_if_disease("psoriasis")
+    expect(c and c.startswith("psoriasis") and "Common medications" in c, c[:70])
+    d = dl.answer_if_disease("leukemia")
+    expect(d and d.startswith("leukemia") and "سرطان خون" in d, d[:70])
+    set_override(None)
+    return "50 curated + banks resolver, symptom guard, bilingual titles"
+
+
+def t_bilingual_chat():
+    from i18n import set_override
+    from hybrid_engine import HybridEngine
+    e = HybridEngine()
+
+    def fa_share(t):
+        letters = [c for c in t if c.isalpha()]
+        if not letters:
+            return 0.0
+        return sum(1 for c in letters if "\u0600" <= c <= "\u06ff") / len(letters)
+
+    set_override("fa")
+    fa_cases = [("دیابت", "متفورمین"), ("پسوریازیس چیست", "دارو"), ("ایبوپروفن چیه", "مسکن"),
+                ("فشار خون نرمال چنده", "۱۲۰"), ("متفورمین مصرف میکنم و اسهال دارم", "متفورمین"),
+                ("سلام", "نکسوس"), ("سردرد دارم", "علائم")]
+    for q, needle in fa_cases:
+        r = e.chat(q)
+        expect(needle in r["text"], (q, r["text"][:80]))
+        expect(fa_share(r["text"][:200]) > 0.25, ("fa-leak", q, r["text"][:90]))
+    set_override("en")
+    en_cases = [("psoriasis", "psoriasis"), ("leukemia", "leukemia"), ("what is ibuprofen", "class"),
+                ("normal blood pressure", "120"), ("I take metformin and have diarrhea", "metformin"),
+                ("hello", "medical assistant"), ("I have a headache", "symptom")]
+    for q, needle in en_cases:
+        r = e.chat(q)
+        expect(needle.lower() in r["text"].lower(), (q, r["text"][:80]))
+        body = r["text"][:250]
+        stripped = body
+        import re as _re2
+        stripped = _re2.sub(r"\([^)]*[\u0600-\u06ff][^)]*\)", "", stripped)
+        expect(fa_share(stripped) < 0.2, ("en-leak", q, body[:90]))
+    set_override("fa")
+    r = e.chat("عسل به نوزاد دادم")
+    expect(fa_share(r["text"][:150]) > 0.3, r["text"][:90])
+    set_override("en")
+    r = e.chat("honey for baby")
+    expect("honey" in r["text"].lower() and fa_share(r["text"][:150]) < 0.2, r["text"][:90])
+    set_override(None)
+    return "16 chat cases x fa/en language purity + answers"
+
+
 def main():
     clean()
     t0 = time.time()
@@ -1416,6 +1488,8 @@ def main():
     run_module("elder mode + streaming settings", t_elder_mode)
     run_module("local_lm_connector auto-detect", t_lmstudio_auto)
     run_module("module_info + home dashboard", t_module_info)
+    run_module("disease_lookup (name->analysis+meds)", t_disease_lookup)
+    run_module("bilingual chat audit", t_bilingual_chat)
     run_module("medical_qa curated bank", t_medical_qa_bank)
     run_module("calendar_export (ics)", t_calendar_export)
     run_module("onboarding wiring", t_onboarding_wiring)

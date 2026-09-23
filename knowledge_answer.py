@@ -40,11 +40,10 @@ def answer_drug_question(message: str) -> str | None:
         txt = lb["ind"]
         for h in ("INDICATIONS AND USAGE", "Indications and Usage", "Uses", "Uses "):
             txt = txt.replace(h, "").strip(" .:—-")
-        txt = txt.split(". ")[0][:150].strip()
+        txt = txt.split(". ")[0][:70 if fa else 150].strip()
         if fa:
-            from translit import translit
             lines.append("")
-            lines.append(f"موارد مصرف: {txt}")
+            lines.append(f"موارد مصرف (برچسب FDA — انگلیسی): {txt}")
         else:
             lines.append("")
             lines.append(f"Used for: {txt}")
@@ -67,6 +66,13 @@ def answer_drug_question(message: str) -> str | None:
 
 def answer_disease_question(message: str) -> str | None:
     """Answer 'what is diabetes' style questions from the disease bank."""
+    try:
+        from disease_lookup import answer_if_disease
+        direct = answer_if_disease(message)
+        if direct:
+            return direct
+    except Exception:
+        pass
     fa = _is_fa()
     from knowledge_browser import full_profile, search_wiki_diseases, search_doid, icd_about
     q = message.strip()
